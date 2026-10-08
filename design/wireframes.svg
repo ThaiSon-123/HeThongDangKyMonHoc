@@ -1,0 +1,418 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2140 3080" font-family="Segoe UI, Roboto, sans-serif">
+<defs>
+  <!-- App shell: sidebar 280 + topbar 64, khung xám low-fi 480x300 -->
+  <symbol id="shell" viewBox="0 0 480 300">
+    <rect width="480" height="300" rx="8" fill="#FFFEFB" stroke="#C4BCAD"/>
+    <rect x="0" y="0" width="110" height="300" rx="8" fill="#F0EAE0" stroke="#C4BCAD"/>
+    <rect x="110" y="0" width="370" height="26" fill="#E8E2D6" stroke="#C4BCAD"/>
+    <rect x="118" y="8" width="90" height="10" rx="5" fill="#CFC7B8"/>
+    <circle cx="462" cy="13" r="7" fill="#CFC7B8"/>
+    <circle cx="442" cy="13" r="7" fill="#CFC7B8"/>
+    <rect x="10" y="10" width="24" height="24" rx="6" fill="#CFC7B8"/>
+    <rect x="10" y="44" width="80" height="8" rx="4" fill="#CFC7B8"/>
+    <rect x="10" y="62" width="60" height="8" rx="4" fill="#E0D9CC"/>
+    <rect x="10" y="80" width="70" height="8" rx="4" fill="#E0D9CC"/>
+    <rect x="10" y="98" width="64" height="8" rx="4" fill="#E0D9CC"/>
+    <rect x="10" y="116" width="74" height="8" rx="4" fill="#E0D9CC"/>
+    <rect x="10" y="134" width="58" height="8" rx="4" fill="#E0D9CC"/>
+    <rect x="10" y="152" width="68" height="8" rx="4" fill="#E0D9CC"/>
+ <rect x="10" y="170" width="62" height="8" rx="4" fill="#E0D9CC"/>
+    <rect x="10" y="188" width="72" height="8" rx="4" fill="#E0D9CC"/>
+  </symbol>
+  <!-- Bảng dữ liệu: header + 5 dòng -->
+  <symbol id="table" viewBox="0 0 340 150">
+    <rect width="340" height="150" rx="6" fill="#fff" stroke="#C4BCAD"/>
+    <rect x="0" y="0" width="340" height="20" fill="#EFE9DE"/>
+    <rect x="10" y="7" width="60" height="7" rx="3.5" fill="#C4BCAD"/>
+    <rect x="80" y="7" width="50" height="7" rx="3.5" fill="#C4BCAD"/>
+    <rect x="140" y="7" width="55" height="7" rx="3.5" fill="#C4BCAD"/>
+    <rect x="205" y="7" width="45" height="7" rx="3.5" fill="#C4BCAD"/>
+    <rect x="260" y="7" width="60" height="7" rx="3.5" fill="#C4BCAD"/>
+    <g stroke="#E4DDD0">
+      <line x1="0" y1="20" x2="340" y2="20"/>
+      <line x1="0" y1="48" x2="340" y2="48"/>
+      <line x1="0" y1="76" x2="340" y2="76"/>
+      <line x1="0" y1="104" x2="340" y2="104"/>
+      <line x1="0" y1="132" x2="340" y2="132"/>
+    </g>
+    <g fill="#CFC7B8">
+      <rect x="10" y="30" width="70" height="8" rx="4"/><rect x="90" y="30" width="46" height="8" rx="4"/><rect x="150" y="30" width="52" height="8" rx="4"/><rect x="212" y="30" width="40" height="8" rx="4"/><rect x="262" y="30" width="58" height="8" rx="4"/>
+      <rect x="10" y="58" width="64" height="8" rx="4"/><rect x="90" y="58" width="52" height="8" rx="4"/><rect x="150" y="58" width="44" height="8" rx="4"/><rect x="212" y="58" width="46" height="8" rx="4"/><rect x="262" y="58" width="58" height="8" rx="4"/>
+      <rect x="10" y="86" width="72" height="8" rx="4"/><rect x="90" y="86" width="42" height="8" rx="4"/><rect x="150" y="86" width="56" height="8" rx="4"/><rect x="212" y="86" width="38" height="8" rx="4"/><rect x="262" y="86" width="58" height="8" rx="4"/>
+      <rect x="10" y="114" width="60" height="8" rx="4"/><rect x="90" y="114" width="50" height="8" rx="4"/><rect x="150" y="114" width="48" height="8" rx="4"/><rect x="212" y="114" width="44" height="8" rx="4"/><rect x="262" y="114" width="58" height="8" rx="4"/>
+    </g>
+  </symbol>
+  <!-- Lưới form: label + input -->
+  <symbol id="form" viewBox="0 0 340 120">
+    <rect width="340" height="120" rx="6" fill="#fff" stroke="#C4BCAD"/>
+    <g fill="#C4BCAD"><rect x="14" y="14" width="52" height="8" rx="4"/><rect x="184" y="14" width="52" height="8" rx="4"/></g>
+    <rect x="14" y="28" width="150" height="22" rx="5" fill="#F2F2F6" stroke="#CFC7B8"/>
+    <rect x="184" y="28" width="142" height="22" rx="5" fill="#F2F2F6" stroke="#CFC7B8"/>
+    <g fill="#C4BCAD"><rect x="14" y="62" width="58" height="8" rx="4"/><rect x="184" y="62" width="46" height="8" rx="4"/></g>
+    <rect x="14" y="76" width="150" height="22" rx="5" fill="#F2F2F6" stroke="#CFC7B8"/>
+    <rect x="184" y="76" width="142" height="22" rx="5" fill="#F2F2F6" stroke="#CFC7B8"/>
+  </symbol>
+  <!-- Hàng card thống kê -->
+  <symbol id="cards" viewBox="0 0 340 54">
+    <g fill="#fff" stroke="#C4BCAD">
+      <rect width="78" height="54" rx="6"/><rect x="87" width="78" height="54" rx="6"/><rect x="174" width="78" height="54" rx="6"/><rect x="261" width="79" height="54" rx="6"/>
+    </g>
+    <g fill="#CFC7B8">
+      <rect x="10" y="10" width="40" height="7" rx="3.5"/><rect x="97" y="10" width="40" height="7" rx="3.5"/><rect x="184" y="10" width="40" height="7" rx="3.5"/><rect x="271" y="10" width="40" height="7" rx="3.5"/>
+      <rect x="10" y="26" width="56" height="12" rx="4"/><rect x="97" y="26" width="56" height="12" rx="4"/><rect x="184" y="26" width="56" height="12" rx="4"/><rect x="271" y="26" width="56" height="12" rx="4"/>
+    </g>
+  </symbol>
+  <!-- Biểu đồ cột -->
+  <symbol id="chart" viewBox="0 0 340 120">
+    <rect width="340" height="120" rx="6" fill="#fff" stroke="#C4BCAD"/>
+    <g fill="#CFC7B8">
+      <rect x="24" y="70" width="22" height="34" rx="3"/><rect x="62" y="52" width="22" height="52" rx="3"/><rect x="100" y="82" width="22" height="22" rx="3"/><rect x="138" y="40" width="22" height="64" rx="3"/><rect x="176" y="60" width="22" height="44" rx="3"/><rect x="214" y="30" width="22" height="74" rx="3"/><rect x="252" y="56" width="22" height="48" rx="3"/><rect x="290" y="44" width="22" height="60" rx="3"/>
+    </g>
+    <line x1="14" y1="104" x2="326" y2="104" stroke="#C4BCAD"/>
+  </symbol>
+  <!-- Dialog -->
+  <symbol id="dialog" viewBox="0 0 200 120">
+    <rect width="200" height="120" rx="10" fill="#fff" stroke="#B0A899"/>
+    <rect x="16" y="16" width="110" height="10" rx="5" fill="#C4BCAD"/>
+    <rect x="16" y="36" width="168" height="7" rx="3.5" fill="#E0D9CC"/>
+    <rect x="16" y="49" width="140" height="7" rx="3.5" fill="#E0D9CC"/>
+    <rect x="16" y="72" width="168" height="22" rx="5" fill="#F2F2F6" stroke="#CFC7B8"/>
+    <rect x="104" y="100" width="44" height="14" rx="7" fill="#BFD8CB"/>
+    <rect x="152" y="100" width="32" height="14" rx="7" fill="#74A98D"/>
+  </symbol>
+</defs>
+
+<rect width="2140" height="3080" fill="#FAF7F2"/>
+<text x="40" y="52" font-size="26" font-weight="600" fill="#212B25">WIREFRAME — HỆ THỐNG ĐĂNG KÝ MÔN HỌC · màn phụ (mockup chi tiết xem design/mockups/)</text>
+<text x="40" y="76" font-size="13" fill="#6B7268">Mỗi khung 480×300 ≈ desktop 1440×900. Import vào Figma: File → Place image, hoặc kéo thả trực tiếp.</text>
+
+<!-- ===== HÀNG 1: ADMIN ===== -->
+<g transform="translate(40,110)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">ADM-02 · Quản lý tài khoản</text>
+  <use href="#cards" x="126" y="36" width="340" height="54"/>
+  <use href="#table" x="126" y="100" width="340" height="150"/>
+  <rect x="400" y="100" width="66" height="22" rx="11" fill="#2D6A4F"/><text x="433" y="115" font-size="10" fill="#fff" text-anchor="middle">+ Tạo TK</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">A1. Quản lý tài khoản (tạo/đặt lại MK/kích hoạt)</text>
+</g>
+<g transform="translate(550,110)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">ADM-03 · Phân quyền vai trò</text>
+  <use href="#table" x="126" y="36" width="340" height="110"/>
+  <rect x="126" y="156" width="340" height="94" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="176" font-size="10" fill="#6B7268">Ma trận quyền: Role × Module (checkbox)</text>
+  <g fill="#DCEDE3" stroke="#74A98D">
+    <rect x="140" y="186" width="30" height="16" rx="3"/><rect x="176" y="186" width="30" height="16" rx="3"/><rect x="212" y="186" width="30" height="16" rx="3"/><rect x="248" y="186" width="30" height="16" rx="3"/>
+    <rect x="140" y="208" width="30" height="16" rx="3"/><rect x="176" y="208" width="30" height="16" rx="3"/><rect x="212" y="208" width="30" height="16" rx="3"/><rect x="248" y="208" width="30" height="16" rx="3"/>
+  </g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">A2. Phân quyền vai trò (5 role · ma trận)</text>
+</g>
+<g transform="translate(1060,110)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">ADM-04 · Cấu hình hệ thống</text>
+  <use href="#form" x="126" y="36" width="340" height="120"/>
+  <rect x="126" y="166" width="340" height="84" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="186" font-size="10" fill="#6B7268">Mở/đóng cửa sổ đăng ký toàn hệ thống (toggle)</text>
+  <rect x="140" y="196" width="60" height="24" rx="12" fill="#2D6A4F"/><circle cx="188" cy="208" r="9" fill="#fff"/>
+  <rect x="140" y="226" width="120" height="10" rx="5" fill="#E0D9CC"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">A3. Cấu hình hệ thống + cửa sổ đăng ký</text>
+</g>
+<g transform="translate(1570,110)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">ADM-06 · Audit log</text>
+  <use href="#table" x="126" y="36" width="340" height="180"/>
+  <rect x="126" y="226" width="120" height="20" rx="10" fill="#F0EAE0"/><text x="186" y="240" font-size="9" fill="#6B7268" text-anchor="middle">Lọc theo vai trò · hành động</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">A4. Audit log (ai · làm gì · khi nào · IP)</text>
+</g>
+
+<!-- ===== HÀNG 2: ADMIN (tiếp) + PĐT ===== -->
+<g transform="translate(40,470)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">ADM-07 · Sao lưu &amp; phục hồi</text>
+  <rect x="126" y="36" width="340" height="70" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="56" font-size="10" fill="#6B7268">Lịch backup tự động + danh sách bản gần nhất</text>
+  <g fill="#E0D9CC"><rect x="140" y="66" width="290" height="8" rx="4"/><rect x="140" y="80" width="240" height="8" rx="4"/><rect x="140" y="94" width="260" height="8" rx="4"/></g>
+  <rect x="126" y="116" width="164" height="26" rx="13" fill="#2D6A4F"/><text x="208" y="133" font-size="10" fill="#fff" text-anchor="middle">⬇ Tải bản backup</text>
+  <rect x="300" y="116" width="164" height="26" rx="13" fill="#FBEAE6"/><text x="382" y="133" font-size="10" fill="#B3402F" text-anchor="middle">⚠ Phục hồi (confirm)</text>
+  <use href="#table" x="126" y="154" width="340" height="96"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">A5. Sao lưu &amp; phục hồi (chỉ Admin)</text>
+</g>
+<g transform="translate(550,470)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-02 · Ngành đào tạo</text>
+  <use href="#cards" x="126" y="36" width="340" height="54"/>
+  <use href="#table" x="126" y="100" width="340" height="150"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P1. Ngành đào tạo (CRUD + trưởng ngành)</text>
+</g>
+<g transform="translate(1060,470)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-03 · Chương trình CTĐT</text>
+  <use href="#table" x="126" y="36" width="340" height="90"/>
+  <rect x="126" y="136" width="340" height="114" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="156" font-size="10" fill="#6B7268">Chi tiết CTĐT: 5 khối kiến thức (chung/cơ sở ngành/…)</text>
+  <g>
+    <rect x="140" y="166" width="90" height="16" rx="8" fill="#E5E0D8"/><rect x="236" y="166" width="90" height="16" rx="8" fill="#D3E4EF"/><rect x="332" y="166" width="90" height="16" rx="8" fill="#BFD8CB"/>
+    <rect x="140" y="188" width="90" height="16" rx="8" fill="#CDE9E4"/><rect x="236" y="188" width="90" height="16" rx="8" fill="#F6E3C5"/>
+  </g>
+  <g fill="#E0D9CC"><rect x="140" y="214" width="290" height="8" rx="4"/><rect x="140" y="228" width="250" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P2. CTĐT (môn + khối kiến thức + tín chỉ)</text>
+</g>
+<g transform="translate(1570,470)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-04 · Môn học &amp; tiên quyết</text>
+  <use href="#form" x="126" y="36" width="340" height="100"/>
+  <rect x="126" y="146" width="340" height="104" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="166" font-size="10" fill="#6B7268">Tiên quyết (AND) ·Song hành (OR) · Học trước</text>
+  <g fill="#DCEDE3" stroke="#74A98D"><rect x="140" y="176" width="80" height="18" rx="9"/><rect x="228" y="176" width="80" height="18" rx="9"/><rect x="140" y="200" width="80" height="18" rx="9"/></g>
+  <text x="150" y="189" font-size="9" fill="#2D6A4F">CNTT102 AND</text><text x="238" y="189" font-size="9" fill="#2D6A4F">CNTT103</text><text x="150" y="213" font-size="9" fill="#2D6A4F">CNTT101</text>
+  <use href="#table" x="126" y="226" width="340" height="24"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P3. Môn học + ràng buộc tiên quyết</text>
+</g>
+
+<!-- ===== HÀNG 3: PĐT (tiếp) ===== -->
+<g transform="translate(40,830)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-05 · Học kỳ &amp; cửa sổ ĐK</text>
+  <use href="#table" x="126" y="36" width="340" height="96"/>
+  <rect x="126" y="142" width="340" height="108" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="162" font-size="10" fill="#6B7268">Timeline cửa sổ đăng ký học kỳ đang chọn</text>
+  <rect x="150" y="176" width="280" height="10" rx="5" fill="#DCEDE3"/>
+  <rect x="150" y="176" width="170" height="10" rx="5" fill="#2D6A4F"/>
+  <circle cx="150" cy="181" r="5" fill="#2D6A4F"/><circle cx="320" cy="181" r="5" fill="#D32F2F"/>
+  <text x="150" y="202" font-size="9" fill="#6B7268">Bắt đầu 01/10</text><text x="360" y="202" font-size="9" fill="#6B7268">Kết thúc 31/10</text>
+  <g fill="#E0D9CC"><rect x="150" y="216" width="280" height="8" rx="4"/><rect x="150" y="230" width="200" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P4. Học kỳ + mở/đóng cửa sổ đăng ký (tự động)</text>
+</g>
+<g transform="translate(550,830)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-10 · Theo dõi đăng ký</text>
+  <use href="#cards" x="126" y="36" width="340" height="54"/>
+  <use href="#table" x="126" y="100" width="340" height="150"/>
+  <rect x="126" y="226" width="150" height="20" rx="10" fill="#F0EAE0"/><text x="201" y="240" font-size="9" fill="#6B7268" text-anchor="middle">Xuất Excel · lọc theo lớp</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P5. Theo dõi đăng ký (mỗi SV đăng ký gì)</text>
+</g>
+<g transform="translate(1060,830)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-11 · Duyệt bảng điểm</text>
+  <use href="#table" x="126" y="36" width="340" height="120"/>
+  <rect x="126" y="166" width="340" height="84" rx="6" fill="#FDF0DC" stroke="#D97706"/>
+  <text x="140" y="188" font-size="10" fill="#B45309">Nhập tạm → Duyệt = CHINH_THUC → KHOA (BR-14)</text>
+  <rect x="140" y="200" width="130" height="24" rx="12" fill="#2D6A4F"/><text x="205" y="216" font-size="10" fill="#fff" text-anchor="middle">✓ Duyệt bảng điểm</text>
+  <rect x="280" y="200" width="130" height="24" rx="12" fill="#ECEFF1"/><text x="345" y="216" font-size="10" fill="#8A7E6A" text-anchor="middle">Trả về GV</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P6. Duyệt &amp; khóa bảng điểm theo lớp</text>
+</g>
+<g transform="translate(1570,830)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-12 · Đơn học lại / cải thiện</text>
+  <use href="#table" x="126" y="36" width="340" height="120"/>
+  <rect x="126" y="166" width="340" height="84" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="186" font-size="10" fill="#6B7268">Duyệt đơn → SV được đăng ký môn đã có điểm (BR-04)</text>
+  <rect x="140" y="198" width="100" height="24" rx="12" fill="#E7F2EA"/><text x="190" y="214" font-size="10" fill="#2D6A4F" text-anchor="middle">✓ Duyệt</text>
+  <rect x="250" y="198" width="100" height="24" rx="12" fill="#FBEAE6"/><text x="300" y="214" font-size="10" fill="#B3402F" text-anchor="middle">✕ Từ chối</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P7. Duyệt đơn học lại (CHO_DUYET→DUYET)</text>
+</g>
+
+<!-- ===== HÀNG 4: PĐT (tiếp) ===== -->
+<g transform="translate(40,1190)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-13 · Yêu cầu sửa điểm danh</text>
+  <use href="#table" x="126" y="36" width="340" height="120"/>
+  <rect x="126" y="166" width="340" height="84" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="186" font-size="10" fill="#6B7268">GV nộp sửa ĐD → PĐT duyệt (không SV tự sửa)</text>
+  <rect x="140" y="198" width="100" height="24" rx="12" fill="#E7F2EA"/><text x="190" y="214" font-size="10" fill="#2D6A4F" text-anchor="middle">✓ Chấp nhận</text>
+  <rect x="250" y="198" width="100" height="24" rx="12" fill="#FBEAE6"/><text x="300" y="214" font-size="10" fill="#B3402F" text-anchor="middle">✕ Từ chối</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P8. Duyệt yêu cầu sửa điểm danh của GV</text>
+</g>
+<g transform="translate(550,1190)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-14 · Báo cáo đào tạo</text>
+  <use href="#chart" x="126" y="36" width="340" height="120"/>
+  <use href="#cards" x="126" y="166" width="340" height="54"/>
+  <g fill="#E0D9CC"><rect x="126" y="232" width="340" height="8" rx="4"/><rect x="126" y="246" width="280" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P9. Báo cáo: tỷ lệ đăng ký, sĩ số, tiến độ CTĐT</text>
+</g>
+<g transform="translate(1060,1190)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">PDT-15 · Gửi thông báo</text>
+  <use href="#form" x="126" y="36" width="340" height="120"/>
+  <rect x="126" y="166" width="340" height="84" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="186" font-size="10" fill="#6B7268">Đối tượng: toàn trường / theo ngành / theo lớp HP</text>
+  <g fill="#DCEDE3" stroke="#74A98D"><rect x="140" y="196" width="70" height="18" rx="9"/><rect x="216" y="196" width="70" height="18" rx="9"/><rect x="292" y="196" width="90" height="18" rx="9"/></g>
+  <g fill="#E0D9CC"><rect x="140" y="224" width="290" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">P10. Gửi thông báo theo đối tượng</text>
+</g>
+<g transform="translate(1570,1190)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">SV-11 · Tạo TKB tự động</text>
+  <rect x="126" y="36" width="340" height="60" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="56" font-size="10" fill="#6B7268">Chọn môn muốn học → sinh phương án không trùng lịch</text>
+  <g fill="#DCEDE3" stroke="#74A98D"><rect x="140" y="64" width="70" height="18" rx="9"/><rect x="216" y="64" width="70" height="18" rx="9"/><rect x="292" y="64" width="80" height="18" rx="9"/></g>
+  <rect x="126" y="106" width="160" height="60" rx="6" fill="#E7F2EA" stroke="#2D6A4F"/><text x="206" y="132" font-size="10" fill="#2D6A4F" text-anchor="middle">Phương án 1 ✓</text><text x="206" y="150" font-size="9" fill="#2D6A4F" text-anchor="middle">18 TC · sáng T2–T6</text>
+  <rect x="296" y="106" width="160" height="60" rx="6" fill="#fff" stroke="#C4BCAD"/><text x="376" y="132" font-size="10" fill="#6B7268" text-anchor="middle">Phương án 2</text><text x="376" y="150" font-size="9" fill="#6B7268" text-anchor="middle">17 TC · có tối T4</text>
+  <use href="#table" x="126" y="176" width="340" height="74"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">S1. Tạo thời khóa biểu tự động (chọn phương án)</text>
+</g>
+
+<!-- ===== HÀNG 5: SV (tiếp) ===== -->
+<g transform="translate(40,1550)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">SV-12 · Thời khóa biểu</text>
+  <rect x="126" y="36" width="340" height="214" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <g stroke="#E0E0E8">
+    <line x1="176" y1="46" x2="176" y2="240"/><line x1="226" y1="46" x2="226" y2="240"/><line x1="276" y1="46" x2="276" y2="240"/><line x1="326" y1="46" x2="326" y2="240"/><line x1="376" y1="46" x2="376" y2="240"/><line x1="426" y1="46" x2="426" y2="240"/>
+    <line x1="136" y1="70" x2="456" y2="70"/><line x1="136" y1="96" x2="456" y2="96"/><line x1="136" y1="122" x2="456" y2="122"/><line x1="136" y1="148" x2="456" y2="148"/><line x1="136" y1="174" x2="456" y2="174"/><line x1="136" y1="200" x2="456" y2="200"/>
+  </g>
+  <rect x="180" y="72" width="42" height="50" rx="4" fill="#BFD8CB"/><rect x="280" y="72" width="42" height="50" rx="4" fill="#BFD8CB"/>
+  <rect x="330" y="126" width="42" height="72" rx="4" fill="#CDE9E4"/><rect x="430" y="126" width="22" height="72" rx="4" fill="#F6E3C5"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">S2. Thời khóa biểu tuần (6 cột × 15 tiết · BR-08)</text>
+</g>
+<g transform="translate(550,1550)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">SV-13 · Chương trình đào tạo (của tôi)</text>
+  <use href="#cards" x="126" y="36" width="340" height="54"/>
+  <rect x="126" y="100" width="340" height="26" rx="5" fill="#DCEDE3"/><rect x="132" y="106" width="180" height="14" rx="7" fill="#74A98D"/>
+  <use href="#table" x="126" y="136" width="340" height="114"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">S3. CTĐT của tôi + tiến độ hoàn thành</text>
+</g>
+<g transform="translate(1060,1550)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">SV-14 · Điểm</text>
+  <use href="#cards" x="126" y="36" width="340" height="54"/>
+  <use href="#table" x="126" y="100" width="340" height="150"/>
+  <text x="140" y="266" font-size="9" fill="#6B7268">Cột: Điểm CC · GK · CK · Hệ 10 · Hệ 4 · Chữ · Trạng thái (NHAP_TAM/CHINH_THUC/KHOA)</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">S4. Bảng điểm theo học kỳ + GPA (chỉ xem · BR-23)</text>
+</g>
+<g transform="translate(1570,1550)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">SV-15 · Điểm danh (của tôi)</text>
+  <use href="#chart" x="126" y="36" width="340" height="110"/>
+  <rect x="126" y="156" width="340" height="94" rx="6" fill="#FBEAE6" stroke="#EF9A9A"/>
+  <text x="140" y="178" font-size="10" fill="#B3402F" font-weight="700">⛔ CẤM THI — CNTT401 (vắng 22% &gt; 20% · BR-24)</text>
+  <text x="140" y="196" font-size="9" fill="#B3402F">Không được dự thi cuối kỳ · liên hệ GV/PĐT</text>
+  <g fill="#E0D9CC"><rect x="140" y="208" width="290" height="8" rx="4"/><rect x="140" y="222" width="200" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">S5. Điểm danh từng lớp + cảnh báo cấm thi</text>
+</g>
+
+<!-- ===== HÀNG 6: SV (tiếp) + GV ===== -->
+<g transform="translate(40,1910)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">SV-16 · Học phí (của tôi)</text>
+  <use href="#cards" x="126" y="36" width="340" height="54"/>
+  <rect x="126" y="100" width="340" height="100" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <g fill="#E0D9CC"><rect x="140" y="116" width="140" height="8" rx="4"/><rect x="330" y="116" width="120" height="8" rx="4"/><rect x="140" y="132" width="120" height="8" rx="4"/><rect x="330" y="132" width="120" height="8" rx="4"/><rect x="140" y="148" width="150" height="8" rx="4"/><rect x="330" y="148" width="120" height="8" rx="4"/></g>
+  <rect x="140" y="166" width="120" height="22" rx="11" fill="#FBEAE6"/><text x="200" y="181" font-size="10" fill="#B3402F" text-anchor="middle">CON_NO</text>
+  <rect x="270" y="166" width="180" height="22" rx="11" fill="#E3F2FD"/><text x="360" y="181" font-size="10" fill="#1565C0" text-anchor="middle">Cập nhật khi đăng ký (BR-15)</text>
+  <use href="#table" x="126" y="210" width="340" height="40"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">S6. Học phí từng kỳ + dòng tiền + biên lai</text>
+</g>
+<g transform="translate(550,1910)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">SV-17 · Đơn học lại / cải thiện</text>
+  <use href="#table" x="126" y="36" width="340" height="110"/>
+  <rect x="126" y="156" width="340" height="60" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="176" font-size="10" fill="#6B7268">+ Nộp đơn: chọn môn đã có điểm · lý do (học lại/cải thiện)</text>
+  <rect x="140" y="186" width="130" height="22" rx="11" fill="#2D6A4F"/><text x="205" y="201" font-size="10" fill="#fff" text-anchor="middle">+ Nộp đơn mới</text>
+  <g fill="#E0D9CC"><rect x="126" y="226" width="340" height="8" rx="4"/><rect x="126" y="240" width="260" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">S7. Nộp + theo dõi đơn học lại (CHO_DUYET…)</text>
+</g>
+<g transform="translate(1060,1910)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">SV-18 · Thông báo</text>
+  <g fill="#fff" stroke="#C4BCAD">
+    <rect x="126" y="36" width="340" height="48" rx="6"/><rect x="126" y="92" width="340" height="48" rx="6"/><rect x="126" y="148" width="340" height="48" rx="6"/><rect x="126" y="204" width="340" height="46" rx="6"/>
+  </g>
+  <circle cx="146" cy="60" r="6" fill="#2D6A4F"/><circle cx="146" cy="116" r="6" fill="#2D6A4F"/>
+  <g fill="#E0D9CC"><rect x="162" y="50" width="180" height="8" rx="4"/><rect x="162" y="64" width="120" height="7" rx="3.5"/><rect x="162" y="106" width="200" height="8" rx="4"/><rect x="162" y="120" width="140" height="7" rx="3.5"/><rect x="162" y="162" width="160" height="8" rx="4"/><rect x="162" y="176" width="110" height="7" rx="3.5"/><rect x="162" y="218" width="190" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">S8. Hộp thông báo (chấm xanh = chưa đọc)</text>
+</g>
+<g transform="translate(1570,1910)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">GV-02 · Lớp phụ trách</text>
+  <use href="#cards" x="126" y="36" width="340" height="54"/>
+  <use href="#table" x="126" y="100" width="340" height="150"/>
+  <text x="140" y="266" font-size="9" fill="#6B7268">Cột: Mã lớp · Môn · Sĩ số · Lịch · Trạng thái · vào ĐD/Nhập điểm</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">G1. Danh sách lớp phụ trách (điểm danh chi tiết GV-09)</text>
+</g>
+
+<!-- ===== HÀNG 7: GV + KT ===== -->
+<g transform="translate(40,2270)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">GV-07 · Nhập điểm</text>
+  <rect x="126" y="36" width="340" height="34" rx="6" fill="#DCEDE3"/>
+  <text x="140" y="57" font-size="10" fill="#2D6A4F">CNTT203.1 · 45 SV · trạng thái NHAP_TAM (BR-14)</text>
+  <use href="#table" x="126" y="80" width="340" height="130"/>
+  <rect x="140" y="220" width="120" height="22" rx="11" fill="#FFF3E0"/><text x="200" y="235" font-size="10" fill="#B45309" text-anchor="middle">Lưu nhập tạm</text>
+  <rect x="270" y="220" width="150" height="22" rx="11" fill="#2D6A4F"/><text x="345" y="235" font-size="10" fill="#fff" text-anchor="middle">Nộp PĐT duyệt</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">G2. Nhập điểm CC/GK/CK (lưu tạm → nộp duyệt)</text>
+</g>
+<g transform="translate(550,2270)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">GV-13 · Gửi thông báo lớp</text>
+  <use href="#form" x="126" y="36" width="340" height="120"/>
+  <rect x="126" y="166" width="340" height="84" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="186" font-size="10" fill="#6B7268">Chọn lớp phụ trách (multi-select) · chỉ lớp mình (BR-23)</text>
+  <g fill="#DCEDE3" stroke="#74A98D"><rect x="140" y="196" width="100" height="18" rx="9"/><rect x="248" y="196" width="100" height="18" rx="9"/></g>
+  <g fill="#E0D9CC"><rect x="140" y="224" width="290" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">G3. Gửi thông báo cho lớp phụ trách</text>
+</g>
+<g transform="translate(1060,2270)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">KT-02 · Cấu hình chính sách học phí</text>
+  <use href="#form" x="126" y="36" width="340" height="120"/>
+  <rect x="126" y="166" width="340" height="84" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="186" font-size="10" fill="#6B7268">Hạn thanh toán · ngưỡng cảnh báo nợ · quy định hoàn (BR-05)</text>
+  <g fill="#E0D9CC"><rect x="140" y="198" width="290" height="8" rx="4"/><rect x="140" y="214" width="230" height="8" rx="4"/></g>
+  <rect x="380" y="230" width="86" height="24" rx="12" fill="#2D6A4F"/><text x="423" y="246" font-size="10" fill="#fff" text-anchor="middle">Lưu</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">K1. Cấu hình chính sách học phí theo kỳ</text>
+</g>
+<g transform="translate(1570,2270)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">KT-03 · Bảng giá tín chỉ</text>
+  <use href="#table" x="126" y="36" width="340" height="140"/>
+  <rect x="126" y="186" width="340" height="64" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="206" font-size="10" fill="#6B7268">Giá theo ngành/năm nhập học · hiệu lực theo học kỳ</text>
+  <rect x="140" y="216" width="110" height="22" rx="11" fill="#2D6A4F"/><text x="195" y="231" font-size="10" fill="#fff" text-anchor="middle">+ Thêm mức giá</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">K2. Bảng giá tín chỉ (mỗi TC × ngành × khóa)</text>
+</g>
+
+<!-- ===== HÀNG 8: KT (tiếp) ===== -->
+<g transform="translate(40,2630)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">KT-04 · Miễn giảm / hoàn giảm</text>
+  <use href="#table" x="126" y="36" width="340" height="110"/>
+  <rect x="126" y="156" width="340" height="60" rx="6" fill="#E0F2F1" stroke="#4DB6AC"/>
+  <text x="140" y="176" font-size="10" fill="#00796B">Duyệt miễn giảm → cập nhật học phí · trạng thái GIAM_TRU</text>
+  <g fill="#E0D9CC"><rect x="140" y="186" width="260" height="8" rx="4"/><rect x="140" y="200" width="200" height="8" rx="4"/></g>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">K3. Miễn giảm học phí (học bổng · đối tượng)</text>
+</g>
+<g transform="translate(550,2630)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">KT-11 · Thu &amp; biên lai</text>
+  <use href="#table" x="126" y="36" width="340" height="140"/>
+  <rect x="126" y="186" width="340" height="64" rx="6" fill="#fff" stroke="#C4BCAD"/>
+  <text x="140" y="206" font-size="10" fill="#6B7268">Mỗi dòng: biên lai số · phương thức · Idempotency-Key (chống thu trùng)</text>
+  <rect x="140" y="216" width="130" height="22" rx="11" fill="#2D6A4F"/><text x="205" y="231" font-size="10" fill="#fff" text-anchor="middle">🧾 In lại biên lai</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">K4. Lịch sử thu + biên lai (in lại / tra cứu)</text>
+</g>
+<g transform="translate(1060,2630)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">KT-12 · Công nợ</text>
+  <use href="#cards" x="126" y="36" width="340" height="54"/>
+  <rect x="126" y="100" width="340" height="50" rx="6" fill="#FBEAE6" stroke="#EF9A9A"/>
+  <text x="140" y="120" font-size="10" fill="#B3402F" font-weight="600">38 SV quá hạn · chặn đăng ký kỳ tới (nếu bật)</text>
+  <g fill="#E0D9CC"><rect x="140" y="130" width="290" height="8" rx="4"/></g>
+  <use href="#table" x="126" y="160" width="340" height="90"/>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">K5. Công nợ + quá hạn + nhắc nợ hàng loạt</text>
+</g>
+<g transform="translate(1570,2630)">
+  <use href="#shell" width="480" height="300"/>
+  <text x="126" y="20" font-size="11" font-weight="600" fill="#2D6A4F">KT-14 · Báo cáo tài chính</text>
+  <use href="#chart" x="126" y="36" width="340" height="110"/>
+  <use href="#cards" x="126" y="156" width="340" height="54"/>
+  <g fill="#E0D9CC"><rect x="126" y="222" width="340" height="8" rx="4"/><rect x="126" y="236" width="280" height="8" rx="4"/></g>
+  <rect x="380" y="252" width="86" height="22" rx="11" fill="#F0EAE0"/><text x="423" y="267" font-size="10" fill="#6B7268" text-anchor="middle">Xuất Excel/PDF</text>
+  <text x="0" y="322" font-size="13" font-weight="600" fill="#212B25">K6. Báo cáo thu chi học phí theo kỳ (KT-13 tổng hợp)</text>
+</g>
+
+<text x="40" y="3030" font-size="12" fill="#6B7268">Ghi chú: wireframe mức thấp chỉ định vị thành phần. Màu/trạng thái chi tiết theo design/DESIGN_SPEC.md. 5 màn chính đã có mockup HTML full-color tại design/mockups/.</text>
+</svg>

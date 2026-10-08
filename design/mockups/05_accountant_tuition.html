@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Học phí — Kế toán · Academia ấm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<style>
+:root{
+  --bg-page:#FAF7F2;--m3-primary:#2D6A4F;--m3-on-primary:#FFFFFF;--m3-primary-container:#DCEDE3;
+  --accent:#D97706;--m3-error:#B3402F;--m3-surface:#FFFFFF;--sidebar-bg:#1F2937;--sidebar-text:#E5E1D8;
+  --m3-surface-variant:#F3EEE5;--m3-outline:#EAE4D9;--m3-on-surface:#212B25;--m3-on-surface-variant:#6B7268;
+  --shadow:0 2px 8px rgba(31,41,55,.06),0 1px 2px rgba(31,41,55,.04);
+  --c-mo-bg:#E7F2EA;--c-mo-fg:#2D6A4F;--c-dh-bg:#E8EEF7;--c-dh-fg:#3B5B92;
+  --c-kh-bg:#EFEAE2;--c-kh-fg:#8A7E6A;--c-teal-bg:#E0F2EF;--c-teal-fg:#0F766E;
+  --c-red-bg:#FBEAE6;--c-red-fg:#B3402F;--c-amber-bg:#FDF0DC;--c-amber-fg:#B45309;
+  --c-purple-bg:#EDE7F6;--c-purple-fg:#6D4FA1;
+}
+[data-theme="dark"]{
+  --bg-page:#141D18;--m3-primary:#74C69D;--m3-on-primary:#0E2A1D;--m3-primary-container:#1F3D2E;
+  --accent:#E8A33D;--m3-error:#E77A67;--m3-surface:#1C2620;--sidebar-bg:#0F171F;--sidebar-text:#E5E1D8;
+  --m3-surface-variant:#223028;--m3-outline:#33413A;--m3-on-surface:#EAE6DD;--m3-on-surface-variant:#A8A296;
+  --shadow:0 2px 8px rgba(0,0,0,.3);
+  --c-mo-bg:#1F3D2E;--c-mo-fg:#74C69D;--c-dh-bg:#1E2C42;--c-dh-fg:#8FB3E3;
+  --c-kh-bg:#2A2822;--c-kh-fg:#B8AC96;--c-teal-bg:#12312E;--c-teal-fg:#4FC3B0;
+  --c-red-bg:#3A211D;--c-red-fg:#E77A67;--c-amber-bg:#38290F;--c-amber-fg:#E8A33D;
+  --c-purple-bg:#2A2438;--c-purple-fg:#B3A4E0;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Be Vietnam Pro',system-ui,sans-serif}
+.msr{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;font-size:20px;line-height:1;display:inline-block;white-space:nowrap;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24;user-select:none}
+.msr.fill{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+body{background:var(--bg-page);color:var(--m3-on-surface);font-size:14px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:280px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:20px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:12px;padding:4px 10px 20px;border-bottom:1px solid rgba(229,225,216,.12);margin-bottom:12px}
+.brand-logo{width:42px;height:42px;border-radius:12px;background:var(--m3-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+.brand .n{font-size:15px;font-weight:700}.brand .r{font-size:11px;color:rgba(229,225,216,.55)}
+nav{flex:1}
+nav .sec{font-size:10.5px;font-weight:600;color:rgba(229,225,216,.45);padding:16px 12px 6px;letter-spacing:1px;text-transform:uppercase}
+nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;color:rgba(229,225,216,.72);font-size:13.5px;font-weight:500;min-height:44px;cursor:pointer}
+nav a .msr{font-size:20px;opacity:.85}
+nav a:hover{background:rgba(229,225,216,.07);color:var(--sidebar-text)}
+nav a.active{background:var(--m3-primary);color:#fff;font-weight:600}
+[data-theme="dark"] nav a.active{background:var(--m3-primary-container);color:var(--m3-primary)}
+.side-user{display:flex;align-items:center;gap:10px;padding:12px 10px;border-top:1px solid rgba(229,225,216,.12);margin-top:12px}
+.side-user .av{width:38px;height:38px;border-radius:50%;background:var(--c-amber-bg);color:var(--c-amber-fg);display:flex;align-items:center;justify-content:center;font-weight:700}
+.side-user .n{font-size:13px;font-weight:600;color:var(--sidebar-text)}
+.side-user .r{font-size:11px;color:rgba(229,225,216,.55)}
+.main{flex:1;min-width:0}
+.topbar{height:64px;display:flex;align-items:center;padding:0 24px;gap:14px;position:sticky;top:0;z-index:5;background:var(--bg-page);border-bottom:1px solid var(--m3-outline)}
+.crumb{font-size:12px;color:var(--m3-on-surface-variant);font-weight:500}
+.crumb b{color:var(--m3-on-surface);font-weight:600}
+.hk-select{height:40px;border:1px solid var(--m3-outline);border-radius:999px;background:var(--m3-surface);color:var(--m3-on-surface);padding:0 14px;font-size:13px;font-family:inherit;margin-left:auto}
+.bell{position:relative;width:40px;height:40px;border-radius:50%;border:1px solid var(--m3-outline);background:var(--m3-surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--m3-on-surface-variant)}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--m3-primary);color:var(--m3-on-primary);display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 0 0 2px var(--bg-page),0 0 0 4px var(--m3-primary)}
+.content{padding:24px;max-width:1280px}
+.page-head h1{font-size:24px;font-weight:700;margin-bottom:4px}
+.page-head .sub{font-size:13px;color:var(--m3-on-surface-variant);margin-bottom:20px}
+/* stats — DataCard viền trên cam (tài chính) */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat{background:var(--m3-surface);border:1px solid var(--m3-outline);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);border-top:3px solid var(--accent)}
+.stat .k{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--m3-on-surface-variant)}
+.stat .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px}
+.stat .d{font-size:11.5px;margin-top:4px;color:var(--m3-on-surface-variant)}
+.stat.g{border-top-color:var(--m3-primary)}.stat.g .v{color:var(--m3-primary)}
+.stat.g .d{color:var(--c-mo-fg)}
+.stat.r{border-top-color:var(--m3-error)}.stat.r .v{color:var(--c-red-fg)}
+.stat.a .v{color:var(--c-amber-fg)}
+/* filter */
+.filterbar{background:var(--m3-surface);border:1px solid var(--m3-outline);border-radius:16px;padding:14px 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;box-shadow:var(--shadow)}
+.f{display:flex;flex-direction:column;gap:5px}
+.f label{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--m3-on-surface-variant)}
+.f select{height:42px;border:1px solid var(--m3-outline);border-radius:12px;background:var(--m3-surface);color:var(--m3-on-surface);padding:0 12px;font-size:13px;min-width:130px;font-family:inherit}
+.f-search{flex:1;min-width:180px}
+.f-search input{width:100%;height:42px;border:1px solid var(--m3-outline);border-radius:999px;padding:0 16px;font-size:13px;background:var(--m3-surface);color:var(--m3-on-surface);font-family:inherit}
+.btn{height:42px;border-radius:999px;border:none;font-size:13.5px;font-weight:600;cursor:pointer;padding:0 22px;display:inline-flex;align-items:center;gap:8px;font-family:inherit}
+.btn .msr{font-size:18px}
+.btn-filled{background:var(--m3-primary);color:var(--m3-on-primary)}
+.btn-tonal{background:var(--m3-primary-container);color:var(--m3-primary)}
+/* table */
+.tbl-card{background:var(--m3-surface);border:1px solid var(--m3-outline);border-radius:16px;overflow:auto;box-shadow:var(--shadow)}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--m3-outline);flex-wrap:wrap;gap:10px}
+.tbl-head h2{font-size:16px;font-weight:700}
+.tbl-head .c{font-size:12px;color:var(--m3-on-surface-variant)}
+table{width:100%;border-collapse:collapse;min-width:1100px}
+th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--m3-on-surface-variant);padding:12px 14px;background:var(--m3-surface-variant);white-space:nowrap}
+td{padding:12px 14px;border-bottom:1px solid var(--m3-outline);font-size:13.5px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:var(--c-mo-fg);font-weight:600}.neg{color:var(--c-red-fg);font-weight:700}.tq{color:var(--c-teal-fg);font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+.chip .dot{width:6px;height:6px;border-radius:3px;background:currentColor}
+.chip.cn{background:var(--c-red-bg);color:var(--c-red-fg)}
+.chip.dd{background:var(--c-mo-bg);color:var(--c-mo-fg)}
+.chip.dt{background:var(--c-dh-bg);color:var(--c-dh-fg)}
+.chip.ct{background:var(--c-kh-bg);color:var(--c-kh-fg)}
+.chip.gt{background:var(--c-teal-bg);color:var(--c-teal-fg)}
+.chip.cht{background:var(--c-amber-bg);color:var(--c-amber-fg)}
+.chip.dht{background:var(--c-purple-bg);color:var(--c-purple-fg)}
+.sv .n{font-weight:600}.sv .m{font-size:11px;color:var(--m3-on-surface-variant)}
+.act{display:flex;gap:6px;justify-content:flex-end}
+.pill-btn{height:34px;border-radius:999px;border:1px solid var(--m3-outline);background:var(--m3-surface);color:var(--m3-on-surface-variant);cursor:pointer;font-size:12px;font-weight:600;padding:0 14px;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.pill-btn .msr{font-size:15px}
+.pill-btn.pay{color:var(--c-mo-fg);border-color:var(--c-mo-fg)}
+.pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 20px;font-size:12.5px;color:var(--m3-on-surface-variant)}
+.pg{width:32px;height:32px;border-radius:10px;border:1px solid var(--m3-outline);background:var(--m3-surface);color:var(--m3-on-surface);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pg.on{background:var(--m3-primary);color:#fff;border-color:var(--m3-primary);font-weight:600}
+/* dialog */
+.overlay{position:fixed;inset:0;background:rgba(31,41,55,.45);display:none;align-items:center;justify-content:center;z-index:20}
+.dialog{width:460px;max-width:94vw;background:var(--m3-surface);border-radius:20px;padding:26px;box-shadow:0 12px 40px rgba(31,41,55,.25)}
+.dialog h4{font-size:20px;font-weight:700;margin-bottom:4px}
+.dialog .d-sub{font-size:13px;color:var(--m3-on-surface-variant);margin-bottom:18px;line-height:1.6}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--m3-on-surface-variant);margin-bottom:7px}
+.field input,.field select{width:100%;height:46px;border:1px solid var(--m3-outline);border-radius:12px;padding:0 14px;font-size:13.5px;background:var(--bg-page);color:var(--m3-on-surface);font-family:inherit}
+.seg{display:flex;border:1px solid var(--m3-outline);border-radius:999px;overflow:hidden;background:var(--bg-page);padding:4px}
+.seg button{flex:1;height:38px;border:none;border-radius:999px;background:transparent;color:var(--m3-on-surface-variant);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.seg button .msr{font-size:16px}
+.seg button.on{background:var(--m3-primary);color:var(--m3-on-primary)}
+.sum-box{background:var(--bg-page);border-radius:14px;padding:16px 18px;margin:16px 0;border:1px solid var(--m3-outline)}
+.sum-box .li{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+.sum-box .li.t{font-weight:700;border-top:1px dashed var(--m3-outline);margin-top:6px;padding-top:10px}
+.hint{font-size:11px;color:var(--m3-on-surface-variant);margin-top:5px;display:flex;align-items:center;gap:5px}
+.hint .msr{font-size:13px}
+.d-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.btn-text{background:none;border:none;color:var(--m3-primary);font-size:13.5px;font-weight:600;height:42px;padding:0 16px;border-radius:999px;cursor:pointer;font-family:inherit}
+.theme-toggle{position:fixed;top:12px;right:16px;z-index:30;width:40px;height:40px;border-radius:50%;border:1px solid var(--m3-outline);background:var(--m3-surface);color:var(--m3-on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center}
+@media(max-width:1100px){.sidebar{display:none}.stats{grid-template-columns:repeat(2,1fr)}.content{padding:16px}}
+</style>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()" title="Sáng / Tối"><span class="msr">dark_mode</span></button>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">ĐK</div>
+      <div><div class="n">Đăng ký môn học</div><div class="r">Đại học Khoa học · 2026–2027</div></div>
+    </div>
+    <nav>
+      <div class="sec">Học phí</div>
+      <a><span class="msr">tune</span> Cấu hình chính sách</a>
+      <a><span class="msr">sell</span> Bảng giá tín chỉ</a>
+      <a><span class="msr">redeem</span> Miễn giảm · hoàn</a>
+      <a class="active"><span class="msr fill">receipt_long</span> Danh sách học phí</a>
+      <a><span class="msr">payments</span> Thu · biên lai</a>
+      <a><span class="msr">account_balance</span> Công nợ</a>
+      <div class="sec">Khác</div>
+      <a><span class="msr">bar_chart</span> Báo cáo tài chính</a>
+      <a><span class="msr">history</span> Audit log (học phí)</a>
+    </nav>
+    <div class="side-user">
+      <div class="av">KT</div>
+      <div><div class="n">Kế toán</div><div class="r">KT001 · Phòng KT</div></div>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <span class="crumb">HK 20263 / <b>Học phí</b></span>
+      <select class="hk-select">HK20263 — kỳ 1</select>
+      <div class="bell"><span class="msr">notifications</span></div>
+      <div class="avatar">K</div>
+    </div>
+    <div class="content">
+      <div class="page-head">
+        <h1>Học phí</h1>
+        <div class="sub">Tự động tính khi SV đăng ký (BR-15) · 7 trạng thái theo mục 10 · thu kèm Idempotency-Key chống trùng</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat a"><div class="k">Phải thu (KT-13)</div><div class="v">2.845.200.000 ₫</div><div class="d">1.240 SV · tự động theo đăng ký</div></div>
+        <div class="stat g"><div class="k">Đã thu</div><div class="v">1.912.400.000 ₫</div><div class="d">tỷ lệ thu 67,2%</div></div>
+        <div class="stat r"><div class="k">Còn nợ (KT-10)</div><div class="v">415 SV · 668.900.000 ₫</div><div class="d">38 SV quá hạn 30/09</div></div>
+        <div class="stat a"><div class="k">Chờ hoàn tiền (BR-05)</div><div class="v">12 SV · 38.400.000 ₫</div><div class="d">hoàn do hủy ngoài cửa sổ</div></div>
+      </div>
+
+      <div class="filterbar">
+        <div class="f"><label>Trạng thái</label><select>Tất cả</select></div>
+        <div class="f"><label>Ngành</label><select>Tất cả</select></div>
+        <div class="f"><label>Lớp HP</label><select>—</select></div>
+        <div class="f f-search"><label>Tìm SV (mã / tên)</label><input placeholder="VD: SV2251012345"></div>
+        <button class="btn btn-tonal"><span class="msr">calculate</span> Tính gộp (/calculate/)</button>
+        <button class="btn btn-filled" onclick="document.getElementById('dlg').style.display='flex'"><span class="msr">point_of_sale</span> Xác nhận thanh toán</button>
+      </div>
+
+      <div class="tbl-card">
+        <div class="tbl-head">
+          <h2>Danh sách học phí sinh viên (KT-08)</h2>
+          <span class="c">1.240 SV · hiển thị 1–6 · sắp xếp còn nợ giảm dần</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Sinh viên</th><th>Ngành</th><th style="text-align:right">TC</th><th style="text-align:right">Tổng tiền</th>
+              <th style="text-align:right">Đã thu</th><th style="text-align:right">Miễn giảm</th><th style="text-align:right">Hoàn tiền</th>
+              <th style="text-align:right">Còn nợ</th><th>Trạng thái</th><th style="text-align:right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="sv"><div class="n">Phạm Văn Cường</div><div class="m">SV2251012347 · K2025</div></td>
+              <td>CNTT</td><td class="num">18</td>
+              <td class="num">22.500.000 ₫</td>
+              <td class="num">0 ₫</td><td class="num">0 ₫</td><td class="num">0 ₫</td>
+              <td class="num neg">22.500.000 ₫</td>
+              <td><span class="chip cn"><span class="dot"></span>CON_NO</span></td>
+              <td><div class="act"><button class="pill-btn pay" onclick="document.getElementById('dlg').style.display='flex'"><span class="msr">point_of_sale</span> Thu</button><button class="pill-btn"><span class="msr">receipt</span> Biên lai</button></div></td>
+            </tr>
+            <tr>
+              <td class="sv"><div class="n">Vũ Văn E</div><div class="m">SV2251012349 · K2025</div></td>
+              <td>CNTT</td><td class="num">14</td>
+              <td class="num">17.500.000 ₫</td>
+              <td class="num">5.000.000 ₫</td><td class="num">0 ₫</td><td class="num">0 ₫</td>
+              <td class="num neg">12.500.000 ₫</td>
+              <td><span class="chip cn"><span class="dot"></span>CON_NO</span></td>
+              <td><div class="act"><button class="pill-btn pay" onclick="document.getElementById('dlg').style.display='flex'"><span class="msr">point_of_sale</span> Thu</button><button class="pill-btn"><span class="msr">receipt</span> Biên lai</button></div></td>
+            </tr>
+            <tr>
+              <td class="sv"><div class="n">Nguyễn Văn An</div><div class="m">SV2251012345 · K2025</div></td>
+              <td>CNTT</td><td class="num">18</td>
+              <td class="num">22.500.000 ₫</td>
+              <td class="num">22.500.000 ₫</td>
+              <td class="num tq">-2.250.000 ₫</td><td class="num">0 ₫</td>
+              <td class="num">0 ₫</td>
+              <td><span class="chip dd"><span class="dot"></span>DA_DONG</span></td>
+              <td><div class="act"><button class="pill-btn"><span class="msr">receipt</span> Biên lai</button></div></td>
+            </tr>
+            <tr>
+              <td class="sv"><div class="n">Lê Thị Bình</div><div class="m">SV2251012346 · K2025</div></td>
+              <td>CNTT</td><td class="num">18</td>
+              <td class="num">22.500.000 ₫</td>
+              <td class="num">10.000.000 ₫</td>
+              <td class="num tq">-2.250.000 ₫</td><td class="num">0 ₫</td>
+              <td class="num">10.250.000 ₫</td>
+              <td><span class="chip gt"><span class="dot"></span>GIAM_TRU</span></td>
+              <td><div class="act"><button class="pill-btn pay" onclick="document.getElementById('dlg').style.display='flex'"><span class="msr">point_of_sale</span> Thu</button><button class="pill-btn"><span class="msr">receipt</span> Biên lai</button></div></td>
+            </tr>
+            <tr>
+              <td class="sv"><div class="n">Hoàng Thị Dung</div><div class="m">SV2251012348 · K2025</div></td>
+              <td>CNTT</td><td class="num">12</td>
+              <td class="num">15.000.000 ₫</td>
+              <td class="num">15.000.000 ₫</td><td class="num">0 ₫</td>
+              <td class="num" style="color:var(--c-amber-fg);font-weight:600">6.000.000 ₫</td>
+              <td class="num">0 ₫</td>
+              <td><span class="chip cht"><span class="dot"></span>CHO_HOAN_TIEN</span></td>
+              <td><div class="act"><button class="pill-btn"><span class="msr">check_circle</span> Xác nhận đã chi</button><button class="pill-btn"><span class="msr">receipt</span></button></div></td>
+            </tr>
+            <tr>
+              <td class="sv"><div class="n">Đặng Văn F</div><div class="m">SV2251012350 · K2025</div></td>
+              <td>HTTT</td><td class="num">18</td>
+              <td class="num">21.600.000 ₫</td>
+              <td class="num">21.600.000 ₫</td><td class="num">0 ₫</td>
+              <td class="num" style="color:var(--c-purple-fg);font-weight:600">0 ₫</td>
+              <td class="num">0 ₫</td>
+              <td><span class="chip dht"><span class="dot"></span>DA_HOAN_TIEN</span></td>
+              <td><div class="act"><button class="pill-btn"><span class="msr">receipt</span> Biên lai</button></div></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pager">
+          <span>Hiển thị 1–6 / 1.240</span>
+          <button class="pg">‹</button><button class="pg on">1</button><button class="pg">2</button><button class="pg">…</button><button class="pg">208</button><button class="pg">›</button>
+          <select style="height:32px;border:1px solid var(--m3-outline);border-radius:10px;background:var(--m3-surface);color:var(--m3-on-surface);font-size:12px;font-family:inherit"><option>25 / trang</option><option>50 / trang</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog KT-09 -->
+<div class="overlay" id="dlg">
+  <div class="dialog">
+    <h4>Xác nhận thanh toán</h4>
+    <div class="d-sub">POST /api/tuition/payments/ — kèm <b>Idempotency-Key</b> chống thu trùng khi retry mạng.</div>
+    <div class="field"><label>Sinh viên</label><input value="SV2251012347 — Phạm Văn Cường · CNTT" readonly></div>
+    <div class="field"><label>Phương thức</label>
+      <div class="seg">
+        <button class="on"><span class="msr">payments</span> Tiền mặt</button>
+        <button><span class="msr">account_balance</span> Chuyển khoản</button>
+        <button>Khác</button>
+      </div>
+    </div>
+    <div class="field"><label>Số tiền thu (₫)</label><input type="text" value="22.500.000">
+      <div class="hint"><span class="msr">fingerprint</span> Idempotency: 7f3c2a1e-… (tự sinh · UNIQUE)</div>
+    </div>
+    <div class="sum-box">
+      <div class="li"><span>Tổng tiền</span><span>22.500.000 ₫</span></div>
+      <div class="li"><span>Đã thu</span><span>0 ₫</span></div>
+      <div class="li"><span>Miễn giảm</span><span>0 ₫</span></div>
+      <div class="li t"><span>Còn nợ sau thu</span><span style="color:var(--c-mo-fg)">0 ₫ → DA_DONG</span></div>
+    </div>
+    <div class="d-foot">
+      <button class="btn-text" onclick="document.getElementById('dlg').style.display='none'">Hủy</button>
+      <button class="btn btn-filled"><span class="msr">task_alt</span> Ghi nhận + in biên lai</button>
+    </div>
+  </div>
+</div>
+<script>
+function toggleTheme(){
+  const b=document.body, t=b.getAttribute('data-theme')==='dark';
+  b.setAttribute('data-theme', t?'':'dark');
+  document.querySelector('.theme-toggle .msr').textContent = t ? 'dark_mode' : 'light_mode';
+}
+</script>
+</body>
+</html>

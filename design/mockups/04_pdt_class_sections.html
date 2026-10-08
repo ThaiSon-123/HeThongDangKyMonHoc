@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý lớp học phần — Phòng đào tạo · Academia ấm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<style>
+:root{
+  --bg-page:#FAF7F2;--m3-primary:#2D6A4F;--m3-on-primary:#FFFFFF;--m3-primary-container:#DCEDE3;
+  --accent:#D97706;--m3-error:#B3402F;--m3-surface:#FFFFFF;--sidebar-bg:#1F2937;--sidebar-text:#E5E1D8;
+  --m3-surface-variant:#F3EEE5;--m3-outline:#EAE4D9;--m3-on-surface:#212B25;--m3-on-surface-variant:#6B7268;
+  --shadow:0 2px 8px rgba(31,41,55,.06),0 1px 2px rgba(31,41,55,.04);
+  --c-mo-bg:#E7F2EA;--c-mo-fg:#2D6A4F;--c-dh-bg:#E8EEF7;--c-dh-fg:#3B5B92;
+  --c-kh-bg:#EFEAE2;--c-kh-fg:#8A7E6A;--c-dd-bg:#E5E0D8;--c-dd-fg:#6B6252;
+  --c-red-bg:#FBEAE6;--c-red-fg:#B3402F;--c-amber-bg:#FDF0DC;--c-amber-fg:#B45309;
+}
+[data-theme="dark"]{
+  --bg-page:#141D18;--m3-primary:#74C69D;--m3-on-primary:#0E2A1D;--m3-primary-container:#1F3D2E;
+  --accent:#E8A33D;--m3-error:#E77A67;--m3-surface:#1C2620;--sidebar-bg:#0F171F;--sidebar-text:#E5E1D8;
+  --m3-surface-variant:#223028;--m3-outline:#33413A;--m3-on-surface:#EAE6DD;--m3-on-surface-variant:#A8A296;
+  --shadow:0 2px 8px rgba(0,0,0,.3);
+  --c-mo-bg:#1F3D2E;--c-mo-fg:#74C69D;--c-dh-bg:#1E2C42;--c-dh-fg:#8FB3E3;
+  --c-kh-bg:#2A2822;--c-kh-fg:#B8AC96;--c-dd-bg:#2A2825;--c-dd-fg:#A89F8F;
+  --c-red-bg:#3A211D;--c-red-fg:#E77A67;--c-amber-bg:#38290F;--c-amber-fg:#E8A33D;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Be Vietnam Pro',system-ui,sans-serif}
+.msr{font-family:'Material Symbols Rounded';font-weight:normal;font-style:normal;font-size:20px;line-height:1;display:inline-block;white-space:nowrap;-webkit-font-smoothing:antialiased;font-variation-settings:'FILL' 0,'wght' 500,'GRAD' 0,'opsz' 24;user-select:none}
+.msr.fill{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+body{background:var(--bg-page);color:var(--m3-on-surface);font-size:14px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:280px;background:var(--sidebar-bg);color:var(--sidebar-text);padding:20px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:12px;padding:4px 10px 20px;border-bottom:1px solid rgba(229,225,216,.12);margin-bottom:12px}
+.brand-logo{width:42px;height:42px;border-radius:12px;background:var(--m3-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+.brand .n{font-size:15px;font-weight:700}.brand .r{font-size:11px;color:rgba(229,225,216,.55)}
+nav{flex:1;overflow-y:auto}
+nav .sec{font-size:10.5px;font-weight:600;color:rgba(229,225,216,.45);padding:14px 12px 6px;letter-spacing:1px;text-transform:uppercase}
+nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;color:rgba(229,225,216,.72);font-size:13px;font-weight:500;min-height:42px;cursor:pointer}
+nav a .msr{font-size:19px;opacity:.85}
+nav a:hover{background:rgba(229,225,216,.07);color:var(--sidebar-text)}
+nav a.active{background:var(--m3-primary);color:#fff;font-weight:600}
+[data-theme="dark"] nav a.active{background:var(--m3-primary-container);color:var(--m3-primary)}
+.side-user{display:flex;align-items:center;gap:10px;padding:12px 10px;border-top:1px solid rgba(229,225,216,.12);margin-top:12px}
+.side-user .av{width:38px;height:38px;border-radius:50%;background:var(--c-dh-bg);color:var(--c-dh-fg);display:flex;align-items:center;justify-content:center;font-weight:700}
+.side-user .n{font-size:13px;font-weight:600;color:var(--sidebar-text)}
+.side-user .r{font-size:11px;color:rgba(229,225,216,.55)}
+.main{flex:1;min-width:0}
+.topbar{height:64px;display:flex;align-items:center;padding:0 24px;gap:14px;position:sticky;top:0;z-index:5;background:var(--bg-page);border-bottom:1px solid var(--m3-outline)}
+.crumb{font-size:12px;color:var(--m3-on-surface-variant);font-weight:500}
+.crumb b{color:var(--m3-on-surface);font-weight:600}
+.hk-select{height:40px;border:1px solid var(--m3-outline);border-radius:999px;background:var(--m3-surface);color:var(--m3-on-surface);padding:0 14px;font-size:13px;font-family:inherit;margin-left:auto}
+.bell{position:relative;width:40px;height:40px;border-radius:50%;border:1px solid var(--m3-outline);background:var(--m3-surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--m3-on-surface-variant)}
+.bell .badge{position:absolute;top:-3px;right:-3px;width:18px;height:18px;border-radius:9px;background:var(--m3-error);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--m3-primary);color:var(--m3-on-primary);display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 0 0 2px var(--bg-page),0 0 0 4px var(--m3-primary)}
+.content{padding:24px;max-width:1280px}
+.page-head h1{font-size:24px;font-weight:700;margin-bottom:4px}
+.page-head .sub{font-size:13px;color:var(--m3-on-surface-variant);margin-bottom:20px}
+/* stats — DataCard viền trên màu nhóm */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat{background:var(--m3-surface);border:1px solid var(--m3-outline);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);border-top:3px solid var(--m3-outline)}
+.stat .k{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--m3-on-surface-variant)}
+.stat .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:6px}
+.stat .d{font-size:11.5px;margin-top:4px;color:var(--m3-on-surface-variant)}
+.stat.hv{border-top-color:var(--m3-primary)}.stat.hv .v{color:var(--m3-primary)}
+.stat.tc{border-top-color:var(--accent)}.stat.tc .v{color:var(--accent)}
+.stat.ld{border-top-color:var(--c-dh-fg)}.stat.ld .v{color:var(--c-dh-fg)}
+/* filter */
+.filterbar{background:var(--m3-surface);border:1px solid var(--m3-outline);border-radius:16px;padding:14px 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;box-shadow:var(--shadow)}
+.f{display:flex;flex-direction:column;gap:5px}
+.f label{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--m3-on-surface-variant)}
+.f select{height:42px;border:1px solid var(--m3-outline);border-radius:12px;background:var(--m3-surface);color:var(--m3-on-surface);padding:0 12px;font-size:13px;min-width:140px;font-family:inherit}
+.f-search{flex:1;min-width:180px}
+.f-search input{width:100%;height:42px;border:1px solid var(--m3-outline);border-radius:999px;padding:0 16px;font-size:13px;background:var(--m3-surface);color:var(--m3-on-surface);font-family:inherit}
+.btn{height:42px;border-radius:999px;border:none;font-size:13.5px;font-weight:600;cursor:pointer;padding:0 22px;display:inline-flex;align-items:center;gap:8px;font-family:inherit}
+.btn .msr{font-size:18px}
+.btn-filled{background:var(--m3-primary);color:var(--m3-on-primary)}
+/* table */
+.tbl-card{background:var(--m3-surface);border:1px solid var(--m3-outline);border-radius:16px;overflow:auto;box-shadow:var(--shadow)}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--m3-outline);flex-wrap:wrap;gap:10px}
+.tbl-head h2{font-size:16px;font-weight:700}
+.tbl-head .c{font-size:12px;color:var(--m3-on-surface-variant)}
+table{width:100%;border-collapse:collapse;min-width:1080px}
+th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--m3-on-surface-variant);padding:12px 16px;background:var(--m3-surface-variant);white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid var(--m3-outline);font-size:13.5px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.num{font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap}
+.chip .dot{width:6px;height:6px;border-radius:3px;background:currentColor}
+.chip.mo{background:var(--c-mo-bg);color:var(--c-mo-fg)}
+.chip.dh{background:var(--c-dh-bg);color:var(--c-dh-fg)}
+.chip.kh{background:var(--c-kh-bg);color:var(--c-kh-fg)}
+.chip.dd{background:var(--c-dd-bg);color:var(--c-dd-fg)}
+.sub{font-size:11px;color:var(--m3-on-surface-variant)}
+.seat-bar{display:flex;align-items:center;gap:8px}
+.seat{width:90px;height:6px;background:var(--m3-surface-variant);border-radius:3px;position:relative;overflow:hidden}
+.seat .f{position:absolute;left:0;top:0;bottom:0;background:var(--m3-primary);border-radius:3px}
+.seat.full .f{background:var(--m3-error)}
+.seat.warn .f{background:var(--accent)}
+.seat-t{font-size:12px;font-variant-numeric:tabular-nums;color:var(--m3-on-surface-variant)}
+.sch{font-size:12px;color:var(--m3-on-surface-variant);line-height:1.5}
+.sch b{color:var(--m3-on-surface);font-weight:600}
+.act{display:flex;gap:6px;justify-content:flex-end}
+.ic-btn{width:36px;height:36px;border-radius:12px;border:1px solid var(--m3-outline);background:var(--m3-surface);color:var(--m3-on-surface-variant);cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.ic-btn .msr{font-size:17px}
+.ic-btn.go{color:var(--c-mo-fg);border-color:var(--c-mo-fg)}
+.ic-btn.danger{color:var(--c-red-fg);border-color:var(--c-red-fg)}
+/* pager */
+.pager{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 20px;font-size:12.5px;color:var(--m3-on-surface-variant)}
+.pg{width:32px;height:32px;border-radius:10px;border:1px solid var(--m3-outline);background:var(--m3-surface);color:var(--m3-on-surface);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.pg.on{background:var(--m3-primary);color:#fff;border-color:var(--m3-primary);font-weight:600}
+/* dialog */
+.overlay{position:fixed;inset:0;background:rgba(31,41,55,.45);display:none;align-items:center;justify-content:center;z-index:20}
+.dialog{width:580px;max-width:94vw;max-height:92vh;overflow:auto;background:var(--m3-surface);border-radius:20px;padding:26px;box-shadow:0 12px 40px rgba(31,41,55,.25)}
+.dialog h4{font-size:20px;font-weight:700;margin-bottom:4px}
+.dialog .d-sub{font-size:13px;color:var(--m3-on-surface-variant);margin-bottom:18px;line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--m3-on-surface-variant);margin-bottom:7px}
+.field input,.field select{width:100%;height:46px;border:1px solid var(--m3-outline);border-radius:12px;padding:0 14px;font-size:13.5px;background:var(--bg-page);color:var(--m3-on-surface);font-family:inherit}
+.sect-title{font-size:14px;font-weight:700;border-top:1px solid var(--m3-outline);margin:20px 0 4px;padding-top:18px}
+.sect-note{font-size:12px;color:var(--m3-on-surface-variant);margin-bottom:12px}
+.sched-row{display:grid;grid-template-columns:56px 1fr 1fr 1fr 1.2fr;gap:10px;margin-bottom:10px;align-items:center}
+.sched-row .f-lab{font-size:12px;font-weight:600;color:var(--m3-on-surface-variant)}
+.sched-row select,.sched-row input{height:42px;border:1px solid var(--m3-outline);border-radius:12px;padding:0 10px;font-size:13px;background:var(--bg-page);color:var(--m3-on-surface);width:100%;font-family:inherit}
+.conf-warn{display:flex;gap:12px;background:var(--c-red-bg);color:var(--c-red-fg);border-left:4px solid var(--m3-error);border-radius:12px;padding:12px 16px;font-size:12.5px;font-weight:500;margin:10px 0 16px;align-items:flex-start}
+.d-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.btn-tonal{background:var(--m3-primary-container);color:var(--m3-primary)}
+.btn-text{background:none;border:none;color:var(--m3-primary);font-size:13.5px;font-weight:600;height:42px;padding:0 16px;border-radius:999px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.theme-toggle{position:fixed;top:12px;right:16px;z-index:30;width:40px;height:40px;border-radius:50%;border:1px solid var(--m3-outline);background:var(--m3-surface);color:var(--m3-on-surface);cursor:pointer;display:flex;align-items:center;justify-content:center}
+@media(max-width:1100px){.sidebar{display:none}.stats{grid-template-columns:repeat(2,1fr)}.content{padding:16px}}
+</style>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()" title="Sáng / Tối"><span class="msr">dark_mode</span></button>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">ĐK</div>
+      <div><div class="n">Đăng ký môn học</div><div class="r">Đại học Khoa học · 2026–2027</div></div>
+    </div>
+    <nav>
+      <div class="sec">Đào tạo</div>
+      <a><span class="msr">account_tree</span> Ngành đào tạo</a>
+      <a><span class="msr">menu_book</span> Chương trình CTĐT</a>
+      <a><span class="msr">import_contacts</span> Môn học · tiên quyết</a>
+      <a><span class="msr">event</span> Học kỳ · cửa sổ ĐK</a>
+      <a class="active"><span class="msr fill">groups</span> Lớp học phần · lịch</a>
+      <div class="sec">Theo dõi</div>
+      <a><span class="msr">playlist_add_check</span> Đăng ký môn học</a>
+      <a><span class="msr">grade</span> Duyệt bảng điểm</a>
+      <a><span class="msr">repeat</span> Đơn học lại</a>
+      <a><span class="msr">fact_check</span> Yêu cầu sửa ĐD</a>
+      <div class="sec">Khác</div>
+      <a><span class="msr">bar_chart</span> Báo cáo đào tạo</a>
+      <a><span class="msr">campaign</span> Gửi thông báo</a>
+      <a><span class="msr">history</span> Audit log</a>
+    </nav>
+    <div class="side-user">
+      <div class="av">ĐT</div>
+      <div><div class="n">Phòng Đào tạo</div><div class="r">DT001 · Phòng ĐT</div></div>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <span class="crumb">HK 20263 / <b>Lớp học phần</b></span>
+      <select class="hk-select">HK20263 — kỳ 1 (MỞ đăng ký)</select>
+      <div class="bell"><span class="msr">notifications</span><span class="badge">2</span></div>
+      <div class="avatar">Đ</div>
+    </div>
+    <div class="content">
+      <div class="page-head">
+        <h1>Lớp học phần</h1>
+        <div class="sub">124 lớp trong học kỳ 20263 · trạng thái theo mục 10: KE_HOACH → MO → DANG_HOC → DA_DONG</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat hv"><div class="k">Lớp HP học kỳ</div><div class="v">124</div><div class="d">4 KE_HOACH · 62 MO · 55 DANG_HOC · 3 DA_DONG</div></div>
+        <div class="stat hv"><div class="k">Tổng đăng ký</div><div class="v">3.420</div><div class="d" style="color:var(--c-mo-fg);font-weight:600">+182 trong 24h</div></div>
+        <div class="stat tc"><div class="k">Lớp sắp đầy (≥90%)</div><div class="v">11</div><div class="d">cân nhắc mở thêm lớp</div></div>
+        <div class="stat ld"><div class="k">Lớp đã đầy</div><div class="v">3</div><div class="d">CNTT401.1 · MAT201.2 · PHY102.1</div></div>
+      </div>
+
+      <div class="filterbar">
+        <div class="f"><label>Trạng thái</label><select>Tất cả</select></div>
+        <div class="f"><label>Ngành</label><select>Tất cả</select></div>
+        <div class="f"><label>Giáo viên</label><select>Tất cả</select></div>
+        <div class="f f-search"><label>Tìm mã lớp / môn / GV</label><input placeholder="VD: CNTT203"></div>
+        <button class="btn btn-filled" onclick="document.getElementById('dlg').style.display='flex'"><span class="msr">add</span> Mở lớp học phần</button>
+      </div>
+
+      <div class="tbl-card">
+        <div class="tbl-head">
+          <h2>Danh sách lớp học phần (PDT-08)</h2>
+          <span class="c">124 lớp · hiển thị 1–5 · sắp xếp theo mã lớp</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Mã lớp</th><th>Môn học</th><th>Giáo viên</th><th>Học kỳ</th>
+              <th>Sĩ số</th><th>Lịch học (PDT-09)</th><th>Trạng thái</th><th style="text-align:right">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>CNTT203.1</b></td>
+              <td><div style="font-weight:600">Cơ sở dữ liệu</div><div class="sub">4 TC (3+1) · khối chuyên ngành</div></td>
+              <td>Trần Thị B</td>
+              <td class="num">20263</td>
+              <td class="num"><div class="seat-bar"><div class="seat warn"><div class="f" style="width:75%"></div></div><span class="seat-t">45/60</span></div></td>
+              <td class="sch"><b>T3, T5 · chiều</b> tiết 6–9<br>Tác D105</td>
+              <td><span class="chip dh"><span class="dot"></span>DANG_HOC</span></td>
+              <td><div class="act"><button class="ic-btn" title="Sửa"><span class="msr">edit</span></button><button class="ic-btn" title="Xem SV"><span class="msr">groups</span></button><button class="ic-btn danger" title="Đóng lớp"><span class="msr">stop_circle</span></button></div></td>
+            </tr>
+            <tr>
+              <td><b>CNTT202.1</b></td>
+              <td><div style="font-weight:600">Lập trình nâng cao</div><div class="sub">3 TC (2+1)</div></td>
+              <td>Nguyễn Văn A</td>
+              <td class="num">20263</td>
+              <td class="num"><div class="seat-bar"><div class="seat"><div class="f" style="width:76%"></div></div><span class="seat-t">38/50</span></div></td>
+              <td class="sch"><b>T2, T4 · sáng</b> tiết 1–3<br>Tác D201</td>
+              <td><span class="chip mo"><span class="dot"></span>MO</span></td>
+              <td><div class="act"><button class="ic-btn" title="Sửa"><span class="msr">edit</span></button><button class="ic-btn" title="Xem SV"><span class="msr">groups</span></button><button class="ic-btn go" title="Bắt đầu học"><span class="msr">play_arrow</span></button></div></td>
+            </tr>
+            <tr>
+              <td><b>CNTT401.1</b></td>
+              <td><div style="font-weight:600">Trí tuệ nhân tạo</div><div class="sub">3 TC</div></td>
+              <td>Trần Thị B</td>
+              <td class="num">20263</td>
+              <td class="num"><div class="seat-bar"><div class="seat full"><div class="f" style="width:100%"></div></div><span class="seat-t">50/50</span></div></td>
+              <td class="sch"><b>T6 · chiều</b> tiết 6–9<br>Tác D105</td>
+              <td><span class="chip mo"><span class="dot"></span>MO</span></td>
+              <td><div class="act"><button class="ic-btn" title="Sửa"><span class="msr">edit</span></button><button class="ic-btn" title="Xem SV"><span class="msr">groups</span></button><button class="ic-btn go" title="Bắt đầu học"><span class="msr">play_arrow</span></button></div></td>
+            </tr>
+            <tr>
+              <td><b>MAT102.2</b></td>
+              <td><div style="font-weight:600">Giải tích 2</div><div class="sub">4 TC · khối cơ sở ngành</div></td>
+              <td>Phạm D</td>
+              <td class="num">20263</td>
+              <td class="num"><div class="seat-bar"><div class="seat"><div class="f" style="width:40%"></div></div><span class="seat-t">44/110</span></div></td>
+              <td class="sch"><b>T3 · sáng</b> tiết 1–4<br>Hall B01</td>
+              <td><span class="chip kh"><span class="dot"></span>KE_HOACH</span></td>
+              <td><div class="act"><button class="ic-btn" title="Đặt lịch"><span class="msr">calendar_month</span></button><button class="ic-btn go" title="Mở lớp"><span class="msr">lock_open</span></button></div></td>
+            </tr>
+            <tr>
+              <td><b>CNTT101.3</b></td>
+              <td><div style="font-weight:600">Nhập môn lập trình</div><div class="sub">3 TC · DAT_KHONG_DAT (P/F)</div></td>
+              <td>Lê Văn C</td>
+              <td class="num">20263</td>
+              <td class="num"><div class="seat-bar"><div class="seat"><div class="f" style="width:60%"></div></div><span class="seat-t">36/60</span></div></td>
+              <td class="sch"><b>T3 · sáng</b> tiết 1–3<br>Tác D201</td>
+              <td><span class="chip dd"><span class="dot"></span>DA_DONG</span></td>
+              <td><div class="act"><button class="ic-btn" title="Duyệt điểm"><span class="msr">grade</span></button></div></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pager">
+          <span>Hiển thị 1–5 / 124</span>
+          <button class="pg">‹</button><button class="pg on">1</button><button class="pg">2</button><button class="pg">3</button><button class="pg">…</button><button class="pg">25</button><button class="pg">›</button>
+          <select style="height:32px;border:1px solid var(--m3-outline);border-radius:10px;background:var(--m3-surface);color:var(--m3-on-surface);font-size:12px;font-family:inherit"><option>25 / trang</option><option>50 / trang</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog PDT-08/09 -->
+<div class="overlay" id="dlg">
+  <div class="dialog">
+    <h4>Mở lớp học phần mới</h4>
+    <div class="d-sub">Trạng thái khởi tạo <b>KE_HOACH</b> → chuyển <b>MO</b> khi có lịch + sĩ số (POST /class-sections/{id}/open/).</div>
+    <div class="grid2">
+      <div class="field"><label>Môn học *</label><select><option>— Chọn môn —</option><option>Cơ sở dữ liệu (CNTT203)</option><option>Mạng máy tính (CNTT301)</option></select></div>
+      <div class="field"><label>Mã lớp *</label><input placeholder="VD: CNTT203.2"></div>
+      <div class="field"><label>Giáo viên phụ trách</label><select><option>— Chọn GV —</option><option>Trần Thị B</option><option>Lê Văn C</option></select></div>
+      <div class="field"><label>Sĩ số tối đa *</label><input type="number" value="60"></div>
+      <div class="field"><label>Ngày bắt đầu (trống = theo học kỳ)</label><input type="date"></div>
+      <div class="field"><label>Ngày kết thúc (mốc hạn nhập điểm BR-13)</label><input type="date"></div>
+    </div>
+
+    <div class="sect-title">Lịch học (PDT-09 · BR-08/09)</div>
+    <div class="sect-note">Ngày 15 tiết: sáng 1–5 · chiều 6–10 · tối 11–15. Buổi tự suy ra từ tiết bắt đầu. Không trùng phòng + GV cùng khung giờ.</div>
+    <div class="sched-row">
+      <span class="f-lab">Lịch 1</span>
+      <select><option>Thứ 2</option><option selected>Thứ 3</option><option>Thứ 4</option></select>
+      <select><option>1 (sáng)</option><option selected>6 (chiều)</option><option>11 (tối)</option></select>
+      <select><option>2</option><option>3</option><option selected>4</option></select>
+      <input placeholder="Phòng · VD D105">
+    </div>
+    <div class="sched-row">
+      <span class="f-lab">Lịch 2</span>
+      <select><option>Thứ 2</option><option>Thứ 3</option><option selected>Thứ 5</option></select>
+      <select><option selected>6 (chiều)</option><option>1 (sáng)</option><option>11 (tối)</option></select>
+      <select><option selected>4</option><option>3</option></select>
+      <input placeholder="Phòng · VD D105" value="D105">
+    </div>
+    <div class="conf-warn"><span class="msr fill" style="font-size:20px">error</span><span>Trùng phòng D105 + GV Trần Thị B: Thứ 4 tiết 6–9 đã có lớp CNTT203.1 — vui lòng đổi phòng hoặc tiết.</span></div>
+    <button class="btn-text"><span class="msr">add</span> Thêm dòng lịch</button>
+
+    <div class="d-foot">
+      <button class="btn-text" onclick="document.getElementById('dlg').style.display='none'">Hủy</button>
+      <button class="btn btn-tonal">Lưu nháp (KE_HOACH)</button>
+      <button class="btn btn-filled"><span class="msr">check_circle</span> Lưu + Mở lớp (MO)</button>
+    </div>
+  </div>
+</div>
+<script>
+function toggleTheme(){
+  const b=document.body, t=b.getAttribute('data-theme')==='dark';
+  b.setAttribute('data-theme', t?'':'dark');
+  document.querySelector('.theme-toggle .msr').textContent = t ? 'dark_mode' : 'light_mode';
+}
+</script>
+</body>
+</html>
