@@ -40,33 +40,34 @@ HeThongDangKyMonHoc/            ← git root
 ## 1. PHA 0 — NỀN TẢNG (1 tuần)
 
 ### 1.1. Repo & CI
-- [ ] **Chuẩn bị repo (Bước 0):**
-  - [ ] Commit hiện trạng — Flutter skeleton (`dang_ky_mon_hoc/`) + `checklist.md` + `plan.md` + `chuc_nang.md` + `design/` hiện đang untracked
-  - [ ] Xóa `linux/`, `macos/`, `windows/` khỏi `dang_ky_mon_hoc/` (chỉ giữ `android/`, `ios/`, `web/` — cần lại thì `flutter create --platforms=linux .`)
-  - [ ] `.gitignore` bổ sung: `.idea/`, `*.iml`, `.dart_tool/`
-- [ ] Bố cục monorepo: `backend/` tạo mới cùng cấp với `dang_ky_mon_hoc/` (giữ nguyên tên thư mục Flutter — package name lấy từ `pubspec.yaml`); docker-compose đặt tại `backend/`; `plan.md`/`checklist.md`/`chuc_nang.md`/`design/` ở repo root
-- [ ] Repo backend (`backend/`) + Flutter dùng chung 1 repo
-- [ ] CI: job `backend` (ruff + mypy + pytest) — trigger theo path `backend/**`
-- [ ] CI: job `flutter` (analyze + test) — trigger theo path `dang_ky_mon_hoc/**`
-- [ ] Pre-commit: `black` + `ruff` + `dart format`
-- [ ] `.gitignore` loại `.env`, `__pycache__`, build artifacts
+- [x] **Chuẩn bị repo (Bước 0):**
+  - [ ] Commit hiện trạng — Flutter skeleton (`dang_ky_mon_hoc/`) + `checklist.md` + `plan.md` + `chuc_nang.md` + `design/` hiện đang untracked ← **CHƯA: cần bạn xác nhận**
+  - [x] Xóa `linux/`, `macos/`, `windows/` khỏi `dang_ky_mon_hoc/` (chỉ giữ `android/`, `ios/`, `web/` — cần lại thì `flutter create --platforms=linux .`) ← đã stage, chờ commit
+  - [x] `.gitignore` bổ sung: `.idea/`, `*.iml`, `.dart_tool/` (đã có sẵn từ trước)
+- [x] Bố cục monorepo: `backend/` tạo mới cùng cấp với `dang_ky_mon_hoc/` (giữ nguyên tên thư mục Flutter — package name lấy từ `pubspec.yaml`); docker-compose đặt tại `backend/`; `plan.md`/`checklist.md`/`chuc_nang.md`/`design/` ở repo root
+- [x] Repo backend (`backend/`) + Flutter dùng chung 1 repo
+- [x] CI: job `backend` (ruff + mypy + pytest) — trigger theo path `backend/**` (`dorny/paths-filter`)
+- [x] CI: job `flutter` (analyze + test) — trigger theo path `dang_ky_mon_hoc/**` (`dorny/paths-filter`)
+- [x] Pre-commit: `black` + `ruff` + `dart format` (`.pre-commit-config.yaml`)
+- [x] `.gitignore` loại `.env`, `__pycache__`, build artifacts
 
 ### 1.2. Docker & môi trường
-- [ ] `docker-compose.yml`: web (Django+Gunicorn) + db (PostgreSQL 16) + redis + celery worker + celery beat + nginx
-- [ ] `Dockerfile` backend (Python, Gunicorn)
-- [ ] `.env.example` commit kèm giá trị mẫu (plan.md mục 23)
-- [ ] `.env` thật **không commit**
-- [ ] `docker-compose up -d` chạy được toàn bộ service
+- [x] `docker-compose.yml`: web (Django+Gunicorn) + db (PostgreSQL 16) + redis + celery worker + celery beat + nginx
+- [x] `Dockerfile` backend (Python 3.12 + Gunicorn, `docker-entrypoint.sh` chờ DB → migrate → collectstatic)
+- [x] `.env.example` commit kèm giá trị mẫu (plan.md mục 23)
+- [x] `.env` thật **không commit** (`.gitignore` + `.dockerignore`)
+- [x] `docker-compose up -d` chạy được toàn bộ service — 6/6 healthy, `curl /api/docs/` → 200
+  - Lưu ý máy dev: host 8000 bị Docker Desktop chiếm → web map `${WEB_PORT:-8010}:8000`, vào qua nginx `:80`
 
 ### 1.3. Django skeleton
-- [ ] Project `config/` (settings dev/prod, urls, wsgi, asgi)
-- [ ] `DJANGO_SETTINGS_MODULE`, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` từ env
-- [ ] `core/exceptions.py` — envelope lỗi `{error: {code, message, details}}` + mã lỗi nghiệp vụ (plan.md mục 13.8)
-- [ ] `core/` — permissions, pagination, mixins (`AuditLogMixin`, `ScopeFilter`)
-- [ ] `django-filter` + phân trang (mặc định 25, tối đa 50)
-- [ ] `Idempotency-Key` middleware (plan.md mục 13.7)
-- [ ] `drf-spectacular` → Swagger `/api/docs/` + schema `/api/schema/`
-- [ ] `django-celery-beat` + 5 job rỗng (plan.md mục 11.8)
+- [x] Project `config/` (settings dev/prod, urls, wsgi, asgi)
+- [x] `DJANGO_SETTINGS_MODULE`, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` từ env
+- [x] `core/exceptions.py` — envelope lỗi `{error: {code, message, details}}` + mã lỗi nghiệp vụ (plan.md mục 13.8)
+- [x] `core/` — permissions, pagination, mixins (`AuditLogMixin`, `ScopeFilter`)
+- [x] `django-filter` + phân trang (mặc định 25, tối đa 50)
+- [x] `Idempotency-Key` middleware (plan.md mục 13.7)
+- [x] `drf-spectacular` → Swagger `/api/docs/` + schema `/api/schema/` — route đã trả 200, **nội dung rỗng tới Pha 1** (chưa có viewset)
+- [x] `django-celery-beat` + 5 job `jobs.*` (plan.md mục 11.8) — worker đã đăng ký đủ 5
 
 ### 1.4. Flutter skeleton
 - [ ] Project Flutter (Web + Android)

@@ -1,0 +1,27 @@
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# E501 (dòng dài) để black lo; E203 bị black cãi nhau.
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "E203"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main"]
+strict = false
+warn_unused_ignores = true
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.dev"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+pythonpath = "."
+python_files = ["tests.py", "test_*.py"]
+addopts = "-q"

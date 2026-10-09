@@ -12,6 +12,16 @@ FILES = [
     "03_teacher_attendance.html",
     "04_pdt_class_sections.html",
     "05_accountant_tuition.html",
+    "06_sv_profile.html",
+    "07_sv_curriculum.html",
+    "08_sv_auto_schedule.html",
+    "09_sv_timetable.html",
+    "10_sv_registration_history.html",
+    "11_sv_attendance.html",
+    "12_sv_grades.html",
+    "13_sv_tuition.html",
+    "14_sv_notifications.html",
+    "15_sv_retake.html",
     "mobile/00_student_app.html",
 ]
 

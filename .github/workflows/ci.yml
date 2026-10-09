@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main, plan]
+  pull_request:
+
+jobs:
+  # Chạy trước để biết path nào đổi → 2 job dưới tự bỏ qua khi không liên quan.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      flutter: ${{ steps.filter.outputs.flutter }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            flutter:
+              - 'dang_ky_mon_hoc/**'
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: ruff
+        run: ruff check .
+      - name: black
+        run: black --check .
+      - name: mypy
+        run: mypy .
+      # exit 5 = không có test nào được collect (Pha 0 chưa có test) — không phải lỗi.
+      - name: pytest
+        run: pytest -q || [ $? -eq 5 ]
+
+  flutter:
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dang_ky_mon_hoc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze
+      - run: flutter test
