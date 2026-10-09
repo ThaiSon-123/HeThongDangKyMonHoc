@@ -108,7 +108,7 @@ Hệ thống Đăng ký Môn Học của nhóm được xây dựng đúng theo 
 
 ### Tầng dữ liệu (Data)
 
-14. **PostgreSQL 16** – cơ sở dữ liệu chính, lưu 27 thực thể (người dùng, lớp học, môn học, lịch Đăng ký, điểm, học phí...).
+14. **PostgreSQL 16** – cơ sở dữ liệu chính, lưu 27 thực thể (người dùng, lớp học, môn học, lịch đăng ký, điểm, học phí...).
 15. **Database Migration** – quản lý cấu trúc dữ liệu theo phiên bản.
 
 ---
@@ -120,10 +120,10 @@ Hệ thống Đăng ký Môn Học của nhóm được xây dựng đúng theo 
 | Flutter Web / App | Hiển thị giao diện, thu thập yêu cầu người dùng, gửi lên máy chủ | SV chọn môn, GV nhập điểm, KT duyệt học phí |
 | Router + State | Định hướng trang, lưu trạng thái | Chuyển đổi trang theo vai trò, lưu kết quả tìm kiếm môn |
 | Dio (HTTP Client) | Tự động gửi JWT, làm mới token khi hết hạn | Khi hết hạn access token, tự động làm mới, người dùng không cần đăng nhập lại |
-| Nginx | Phân giải tải, chặn HTTPS, tăng tốc | Chấm nhận cả yêu cầu, gửi tới Gunicorn; tăng tốc tài nguyên tĩnh |
+| Nginx | Phân giải tải, chặn HTTPS, tăng tốc | Tiếp nhận mọi yêu cầu, gửi tới Gunicorn; tăng tốc tài nguyên tĩnh |
 | Gunicorn | Chạy nhiều worker xử lý cùng lúc | Nhiều SV đăng ký cùng lượt, cùng lúc xử lý song song |
-| Django REST Framework | Xử lý logic nghiệp vụ, kiểm tra dữ liệu, phân quyền | BR-06: khi đăng ký môn, dùng `SELECT ... FOR UPDATE` để kiểm tra sỗ chỗn không vượt sỗ lưu |
-| Quản lý JWT | Xác thực, phân quyền theo vai trò | PĐ chỉ xem được dân khóa của khoa mình, KT chỉ duyệt học phí |
+| Django REST Framework | Xử lý logic nghiệp vụ, kiểm tra dữ liệu, phân quyền | BR-06: khi đăng ký môn, dùng `SELECT ... FOR UPDATE` để kiểm tra số chỗ không vượt sĩ số |
+| Quản lý JWT | Xác thực, phân quyền theo vai trò | PĐ chỉ xem được dữ liệu khoa mình, KT chỉ duyệt học phí |
 | Module nghiệp vụ (10 app) | Tách riêng từng lĩnh vực | Đăng ký môn, chấm điểm, điểm, học phí, thông báo... mỗi lĩnh vực 1 app |
 | Celery Worker + Beat | Xử lý công việc nền theo lịch | 5 job: chuyển trạng thái lịch học (00:05), quét cấm thi (00:30), thông báo học phí quá hạn (07:00), tính lại GPA (01:00), sao lưu DB (02:00) |
 | Redis | Hàng đợi tin nhắn giữa API và Celery | Khi API có công việc nền, đưa vào Redis, Celery worker lấy ra chạy |
