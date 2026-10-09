@@ -41,7 +41,7 @@ HeThongDangKyMonHoc/            ← git root
 
 ### 1.1. Repo & CI
 - [x] **Chuẩn bị repo (Bước 0):**
-  - [ ] Commit hiện trạng — Flutter skeleton (`dang_ky_mon_hoc/`) + `checklist.md` + `plan.md` + `chuc_nang.md` + `design/` hiện đang untracked ← **CHƯA: cần bạn xác nhận**
+  - [x] Commit hiện trạng — Flutter skeleton (`dang_ky_mon_hoc/`) + `checklist.md` + `plan.md` + `chuc_nang.md` + `design/` ← đã commit (`c0cee53`, kèm backend skeleton + CI)
   - [x] Xóa `linux/`, `macos/`, `windows/` khỏi `dang_ky_mon_hoc/` (chỉ giữ `android/`, `ios/`, `web/` — cần lại thì `flutter create --platforms=linux .`) ← đã stage, chờ commit
   - [x] `.gitignore` bổ sung: `.idea/`, `*.iml`, `.dart_tool/` (đã có sẵn từ trước)
 - [x] Bố cục monorepo: `backend/` tạo mới cùng cấp với `dang_ky_mon_hoc/` (giữ nguyên tên thư mục Flutter — package name lấy từ `pubspec.yaml`); docker-compose đặt tại `backend/`; `plan.md`/`checklist.md`/`chuc_nang.md`/`design/` ở repo root
@@ -70,28 +70,28 @@ HeThongDangKyMonHoc/            ← git root
 - [x] `django-celery-beat` + 5 job `jobs.*` (plan.md mục 11.8) — worker đã đăng ký đủ 5
 
 ### 1.4. Flutter skeleton
-- [ ] Project Flutter (Web + Android)
-- [ ] `core/api/` — Dio client + interceptor refresh token
-- [ ] `core/auth/` — auth provider + `flutter_secure_storage`
-- [ ] `core/router/` — GoRouter + route map theo role (plan.md mục 15.3)
-- [ ] `core/theme/` — Material 3
-- [ ] `shared/` — widgets, models, utils
-- [ ] **Route map theo vai trò: Admin/PĐT/KT chỉ Web; SV/GV Web + App** — khi build App chỉ đóng gói `/login`, `/forgot-password`, `/student/*`, `/teacher/*`
-- [ ] Build được cả Web + App, không lỗi console
+- [x] Project Flutter (Web + Android) — Flutter 3.47, đã có sẵn, giữ `android/` + `web/` + `ios/`
+- [x] `core/api/` — Dio client + interceptor refresh token (`QueuedInterceptor`, 401 → refresh 1 lần → retry; refesh fail → xoá token về login)
+- [x] `core/auth/` — `AuthController` (Riverpod `Notifier`: login/logout/restore phiên) + `TokenStorage` (`flutter_secure_storage`)
+- [x] `core/router/` — GoRouter + route map theo role (plan.md mục 15.3), redirect theo `AuthState` + `refreshListenable`
+- [x] `core/theme/` — Material 3 (`ColorScheme.fromSeed`, light + dark)
+- [x] `shared/` — `widgets/placeholder_screen.dart` (giữ chỗ cho 40 route); `models/`, `utils/` bổ sung theo pha
+- [x] **Route map theo vai trò: Admin/PĐT/KT chỉ Web; SV/GV Web + App** — `_webOnlyRoles` chặn bằng `kIsWeb`; route web-only mở trên App hiển thị màn "chỉ khả dụng trên trình duyệt"
+- [x] Build được cả Web + App, không lỗi console — `flutter analyze` 0 issue, widget test pass, `flutter build web` + `flutter build apk --debug` OK (commit `c164e57`)
 
 ### 1.5. Seed data
-- [ ] Management command `seed_demo` (plan.md mục 24)
-- [ ] Tài khoản: 1 Admin, 2 PĐT, 2 KT, 3 GV, 10 SV — mật khẩu `Demo@12345` (log console, không ghi repo)
-- [ ] 2 ngành × 1 CTĐT × 8 môn (6 bắt buộc + 2 tự chọn), đủ 5 khối kiến thức, 2 cặp tiên quyết
-- [ ] 1 môn `loai_danh_gia = DAT_KHONG_DAT`
-- [ ] 2 học kỳ: 1 `DONG` (có điểm `KHOA`), 1 `MO` + cửa sổ đăng ký mở
-- [ ] 6 lớp HP: 4 `MO` (1 lớp `si_so_toi_da = 2` test BR-02/06), 1 `DANG_HOC`, 1 `DA_DONG`
-- [ ] Mỗi lớp 2–3 `Schedule`, có 1 cặp lịch trùng giờ (test BR-03)
-- [ ] Bảng giá: `MAC_DINH` + 2 `NGANH` + 1 `KHOI_KIEN_THUC` + `LECH_LT` + `GIA_TH`
-- [ ] `SystemConfig`: tín chỉ 12–24, `tin_chi_toi_da_canh_bao = 14`, `MAX_ABSENT_PCT = 20`, `so_ngay_cho_phep_nhap_diem = 14`
-- [ ] 1 lớp có 10 buổi `DA_DIEM_DANH`, 1 SV vắng 3/10 = 30% (test BR-24)
+- [x] Management command `seed_demo` (plan.md mục 24) — `apps/config/management/commands/seed_demo.py`, idempotent (`update_or_create`), mật khẩu qua env `SEED_DEMO_PASSWORD`
+- [x] Tài khoản: 1 Admin, 2 PĐT, 2 KT, 3 GV, 10 SV — mật khẩu `Demo@12345` (log console khi chạy, không ghi repo)
+- [x] 2 ngành × 1 CTĐT × 8 môn (6 bắt buộc + 2 tự chọn), đủ 5 khối kiến thức, 2 cặp tiên quyết (IT2010←IT1010, IT3010←IT2010)
+- [x] 1 môn `loai_danh_gia = DAT_KHONG_DAT` (IT4020 Kỹ năng khởi nghiệp)
+- [x] 2 học kỳ: 1 `DONG` (có điểm `KHOA`), 1 `MO` + cửa sổ đăng ký mở
+- [x] 6 lớp HP: 4 `MO` (1 lớp `si_so_toi_da = 2` test BR-02/06), 1 `DANG_HOC`, 1 `DA_DONG` — `si_so_hien_tai` cập nhật theo đăng ký
+- [x] Mỗi lớp 2 `Schedule`, có 1 cặp lịch trùng giờ (IT1010/IT2010 cùng thứ 2 tiết 1–3, test BR-03)
+- [x] Bảng giá: `MAC_DINH` + 2 `NGANH` + 1 `KHOI_KIEN_THUC` + `LECH_LT` + `GIA_TH` + `TuitionConfig` (hạn đóng = cuối HK - 30 ngày)
+- [x] `SystemConfig`: tín chỉ 12–24, `tin_chi_toi_da_canh_bao = 14`, `max_absent_pct = 20`, `so_ngay_cho_phep_nhap_diem = 14` (cả 5 tham số cũng đặt trên Semester `MO`)
+- [x] 1 lớp có 10 buổi `DA_DIEM_DANH`, sv01 vắng 3/10 = 30% (test BR-20/BR-24); sv05 có 1 môn F → đơn học lại `DUYET` (BR-24); GPA cache sv01 = 3.99, sv02 = 2.10
 
-**Milestone Pha 0:** Docker chạy, Swagger mở được, seed data nạp đầy đủ, Flutter build Web + App.
+**Milestone Pha 0:** Docker chạy, Swagger mở được, seed data nạp đầy đủ, Flutter build Web + App. ← **HOÀN THÀNH (2026-10-09):** 18 user / 2 ngành / 2 CTĐT / 8 môn / 6 lớp / 52 đăng ký / 20 điểm / 10 buổi điểm danh — `seed_demo` idempotent, chạy lại an toàn.
 
 ---
 
