@@ -9,6 +9,11 @@ jobs:
   # Chạy trước để biết path nào đổi → 2 job dưới tự bỏ qua khi không liên quan.
   changes:
     runs-on: ubuntu-latest
+    # paths-filter gọi API liệt kê file của PR → cần pull-requests: read, nếu không lỗi
+    # "Resource not accessible by integration" khi token mặc định của repo bị giới hạn.
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       flutter: ${{ steps.filter.outputs.flutter }}
