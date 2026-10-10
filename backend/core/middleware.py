@@ -1,12 +1,10 @@
-"""Idempotency-Key (plan.md mục 13.7).
+"""Idempotency-Key (plan.md mục 8.3).
 
 Chỉ `POST /api/registrations/` và `POST /api/tuition/payments/` nhận Idempotency-Key.
 Middleware ở đây chỉ làm 2 việc: gắn key vào request và chặn endpoint bắt buộc key
-khi thiếu. Logic replay (Redis fast-path 24h + UNIQUE DB bền vững) nằm ở
-`core.idempotency` vì nó cần transaction của endpoint.
+khi thiếu. Logic replay (UNIQUE `request_id` ở DB) nằm ở `core.idempotency`
+vì nó cần transaction của endpoint.
 """
-
-import json
 
 from django.http import JsonResponse
 
@@ -31,14 +29,9 @@ class IdempotencyKeyMiddleware:
             for prefix, required in IDEMPOTENT_ENDPOINTS:
                 if request.path.rstrip("/").endswith(prefix.rstrip("/")):
                     if required and not key:
+                        # Lỗi field kiểu DRF (mục 8.4) — không tự chế mã nghiệp vụ mới.
                         return JsonResponse(
-                            {
-                                "error": {
-                                    "code": "TRANG_THAI_KHONG_HOP_LE",
-                                    "message": "Thiếu header Idempotency-Key.",
-                                }
-                            },
-                            status=400,
+                            {"Idempotency-Key": ["Thiếu header Idempotency-Key."]}, status=400
                         )
                     break
 
@@ -46,11 +39,3 @@ class IdempotencyKeyMiddleware:
         if key:
             response["Idempotency-Key"] = key
         return response
-
-
-def load_cached_response(raw):
-    """Redis fast-path: trả lại response cũ nguyên vẹn (kể cả status 201)."""
-    if not raw:
-        return None
-    data = json.loads(raw)
-    return data["status"], json.loads(data["body"])

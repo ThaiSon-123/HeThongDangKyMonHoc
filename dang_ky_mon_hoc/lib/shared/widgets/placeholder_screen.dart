@@ -14,7 +14,11 @@ class PlaceholderScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.construction, size: 48, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              Icons.construction,
+              size: 48,
+              color: Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(height: 12),
             Text('$title — đang phát triển'),
           ],

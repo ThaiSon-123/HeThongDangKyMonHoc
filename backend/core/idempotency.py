@@ -1,11 +1,10 @@
-"""Idempotency bền vững (plan.md mục 13.7).
+"""Idempotency (plan.md mục 8.3).
 
-Chân lý là UNIQUE `request_id` (khi khác NULL) trong DB — Redis chỉ là fast-path 24h
-nên bỏ qua được mà không sai kết quả. Key đã dùng → trả lại đúng payload cũ.
+Chân lý duy nhất là UNIQUE `request_id` (khi khác NULL) trong DB — không có cache Redis.
+Key đã dùng → trả lại đúng payload cũ.
 """
 
 from django.db import IntegrityError, transaction
-from rest_framework.response import Response
 
 
 def run_once(request, model, handler, replay):
@@ -33,8 +32,3 @@ def run_once(request, model, handler, replay):
                 raise
             return replay(existing)
         return response
-
-
-def cached_response(status, body):
-    """Redis fast-path 24h — chỉ là cache, DB vẫn là chân lý."""
-    return Response(body, status=status)

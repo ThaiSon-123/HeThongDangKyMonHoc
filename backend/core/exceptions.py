@@ -1,6 +1,6 @@
-"""Envelope lỗi nghiệp vụ + mã lỗi (plan.md mục 13.8).
+"""Envelope lỗi nghiệp vụ + mã lỗi (plan.md mục 8.4).
 
-Chỉ dùng mã trong danh sách dưới đây — không tự chế mã mới (checklist mục 21.5).
+Chỉ dùng mã trong danh sách dưới đây — không tự chế mã mới (plan.md mục 17, DoD #2).
 Lỗi validation field giữ nguyên dạng DRF mặc định {"field": ["..."]}.
 """
 
@@ -31,24 +31,24 @@ class BusinessError(APIException):
 
 
 class Codes:
-    """Mã lỗi nghiệp vụ (plan.md mục 13.8)."""
+    """Mã lỗi nghiệp vụ (plan.md mục 8.4)."""
 
     NGOAI_CUA_SO_DANG_KY = "NGOAI_CUA_SO_DANG_KY"
     LOP_CHUA_MO = "LOP_CHUA_MO"
     LOP_DAY = "LOP_DAY"
     TRUNG_LICH = "TRUNG_LICH"
+    DA_DANG_KY = "DA_DANG_KY"
     DA_DAT_MON = "DA_DAT_MON"
     THIEU_TIEN_QUYET = "THIEU_TIEN_QUYET"
     VUOT_TIN_TC_TOI_DA = "VUOT_TIN_TC_TOI_DA"
     VUOT_TIN_TC_CANH_BAO = "VUOT_TIN_TC_CANH_BAO"
-    CAM_THI = "CAM_THI"
     QUA_HAN_NHAP_DIEM = "QUA_HAN_NHAP_DIEM"
     TRANG_THAI_KHONG_HOP_LE = "TRANG_THAI_KHONG_HOP_LE"
     KHONG_CO_QUYEN = "KHONG_CO_QUYEN"
     TAI_KHOAN_BI_KHOA = "TAI_KHOAN_BI_KHOA"
     CHUA_CAU_HINH_GIA = "CHUA_CAU_HINH_GIA"
+    SO_TIEN_KHONG_HOP_LE = "SO_TIEN_KHONG_HOP_LE"
     QUA_NHIEU_YEU_CAU = "QUA_NHIEU_YEU_CAU"
-    IDEMPOTENCY_KEY_REUSED = "IDEMPOTENCY_KEY_REUSED"
 
 
 # HTTP mặc định cho từng mã
@@ -57,18 +57,18 @@ _CODE_STATUS = {
     Codes.LOP_CHUA_MO: 400,
     Codes.LOP_DAY: 409,
     Codes.TRUNG_LICH: 409,
+    Codes.DA_DANG_KY: 409,
     Codes.DA_DAT_MON: 400,
     Codes.THIEU_TIEN_QUYET: 400,
     Codes.VUOT_TIN_TC_TOI_DA: 400,
     Codes.VUOT_TIN_TC_CANH_BAO: 400,
-    Codes.CAM_THI: 409,
     Codes.QUA_HAN_NHAP_DIEM: 409,
     Codes.TRANG_THAI_KHONG_HOP_LE: 409,
     Codes.KHONG_CO_QUYEN: 403,
     Codes.TAI_KHOAN_BI_KHOA: 403,
     Codes.CHUA_CAU_HINH_GIA: 400,
+    Codes.SO_TIEN_KHONG_HOP_LE: 400,
     Codes.QUA_NHIEU_YEU_CAU: 429,
-    Codes.IDEMPOTENCY_KEY_REUSED: 409,
 }
 
 

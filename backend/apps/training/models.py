@@ -1,13 +1,18 @@
 """Dữ liệu đào tạo: ngành, CTĐT, môn, học kỳ, lớp HP, lịch (plan.md mục 9)."""
 
-from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
 class TrangThaiDung(models.TextChoices):
+    """Trạng thái Ngành / CTĐT."""
+
     HOAT_DONG = "HOAT_DONG", "Hoạt động"
     NGUNG = "NGUNG", "Ngừng"
+
+
+class TrangThaiMon(models.TextChoices):
+    HOAT_DONG = "HOAT_DONG", "Hoạt động"
     NGUNG_SU_DUNG = "NGUNG_SU_DUNG", "Ngừng sử dụng"
 
 
@@ -81,7 +86,7 @@ class Course(models.Model):
         default="DIEM",
     )
     trang_thai = models.CharField(
-        max_length=20, choices=TrangThaiDung.choices, default=TrangThaiDung.HOAT_DONG
+        max_length=20, choices=TrangThaiMon.choices, default=TrangThaiMon.HOAT_DONG
     )
 
     class Meta:
@@ -154,9 +159,6 @@ class Semester(models.Model):
     ngay_ket_thuc = models.DateField()
     cua_so_dk_bat_dau = models.DateTimeField()
     cua_so_dk_ket_thuc = models.DateTimeField()
-    tin_chi_toi_thieu = models.PositiveSmallIntegerField(null=True, blank=True)
-    tin_chi_toi_da = models.PositiveSmallIntegerField(null=True, blank=True)
-    tin_chi_toi_da_canh_bao = models.PositiveSmallIntegerField(null=True, blank=True)
     trang_thai = models.CharField(
         max_length=10, choices=TrangThaiHocKy.choices, default=TrangThaiHocKy.MO
     )
@@ -218,13 +220,13 @@ class Schedule(models.Model):
     lop_hoc_phan = models.ForeignKey(
         ClassSection, on_delete=models.CASCADE, related_name="lich_hoc"
     )
-    thu = models.PositiveSmallIntegerField(validators=[MinValueValidator(2), MaxValueValidator(6)])
+    # 2..7 = thứ 2..thứ 7, 8 = Chủ nhật (BR-08)
+    thu = models.PositiveSmallIntegerField(validators=[MinValueValidator(2), MaxValueValidator(8)])
     tiet_bat_dau = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(15)]
     )
     so_tiet_moi_buoi = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
     phong = models.CharField(max_length=30)
-    ngay_hoc = models.DateField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Lịch học"
@@ -253,39 +255,3 @@ class TrangThaiDon(models.TextChoices):
     CHO_DUYET = "CHO_DUYET", "Chờ duyệt"
     DUYET = "DUYET", "Đã duyệt"
     TU_CHOI = "TU_CHOI", "Từ chối"
-
-
-class GradeRetake(models.Model):
-    sinh_vien = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="don_hoc_lai"
-    )
-    mon_hoc = models.ForeignKey(Course, on_delete=models.PROTECT, related_name="don_hoc_lai")
-    hoc_ky = models.ForeignKey(Semester, on_delete=models.PROTECT, related_name="don_hoc_lai")
-    loai = models.CharField(
-        max_length=20, choices=[("HOC_LAI", "Học lại"), ("HOC_CAI_THIEN", "Học cải thiện")]
-    )
-    ly_do = models.TextField(blank=True)
-    trang_thai = models.CharField(
-        max_length=20, choices=TrangThaiDon.choices, default=TrangThaiDon.CHO_DUYET
-    )
-    nguoi_duyet = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="duyet_don_hoc_lai",
-    )
-    ngay_duyet = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = "Đơn học lại / cải thiện"
-        verbose_name_plural = "Đơn học lại / cải thiện"
-        ordering = ["-ngay_duyet", "-id"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["sinh_vien", "mon_hoc", "hoc_ky"], name="uniq_don_hoc_lai"
-            )
-        ]
-
-    def __str__(self):
-        return f"{self.sinh_vien_id}/{self.mon_hoc_id}/{self.hoc_ky_id}"

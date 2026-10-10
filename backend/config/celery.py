@@ -1,7 +1,7 @@
-"""Celery app + 5 job nền rỗng (plan.md mục 11.8).
+"""Celery app + 4 job nền (plan.md mục 7.8).
 
-Job rỗng ở Pha 0: đăng ký task + beat schedule để cài đặt lịch không cần deploy lại.
-Nội dung job ghi ở Pha 7-8.
+Job stub ở Pha 0: đăng ký task + beat schedule để cài đặt lịch không cần deploy lại.
+Nội dung job ghi ở Pha 2/6/10.
 """
 
 import os
@@ -20,21 +20,17 @@ app.conf.beat_schedule = {
         "task": "jobs.classes_transition_daily",
         "schedule": crontab(hour=0, minute=5),
     },
-    "scan_cam_thi": {
-        "task": "jobs.scan_cam_thi",
-        "schedule": crontab(hour=0, minute=30),
-    },
     "tuition_overdue_notify": {
         "task": "jobs.tuition_overdue_notify",
         "schedule": crontab(hour=7, minute=0),
     },
-    "recalc_gpa": {
-        "task": "jobs.recalc_gpa",
-        "schedule": crontab(hour=1, minute=0),
-    },
     "backup_daily": {
         "task": "jobs.backup_daily",
         "schedule": crontab(hour=2, minute=0),
+    },
+    "flush_expired_tokens": {
+        "task": "jobs.flush_expired_tokens",
+        "schedule": crontab(hour=3, minute=0),
     },
 }
 

@@ -26,7 +26,7 @@ class AuditLogMixin(viewsets.ModelViewSet):
             user=getattr(self.request, "user", None),
             hanh_dong=hanh_dong,
             doi_tuong=self.audit_model or instance.__class__.__name__,
-            doi_tuong_id=getattr(instance, "uuid", None) or getattr(instance, "id", None),
+            doi_tuong_id=str(instance.pk) if instance.pk is not None else "",
             chi_tiet=chi_tiet or {"serialized": self._safe_repr(instance)},
             ip=self._client_ip(),
         )

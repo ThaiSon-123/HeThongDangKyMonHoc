@@ -1,4 +1,4 @@
-"""Seed dữ liệu demo — plan.md mục 24 / checklist 1.5.
+"""Seed dữ liệu demo — plan.md mục 15 / checklist Pha 0.
 
 Idempotent: update_or_create toàn bộ, chạy lại an toàn.
 Mật khẩu tài khoản demo lấy từ env `SEED_DEMO_PASSWORD`
@@ -8,7 +8,7 @@ Chạy:  python manage.py seed_demo
 """
 
 import os
-from datetime import date, datetime, timedelta, timezone as dt_timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -21,7 +21,7 @@ from apps.auth.models import Role
 from apps.config.models import SystemConfig
 from apps.grades.models import Grade, TrangThaiDiem
 from apps.profiles.models import StudentProfile, TeacherProfile
-from apps.registration.models import LoaiDangKy, Registration, TrangThaiDangKy
+from apps.registration.models import Registration, TrangThaiDangKy
 from apps.training.models import (
     Buoi,
     ClassSection,
@@ -37,6 +37,7 @@ from apps.training.models import (
     TrangThaiDung,
     TrangThaiHocKy,
     TrangThaiLop,
+    TrangThaiMon,
 )
 from apps.tuition.models import HocPhanGia, TuitionConfig
 
@@ -44,7 +45,7 @@ MAT_KHAU_MAC_DINH = "Demo@12345"
 
 
 class Command(BaseCommand):
-    help = "Seed dữ liệu demo đầy đủ (checklist 1.5 / plan.md mục 24)"
+    help = "Seed dữ liệu demo đầy đủ (plan.md mục 15)"
 
     def handle(self, *args, **options):
         self.mat_khau = os.environ.get("SEED_DEMO_PASSWORD", MAT_KHAU_MAC_DINH)
@@ -52,8 +53,10 @@ class Command(BaseCommand):
         with transaction.atomic():
             dao_tao = self._seed_dao_tao()
             users = self._seed_users(
-                dao_tao["nganh_cntt"], dao_tao["nganh_ktpm"],
-                dao_tao["ctdt_cntt"], dao_tao["ctdt_ktpm"],
+                dao_tao["nganh_cntt"],
+                dao_tao["nganh_ktpm"],
+                dao_tao["ctdt_cntt"],
+                dao_tao["ctdt_ktpm"],
             )
             hk_dong, hk_mo = self._seed_hoc_ky()
             lops = self._seed_lop_hoc_phan(users["gv"], hk_mo, hk_dong, dao_tao["mons"])
@@ -112,9 +115,16 @@ class Command(BaseCommand):
             gv.append(u)
 
         ten_sv = [
-            "Nguyễn Văn An", "Trần Thị Bích", "Lê Văn Cường", "Phạm Thị Dung",
-            "Hoàng Văn Em", "Đỗ Thị Phương", "Vũ Văn Giang", "Bùi Thị Hạnh",
-            "Đinh Văn Khanh", "Ngô Thị Loan",
+            "Nguyễn Văn An",
+            "Trần Thị Bích",
+            "Lê Văn Cường",
+            "Phạm Thị Dung",
+            "Hoàng Văn Em",
+            "Đỗ Thị Phương",
+            "Vũ Văn Giang",
+            "Bùi Thị Hạnh",
+            "Đinh Văn Khanh",
+            "Ngô Thị Loan",
         ]
         sv = []
         for i, ten in enumerate(ten_sv, 1):
@@ -190,7 +200,7 @@ class Command(BaseCommand):
                     "so_tiet_ly_thuyet": tiet_lt,
                     "so_tiet_thuc_hanh": tiet_th,
                     "loai_danh_gia": "DAT_KHONG_DAT" if ma_mon == "IT4020" else "DIEM",
-                    "trang_thai": TrangThaiDung.HOAT_DONG,
+                    "trang_thai": TrangThaiMon.HOAT_DONG,
                 },
             )[0]
 
@@ -243,11 +253,8 @@ class Command(BaseCommand):
                 "nam_hoc": "2024-2025",
                 "ngay_bat_dau": date(2024, 9, 2),
                 "ngay_ket_thuc": date(2025, 1, 10),
-                "cua_so_dk_bat_dau": datetime(2024, 8, 1, 8, 0, tzinfo=dt_timezone.utc),
-                "cua_so_dk_ket_thuc": datetime(2024, 8, 20, 23, 59, tzinfo=dt_timezone.utc),
-                "tin_chi_toi_thieu": 12,
-                "tin_chi_toi_da": 24,
-                "tin_chi_toi_da_canh_bao": 14,
+                "cua_so_dk_bat_dau": datetime(2024, 8, 1, 8, 0, tzinfo=UTC),
+                "cua_so_dk_ket_thuc": datetime(2024, 8, 20, 23, 59, tzinfo=UTC),
                 "trang_thai": TrangThaiHocKy.DONG,
             },
         )[0]
@@ -262,9 +269,6 @@ class Command(BaseCommand):
                 "ngay_ket_thuc": date(2025, 6, 10),
                 "cua_so_dk_bat_dau": hom_qua,
                 "cua_so_dk_ket_thuc": sau_14_ngay,
-                "tin_chi_toi_thieu": 12,
-                "tin_chi_toi_da": 24,
-                "tin_chi_toi_da_canh_bao": 14,
                 "trang_thai": TrangThaiHocKy.MO,
             },
         )[0]
@@ -310,12 +314,15 @@ class Command(BaseCommand):
         tao_lich(lop_it1010, [(2, 1, 3, "A101"), (4, 1, 3, "A101")])
         # TRÙNG với IT1010 thứ 2 tiết 1-3 — test chặn trùng lịch (BR-03).
         tao_lich(lop_it2010, [(2, 1, 3, "B202"), (5, 6, 3, "B202")])
-        tao_lich(lop_it3010, [(3, 6, 4, "C303"), (6, 6, 3, "C303")])
-        tao_lich(lop_it4010, [(3, 11, 3, "D404"), (5, 11, 3, "D404")])
+        # thu=8 là Chủ nhật (BR-08).
+        tao_lich(lop_it3010, [(3, 6, 4, "C303"), (6, 6, 3, "C303"), (8, 1, 3, "C303")])
+        tao_lich(lop_it4010, [(3, 11, 3, "D404"), (5, 11, 3, "D404"), (7, 1, 3, "D404")])  # thứ 7
 
         # --- HK trước (ĐÓNG): lớp DA_DONG + lớp DANG_HOC (dùng cho điểm danh)
         lop_dong = tao_lop("IT1010.L01-HK1", mons["IT1010"], hk_dong, 0, 60, TrangThaiLop.DA_DONG)
-        lop_dang_hoc = tao_lop("IT2010.L01-HK1", mons["IT2010"], hk_dong, 1, 60, TrangThaiLop.DANG_HOC)
+        lop_dang_hoc = tao_lop(
+            "IT2010.L01-HK1", mons["IT2010"], hk_dong, 1, 60, TrangThaiLop.DANG_HOC
+        )
         tao_lich(lop_dong, [(2, 1, 3, "A101"), (4, 1, 3, "A101")])
         tao_lich(lop_dang_hoc, [(2, 4, 3, "B201"), (5, 4, 3, "B201")])
 
@@ -334,7 +341,6 @@ class Command(BaseCommand):
             (PV.NGANH, "CNTT", Decimal("550000")),
             (PV.NGANH, "KTPM", Decimal("520000")),
             (PV.KHOI_KIEN_THUC, "tu_chon", Decimal("480000")),
-            (PV.LECH_LT, None, Decimal("0.9")),
             (PV.GIA_TH, None, Decimal("700000")),
         ]
         for pham_vi, tham_chieu, don_gia in rows:
@@ -342,47 +348,44 @@ class Command(BaseCommand):
                 hoc_ky=hk_mo,
                 pham_vi=pham_vi,
                 tham_chieu=tham_chieu,
-                defaults={"don_gia": don_gia, "hieu_luc_tu": hk_mo.ngay_bat_dau},
+                defaults={"don_gia": don_gia},
             )
         TuitionConfig.objects.update_or_create(
             hoc_ky=hk_mo,
             defaults={
                 "han_dong": hk_mo.ngay_ket_thuc - timedelta(days=30),
-                "chinh_sach_hoan_giam": "Hủy trong 2 tuần đầu: hoàn 100%. "
-                "Từ tuần 3: không hoàn.",
+                "ghi_chu": "Hủy trong cửa sổ đăng ký: hoàn 100% phần môn hủy.",
             },
         )
 
     # --------------------------------------------- đăng ký + điểm (1.5.4/5)
 
     def _seed_dang_ky_diem(self, sv_users, lops, hk_mo):
-        """HK trước: 10 SV đăng ký 2 lớp, điểm KHOA (sv05 F môn CSDL-like).
+        """HK trước: 10 SV đăng ký 2 lớp, điểm KHOA (sv05 điểm F, sv06 điểm D — test "đạt" BR-11).
         HK hiện tại: 10 SV đăng ký 3 lớp; sv01+sv02 đăng ký lớp sĩ số 2.
         GPA cache: sv01 = 3.99, sv02 = 2.10."""
 
         lop_dong = lops["lop_dong"]
         lop_dang_hoc = lops["lop_dang_hoc"]
-        User = get_user_model()
-
-        for i, sv in enumerate(sv_users, 1):
+        for sv in sv_users:
             for lop in (lop_dong, lop_dang_hoc):
                 Registration.objects.update_or_create(
-                    sinh_vien=sv, lop_hoc_phan=lop,
+                    sinh_vien=sv,
+                    lop_hoc_phan=lop,
                     defaults={
-                        "hoc_ky": lop.hoc_ky,
                         "trang_thai": TrangThaiDangKy.DA_DANG_KY,
-                        "loai_dang_ky": LoaiDangKy.BINH_THUONG,
                     },
                 )
 
-        # Điểm KHOA cho lớp đã đóng. sv05 F (BR-24 → phải học lại).
+        # Điểm KHOA cho lớp đã đóng. sv05 F (chưa đạt → được đăng ký lại, BR-04c); sv06 D (đã đạt).
         diem_sv = {i: Decimal("8.0") for i in range(1, 11)}
         diem_sv[5] = Decimal("3.5")  # F
+        diem_sv[6] = Decimal("4.5")  # D
         for i, sv in enumerate(sv_users, 1):
             self._tao_diem(lop_dong, sv, diem_sv[i], TrangThaiDiem.KHOA)
             self._tao_diem(lop_dang_hoc, sv, diem_sv[i] + Decimal("0.5"), TrangThaiDiem.KHOA)
 
-        # GPA cache (test BR-24): sv01 3.99, sv02 2.10.
+        # GPA cache (test BR-07 diện cảnh báo GPA < 2.0): sv01 3.99, sv02 2.10.
         StudentProfile.objects.filter(user=sv_users[0]).update(
             gpa=Decimal("3.99"), tin_chi_tich_luy=6
         )
@@ -395,20 +398,18 @@ class Command(BaseCommand):
         for sv in sv_users:
             for lop in lop_mo[:3]:
                 Registration.objects.update_or_create(
-                    sinh_vien=sv, lop_hoc_phan=lop,
+                    sinh_vien=sv,
+                    lop_hoc_phan=lop,
                     defaults={
-                        "hoc_ky": hk_mo,
                         "trang_thai": TrangThaiDangKy.DA_DANG_KY,
-                        "loai_dang_ky": LoaiDangKy.BINH_THUONG,
                     },
                 )
         for sv in sv_users[:2]:
             Registration.objects.update_or_create(
-                sinh_vien=sv, lop_hoc_phan=lop_mo[3],
+                sinh_vien=sv,
+                lop_hoc_phan=lop_mo[3],
                 defaults={
-                    "hoc_ky": hk_mo,
                     "trang_thai": TrangThaiDangKy.DA_DANG_KY,
-                    "loai_dang_ky": LoaiDangKy.BINH_THUONG,
                 },
             )
 
@@ -419,23 +420,10 @@ class Command(BaseCommand):
             ).count()
             lop.save(update_fields=["si_so_hien_tai"])
 
-        # Đơn học lại cho sv05 (F phải học lại — BR-24).
-        from apps.training.models import GradeRetake, TrangThaiDon
-
-        GradeRetake.objects.update_or_create(
-            sinh_vien=User.objects.get(username="sv05"),
-            mon_hoc=lop_dong.mon_hoc,
-            defaults={
-                "hoc_ky": hk_mo,
-                "trang_thai": TrangThaiDon.DUYET,
-            },
-        )
-
     def _tao_diem(self, lop, sv, tong_ket, trang_thai):
         from decimal import ROUND_HALF_UP
 
         bang_chu = Decimal("8.5"), Decimal("7.0"), Decimal("5.5"), Decimal("4.0")
-        g4 = {True: "4.0", 8.5: "4.0"}.get(True)
         if tong_ket >= bang_chu[0]:
             chu, g4 = "A", Decimal("4.0")
         elif tong_ket >= bang_chu[1]:
@@ -468,7 +456,7 @@ class Command(BaseCommand):
 
     def _seed_diem_danh(self, sv_users, lop):
         """10 buổi đã điểm danh trên lớp đang học.
-        sv01 vắng 3/10 không phép (30% > 20% — test BR-20/BR-24)."""
+        sv01 vắng 3/10 không phép (30% > 20% — test cờ cảnh báo BR-20)."""
         AttendanceSession.objects.filter(lop_hoc_phan=lop).delete()
 
         buoi_dau = date.today() - timedelta(days=date.today().weekday() + 7 * 9)
@@ -494,7 +482,10 @@ class Command(BaseCommand):
                     sinh_vien=sv,
                     trang_thai=(
                         "VANG_KHONG_PHEP"
-                        if (sv == sv_users[0] and s.ngay_hoc in {sessions[i].ngay_hoc for i in vang_sv01})
+                        if (
+                            sv == sv_users[0]
+                            and s.ngay_hoc in {sessions[i].ngay_hoc for i in vang_sv01}
+                        )
                         else "CO_MAT"
                     ),
                 )
@@ -505,14 +496,15 @@ class Command(BaseCommand):
 
     def _seed_cau_hinh(self, hk_mo):
         configs = [
-            ("tin_chi_toi_thieu", "INT", "12", "Số tín chỉ đăng ký tối thiểu"),
-            ("tin_chi_toi_da", "INT", "24", "Số tín chỉ đăng ký tối đa"),
-            ("tin_chi_toi_da_canh_bao", "INT", "14", "Ngưỡng cảnh báo tín chỉ"),
-            ("max_absent_pct", "DECIMAL", "20", "% vắng tối đa bị cấm thi"),
-            ("so_ngay_cho_phep_nhap_diem", "INT", "14", "Hạn nhập điểm sau khi lớp kết thúc"),
+            ("tin_chi_toi_thieu", "12", "Số tín chỉ đăng ký tối thiểu"),
+            ("tin_chi_toi_da", "24", "Số tín chỉ đăng ký tối đa"),
+            ("tin_chi_toi_da_canh_bao", "14", "Trần tín chỉ cho SV diện cảnh báo học vụ"),
+            ("max_absent_pct", "20", "% vắng không phép vượt ngưỡng thì hiện cờ cảnh báo"),
+            ("so_ngay_cho_phep_nhap_diem", "14", "Hạn nhập điểm sau khi lớp kết thúc (ngày)"),
+            ("backup_retention_days", "14", "Số ngày giữ file backup"),
         ]
-        for khoa, kieu, gia_tri, mo_ta in configs:
+        for khoa, gia_tri, mo_ta in configs:
             SystemConfig.objects.update_or_create(
                 khoa=khoa,
-                defaults={"kieu": kieu, "gia_tri": gia_tri, "mo_ta": mo_ta},
+                defaults={"gia_tri": gia_tri, "mo_ta": mo_ta},
             )

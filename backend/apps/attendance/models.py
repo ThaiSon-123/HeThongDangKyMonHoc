@@ -1,4 +1,4 @@
-"""Điểm danh (BR-20/BR-24): AttendanceSession = mẫu số vắng, Attendance = 1 dòng/SV/buổi."""
+"""Điểm danh (BR-19/20): AttendanceSession = mẫu số tỷ lệ vắng, Attendance = 1 dòng/SV/buổi."""
 
 from django.conf import settings
 from django.db import models

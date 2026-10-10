@@ -1,16 +1,14 @@
-"""Thuật toán giá (BR-16/17) — plan.md dòng 334-335.
+"""Thuật toán giá (BR-16/17) — plan.md mục 4.3.
 
 BR-16: duyệt **2 trục** theo thứ tự — (1) `hoc_ky` = học kỳ đang tính, (2)
 `hoc_ky IS NULL`. Trong mỗi trục xét `pham_vi` theo thứ tự `KHOI_KIEN_THUC` →
 `NGANH` → `MAC_DINH`, dừng ở bản ghi khớp đầu tiên = **đơn giá gốc**.
 
-BR-17: `LECH_LT`/`LECH_TH`/`GIA_TH` KHÔNG phải trục so sánh mà là hệ số điều
-chỉnh áp lên đơn giá gốc, khớp theo **khối kiến thức của môn trong CTĐT của SV**
-(không xét trục ngành), tra độc lập theo cùng 2 trục `hoc_ky`.
+BR-17: đơn giá phần lý thuyết = đơn giá gốc; đơn giá phần thực hành = bản ghi
+`GIA_TH` (tra cùng 2 trục `hoc_ky`) nếu có, ngược lại = đơn giá gốc.
 
 `bang_gia` là list dòng `HocPhanGia` (queryset cũng iterable nên truyền thẳng
 được) — nhận list để self-check chạy được không cần DB.
-`hieu_luc_tu` không xét (BR-16 loại khỏi thuật toán).
 """
 
 from dataclasses import dataclass
@@ -22,7 +20,6 @@ from apps.tuition.models import HocPhanGia
 @dataclass
 class GiaApDung:
     don_gia_goc: Decimal
-    don_gia_lt: Decimal
     don_gia_th: Decimal
     tong_tien: Decimal
     pham_vi_goc: str
@@ -51,14 +48,6 @@ def tra_bang_gia(
             None,
         )
 
-    def tra(pham_vi, tham_chieu):
-        """Tra 1 loại bản ghi theo 2 trục — mỗi loại tra độc lập (BR-17)."""
-        for hk in truc:
-            row = khop(pham_vi, tham_chieu, hk)
-            if row is not None:
-                return row
-        return None
-
     goc = next(
         (
             row
@@ -71,22 +60,13 @@ def tra_bang_gia(
     if goc is None:
         raise ValueError(f"Không có bảng giá khớp: nganh={nganh} khoi={khoi_kien_thuc}")
 
-    lech_lt = tra(P.LECH_LT, khoi_kien_thuc)
-    don_gia_lt = goc.don_gia * (1 + lech_lt.don_gia) if lech_lt else goc.don_gia
-
-    gia_th, lech_th = tra(P.GIA_TH, khoi_kien_thuc), tra(P.LECH_TH, khoi_kien_thuc)
-    if gia_th is not None:
-        don_gia_th = gia_th.don_gia
-    elif lech_th is not None:
-        don_gia_th = goc.don_gia * (1 + lech_th.don_gia)
-    else:
-        don_gia_th = goc.don_gia
+    gia_th = next((row for hk in truc if (row := khop(P.GIA_TH, None, hk)) is not None), None)
+    don_gia_th = gia_th.don_gia if gia_th is not None else goc.don_gia
 
     return GiaApDung(
         goc.don_gia,
-        don_gia_lt,
         don_gia_th,
-        tin_chi_lt * don_gia_lt + tin_chi_th * don_gia_th,
+        tin_chi_lt * goc.don_gia + tin_chi_th * don_gia_th,
         goc.pham_vi,
         goc.hoc_ky_id,
     )
@@ -94,7 +74,7 @@ def tra_bang_gia(
 
 if (
     __name__ == "__main__"
-):  # self-check: DJANGO_SETTINGS_MODULE=config.settings.dev python -m apps.tuition.pricing
+):  # self-check: python manage.py shell -c "import runpy; runpy.run_module('apps.tuition.pricing', run_name='__main__')"
     P, D = HocPhanGia.PhamVi, Decimal
 
     def row(pham_vi, tham_chieu, don_gia, hk=None):
@@ -124,18 +104,22 @@ if (
     hai_truc = day_du + [row(P.MAC_DINH, None, "200", hk=9)]
     assert tra_bang_gia(hai_truc, "CNTT", "chuyen_nganh", hoc_ky_id=9, **kw).don_gia_goc == D("200")
 
-    # BR-17: LECH_LT nhân (1 + hệ số); GIA_TH thắng LECH_TH; LT/TH cộng theo tín chỉ.
-    g = tra_bang_gia(day_du + [row(P.LECH_LT, "chuyen_nganh", "0.1")], "CNTT", "chuyen_nganh", **kw)
-    assert g.don_gia_lt == D("165") and g.don_gia_th == D("150"), "lệch LT chỉ áp cho LT"
-    assert g.tong_tien == 3 * D("165") + 2 * D("150"), "3 LT × 165 + 2 TH × 150"
+    # BR-17: không có GIA_TH → TH = đơn giá gốc; có GIA_TH → TH dùng GIA_TH, LT vẫn là gốc.
+    g = tra_bang_gia(day_du, "CNTT", "chuyen_nganh", **kw)
+    assert g.don_gia_th == D("150") and g.tong_tien == 5 * D("150"), "không GIA_TH → 5 × gốc"
+    g = tra_bang_gia(day_du + [row(P.GIA_TH, None, "77")], "CNTT", "chuyen_nganh", **kw)
+    assert g.don_gia_th == D("77"), "GIA_TH thắng đơn giá gốc"
+    assert g.tong_tien == 3 * D("150") + 2 * D("77"), "3 LT × 150 + 2 TH × 77"
 
+    # GIA_TH cũng tra theo 2 trục: bản ghi của học kỳ thắng bản mặc định.
     g = tra_bang_gia(
-        day_du + [row(P.LECH_TH, "chuyen_nganh", "0.5"), row(P.GIA_TH, "chuyen_nganh", "77")],
+        day_du + [row(P.GIA_TH, None, "77"), row(P.GIA_TH, None, "60", hk=9)],
         "CNTT",
         "chuyen_nganh",
+        hoc_ky_id=9,
         **kw,
     )
-    assert g.don_gia_th == D("77"), "GIA_TH thắng LECH_TH"
+    assert g.don_gia_th == D("60"), "GIA_TH học kỳ > GIA_TH mặc định"
 
     try:
         tra_bang_gia([row(P.NGANH, "KTPM", "120")], "CNTT", "chuyen_nganh", **kw)

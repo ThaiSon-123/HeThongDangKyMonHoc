@@ -5,19 +5,20 @@ import '../auth/token_storage.dart';
 /// Dio client dùng chung. Tự refresh token khi gặp 401 rồi retry 1 lần.
 class ApiClient {
   ApiClient({String? baseUrl})
-      : _dio = Dio(
-          BaseOptions(
-            baseUrl: baseUrl ??
-                const String.fromEnvironment(
-                  'API_BASE_URL',
-                  defaultValue: 'http://10.0.2.2:8000/api/v1',
-                ),
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 30),
-            // Thông báo lỗi HTTP (4xx/5xx) để interceptor xử lý.
-            validateStatus: (code) => code != null && code < 500,
-          ),
-        ) {
+    : _dio = Dio(
+        BaseOptions(
+          baseUrl:
+              baseUrl ??
+              const String.fromEnvironment(
+                'API_BASE_URL',
+                defaultValue: 'http://10.0.2.2:8000/api/v1',
+              ),
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 30),
+          // Thông báo lỗi HTTP (4xx/5xx) để interceptor xử lý.
+          validateStatus: (code) => code != null && code < 500,
+        ),
+      ) {
     _dio.interceptors.add(_AuthInterceptor(_dio, _tokens));
   }
 

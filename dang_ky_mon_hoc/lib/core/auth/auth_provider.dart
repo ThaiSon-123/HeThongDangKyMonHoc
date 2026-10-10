@@ -42,9 +42,7 @@ class AuthController extends Notifier<AuthState> {
       final res = await _dio.get('/auth/me/');
       state = AuthState(
         status: AuthStatus.authenticated,
-        user: AuthUser.fromJson(
-          Map<String, dynamic>.from(res.data as Map),
-        ),
+        user: AuthUser.fromJson(Map<String, dynamic>.from(res.data as Map)),
       );
     } on DioException {
       await _tokens.clear();
@@ -69,9 +67,7 @@ class AuthController extends Notifier<AuthState> {
       );
       state = AuthState(
         status: AuthStatus.authenticated,
-        user: AuthUser.fromJson(
-          Map<String, dynamic>.from(data['user'] as Map),
-        ),
+        user: AuthUser.fromJson(Map<String, dynamic>.from(data['user'] as Map)),
       );
       return null;
     } on DioException {
@@ -85,5 +81,6 @@ class AuthController extends Notifier<AuthState> {
   }
 }
 
-final authControllerProvider =
-    NotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);

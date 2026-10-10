@@ -47,8 +47,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             labelText: 'Email',
                             prefixIcon: Icon(Icons.email),
                           ),
-                          validator: (v) => (v == null ||
-                                  !v.contains('@'))
+                          validator: (v) => (v == null || !v.contains('@'))
                               ? 'Nhập email hợp lệ'
                               : null,
                         ),

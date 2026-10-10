@@ -6,9 +6,7 @@ from django.db import models
 
 class Audience(models.TextChoices):
     ROLE = "ROLE", "Vai trò"
-    MAJOR = "MAJOR", "Ngành"
     CLASS = "CLASS", "Lớp học phần"
-    SEMESTER = "SEMESTER", "Học kỳ"
     USER = "USER", "Người dùng"
 
 

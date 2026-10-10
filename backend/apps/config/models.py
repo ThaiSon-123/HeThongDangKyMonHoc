@@ -1,20 +1,13 @@
-"""SystemConfig + RolePermission (ADM-05/ADM-04, plan.md mục 9)."""
+"""SystemConfig (ADM-05, plan.md mục 5). Quyền theo vai trò cố định trong code (mục 9)."""
 
 from django.db import models
 
 
-class KieuGiaTri(models.TextChoices):
-    INT = "INT", "INT"
-    DECIMAL = "DECIMAL", "DECIMAL"
-    STRING = "STRING", "STRING"
-    BOOL = "BOOL", "BOOL"
-    JSON = "JSON", "JSON"
-
-
 class SystemConfig(models.Model):
     khoa = models.CharField(max_length=100, unique=True)
-    kieu = models.CharField(max_length=10, choices=KieuGiaTri.choices, default=KieuGiaTri.STRING)
-    gia_tri = models.CharField(max_length=200)  # lưu chuỗi, parse theo kieu (mục 9)
+    gia_tri = models.CharField(
+        max_length=200
+    )  # lưu chuỗi, nơi đọc tự parse (get_int/get_decimal/get_bool)
     mo_ta = models.CharField(max_length=255, blank=True)
     cap_nhat_luc = models.DateTimeField(auto_now=True)
 
@@ -53,16 +46,3 @@ class SystemConfig(models.Model):
             return Decimal(str(raw))
         except (InvalidOperation, ValueError):
             return default
-
-
-class RolePermission(models.Model):
-    role = models.CharField(max_length=30)
-    permission = models.CharField(max_length=100)
-    trang_thai = models.BooleanField(default=True)
-
-    class Meta:
-        unique_together = [("role", "permission")]
-        ordering = ["role", "permission"]
-
-    def __str__(self):
-        return f"{self.role}:{self.permission}"

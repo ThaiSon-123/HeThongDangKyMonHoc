@@ -1,4 +1,4 @@
-"""Cấu hình chung — mọi giá trị nhạy cảm đến từ biến môi trường (plan.md mục 23)."""
+"""Cấu hình chung — mọi giá trị nhạy cảm đến từ biến môi trường (plan.md mục 14)."""
 
 import os
 from datetime import timedelta
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # third-party
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "corsheaders",
     "drf_spectacular",
@@ -126,9 +127,10 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = Path(env("MEDIA_DIR", str(BASE_DIR / "media")))
 
 # --- CORS ---
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:*")
+# django-cors-headers không hỗ trợ wildcard port ("localhost:*") → dev dùng regex (dev.py), prod liệt kê origin.
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:*")
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
 
 # --- DRF ---
 REST_FRAMEWORK = {
@@ -149,11 +151,11 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Hệ thống Đăng ký Môn học API",
     "DESCRIPTION": "Backend là nguồn sự thật duy nhất — mọi BR kiểm tra tại API.",
-    "VERSION": "2.5",
+    "VERSION": "3.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
-# --- JWT (plan.md mục 13.7) ---
+# --- JWT (plan.md mục 8.2) ---
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=env_int("JWT_ACCESS_LIFETIME_MIN", 60)),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=env_int("JWT_REFRESH_LIFETIME_DAYS", 7)),
@@ -163,7 +165,7 @@ SIMPLE_JWT = {
 }
 PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE = env_bool("PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE", False)
 
-# --- Pagination (mục 13.7) ---
+# --- Pagination (mục 8.2) ---
 API_MAX_PAGE_SIZE = 50
 
 # --- Celery ---
@@ -181,10 +183,6 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@hpsv.local")
-
-# --- Idempotency (mục 13.7) ---
-IDEMPOTENCY_REDIS_URL = REDIS_URL
-IDEMPOTENCY_TTL_SECONDS = 60 * 60 * 24
 
 # --- Backup ---
 BACKUP_DIR = Path(env("BACKUP_DIR", str(BASE_DIR / "backups")))

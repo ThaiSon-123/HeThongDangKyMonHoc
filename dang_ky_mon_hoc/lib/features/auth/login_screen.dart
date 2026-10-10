@@ -33,10 +33,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _loading = true;
       _error = null;
     });
-    final error = await ref.read(authControllerProvider.notifier).login(
-          _username.text.trim(),
-          _password.text,
-        );
+    final error = await ref
+        .read(authControllerProvider.notifier)
+        .login(_username.text.trim(), _password.text);
     if (!mounted) return;
     if (error != null) {
       setState(() {
@@ -77,8 +76,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         prefixIcon: Icon(Icons.person),
                       ),
                       textInputAction: TextInputAction.next,
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Nhập tên đăng nhập' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Nhập tên đăng nhập'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

@@ -1,4 +1,4 @@
-"""Học phí (BR-15..18, KT-01..09) — `da_thu`/`mien_giam`/`hoan_tien` là cache rebase từ bảng con."""
+"""Học phí (BR-15..18, BR-26). Tuition chỉ lưu tong_*; con_no/can_hoan/... dẫn xuất (plan.md mục 5)."""
 
 from django.conf import settings
 from django.db import models
@@ -15,8 +15,6 @@ class HocPhanGia(models.Model):
         MAC_DINH = "MAC_DINH", "Mặc định"
         KHOI_KIEN_THUC = "KHOI_KIEN_THUC", "Khối kiến thức"
         NGANH = "NGANH", "Ngành"
-        LECH_LT = "LECH_LT", "Lệch LT"
-        LECH_TH = "LECH_TH", "Lệch TH"
         GIA_TH = "GIA_TH", "Giá TH"
 
     hoc_ky = models.ForeignKey(
@@ -25,7 +23,6 @@ class HocPhanGia(models.Model):
     pham_vi = models.CharField(max_length=20, choices=PhamVi.choices)
     tham_chieu = models.CharField(max_length=50, null=True, blank=True)
     don_gia = models.DecimalField(max_digits=14, decimal_places=2)
-    hieu_luc_tu = models.DateField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Bảng giá học phí"
@@ -40,10 +37,8 @@ class HocPhanGia(models.Model):
                 Coalesce("tham_chieu", Value("", output_field=CharField())),
                 name="uniq_bang_gia",
             ),
-            # don_gia ≥ 0, riêng LECH_* là hệ số nên âm vẫn hợp lệ.
             models.CheckConstraint(
-                condition=models.Q(pham_vi__in=["LECH_LT", "LECH_TH"]) | models.Q(don_gia__gte=0),
-                name="ck_gia_don_gia_khong_am",
+                condition=models.Q(don_gia__gte=0), name="ck_gia_don_gia_khong_am"
             ),
         ]
 
@@ -58,7 +53,7 @@ class TuitionConfig(models.Model):
         Semester, on_delete=models.CASCADE, related_name="chinh_sach_hoc_phi"
     )
     han_dong = models.DateField()
-    chinh_sach_hoan_giam = models.TextField(blank=True)
+    ghi_chu = models.TextField(blank=True)
 
     class Meta:
         verbose_name = "Chính sách học phí"
@@ -70,14 +65,7 @@ class TuitionConfig(models.Model):
 
 class LoaiMienGiam(models.TextChoices):
     MIEN_GIAM = "MIEN_GIAM", "Miễn giảm"
-    HOAN_TIEN = "HOAN_TIEN", "Hoàn tiền"
-    GIAM_TRU = "GIAM_TRU", "Giảm trừ"
     HOC_BONG = "HOC_BONG", "Học bổng"
-
-
-class TrangThaiMienGiam(models.TextChoices):
-    AP_DUNG = "AP_DUNG", "Áp dụng"
-    DA_CHI = "DA_CHI", "Đã chi"
 
 
 class Discount(models.Model):
@@ -89,9 +77,6 @@ class Discount(models.Model):
     so_tien = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     ty_le = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     ly_do = models.CharField(max_length=255, blank=True)
-    trang_thai = models.CharField(
-        max_length=20, choices=TrangThaiMienGiam.choices, default=TrangThaiMienGiam.AP_DUNG
-    )
 
     class Meta:
         verbose_name = "Miễn giảm"
@@ -111,13 +96,10 @@ class Discount(models.Model):
 
 
 class TrangThaiHocPhi(models.TextChoices):
+    """Chỉ trạng thái lưu. Trạng thái hiển thị (CON_NO/CHO_HOAN_TIEN/DA_DONG) dẫn xuất."""
+
     CHUA_TINH = "CHUA_TINH", "Chưa tính"
     DA_TINH = "DA_TINH", "Đã tính"
-    DA_DONG = "DA_DONG", "Đã đóng"
-    CON_NO = "CON_NO", "Còn nợ"
-    GIAM_TRU = "GIAM_TRU", "Giảm trừ"
-    CHO_HOAN_TIEN = "CHO_HOAN_TIEN", "Chờ hoàn tiền"
-    DA_HOAN_TIEN = "DA_HOAN_TIEN", "Đã hoàn tiền"
 
 
 class Tuition(models.Model):
@@ -127,10 +109,6 @@ class Tuition(models.Model):
     hoc_ky = models.ForeignKey(Semester, on_delete=models.PROTECT, related_name="hoc_phi")
     tong_tin_chi = models.PositiveSmallIntegerField(default=0)
     tong_tien = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    da_thu = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    mien_giam = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    hoan_tien = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    con_no = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     trang_thai = models.CharField(
         max_length=20, choices=TrangThaiHocPhi.choices, default=TrangThaiHocPhi.CHUA_TINH
     )
@@ -143,21 +121,6 @@ class Tuition(models.Model):
             models.UniqueConstraint(fields=["sinh_vien", "hoc_ky"], name="uniq_sv_hoc_ky")
         ]
 
-    @property
-    def con_no_tinh_lai(self):
-        """`con_no = max(0, tong_tien − da_thu − mien_giam)`."""
-        return max(0, self.tong_tien - self.da_thu - self.mien_giam)
-
-    def tinh_trang_thai(self):
-        """Thứ tự ưu tiên: hoàn tiền > còn nợ > giảm trừ > đã đóng (mục 9)."""
-        if self.hoan_tien > 0:
-            return TrangThaiHocPhi.CHO_HOAN_TIEN
-        if self.con_no > 0:
-            return TrangThaiHocPhi.CON_NO
-        if self.mien_giam > 0:
-            return TrangThaiHocPhi.GIAM_TRU
-        return TrangThaiHocPhi.DA_DONG
-
     def __str__(self):
         return f"{self.sinh_vien_id}/{self.hoc_ky_id} {self.trang_thai}"
 
@@ -168,11 +131,17 @@ class PhuongThuc(models.TextChoices):
     KHAC = "KHAC", "Khác"
 
 
+class LoaiThanhToan(models.TextChoices):
+    THU = "THU", "Thu"
+    HOAN = "HOAN", "Hoàn tiền"
+
+
 class Payment(models.Model):
     tuition = models.ForeignKey(Tuition, on_delete=models.CASCADE, related_name="payments")
+    loai = models.CharField(max_length=10, choices=LoaiThanhToan.choices, default=LoaiThanhToan.THU)
     so_tien = models.DecimalField(max_digits=14, decimal_places=2)
     phuong_thuc = models.CharField(max_length=20, choices=PhuongThuc.choices)
-    ngay_thu = models.DateTimeField(auto_now_add=True)
+    ngay = models.DateTimeField(auto_now_add=True)
     nguoi_thu = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="thu_hoc_phi"
     )
@@ -182,7 +151,12 @@ class Payment(models.Model):
     class Meta:
         verbose_name = "Thanh toán"
         verbose_name_plural = "Thanh toán"
-        ordering = ["-ngay_thu"]
+        ordering = ["-ngay"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(so_tien__gt=0), name="ck_payment_so_tien_duong"
+            )
+        ]
 
     def __str__(self):
         return f"{self.tuition_id} {self.so_tien}"
