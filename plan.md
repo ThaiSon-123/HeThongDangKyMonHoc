@@ -1,6 +1,6 @@
 # KẾ HOẠCH TRIỂN KHAI & ĐẶC TẢ — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-**Phiên bản:** 3.2 — 5 vai trò · 59 chức năng · 25 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
+**Phiên bản:** 3.8 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
 
 > **Nền tảng theo vai trò:** **SV + GV = Flutter Web + Flutter App (Android/iOS)**;
 > **Admin + PĐT + KT = chỉ Flutter Web**. Một codebase Flutter; hai entrypoint (mục 10.2).
@@ -26,10 +26,9 @@ lịch học, đăng ký môn, điểm danh, điểm, học phí, thông báo, b
 | Lịch học bù theo ngày cụ thể | Chỉ lịch định kỳ theo thứ × tiết (BR-03) |
 | Phân quyền động (`RolePermission`) | Ma trận quyền **cố định trong code** (mục 9); Admin chỉ gán vai trò cho tài khoản |
 | Phục hồi (restore) DB qua API | Chỉ tạo + liệt kê backup; restore làm tay bằng `pg_restore` |
-| Ghi đè trần tín chỉ theo học kỳ | Chỉ `SystemConfig` (BR-07) |
 | Bảng giá `LECH_LT`/`LECH_TH`, hoàn tiền/miễn giảm nhiều trạng thái | Bảng giá gọn (BR-16/17); hoàn tiền = `Payment` loại `HOAN` (BR-26) |
 | Xuất PDF | Chỉ Excel (`openpyxl`) |
-| Cổng thanh toán online, quản lý phòng học, xếp lớp theo khóa | KT xác nhận thu tay; phòng chỉ là thuộc tính lịch; SV gắn 1 CTĐT cố định |
+| Cổng thanh toán online tự động đối soát, quản lý phòng học, xếp lớp theo khóa | SV **chuyển khoản qua mã QR** (thông tin tài khoản trong `SystemConfig`), **KT đối soát và ghi `Payment`** (KT-08) — không tích hợp cổng; phòng chỉ là thuộc tính lịch; SV gắn 1 CTĐT cố định |
 
 | Thành phần | Mô tả |
 | :--- | :--- |
@@ -57,7 +56,7 @@ lịch học, đăng ký môn, điểm danh, điểm, học phí, thông báo, b
 └──────────────────────────┬──────────────────────────────────┘
                            │ transaction · select_for_update
 ┌──────────────────────────▼──────────────────────────────────┐
-│  PostgreSQL 16 — 25 thực thể (mục 5, ERD 11.2)              │
+│  PostgreSQL 16 — 26 thực thể (mục 5, ERD 11.2)              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -92,7 +91,7 @@ backend/
 ├── apps/
 │   ├── auth/          # User (label "user"), JWT, LockedAwareJWTAuthentication
 │   ├── profiles/      # StudentProfile, TeacherProfile
-│   ├── training/      # Major, Curriculum, CurriculumCourse, Course, Prerequisite,
+│   ├── training/      # Faculty, Major, Curriculum, CurriculumCourse, Course, Prerequisite,
 │   │                  #   Semester, ClassSection, Schedule
 │   ├── registration/  # Registration
 │   ├── attendance/    # AttendanceSession, Attendance, AttendanceRequest
@@ -141,13 +140,13 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 
 | Mã | Chức năng | Mô tả |
 | :--- | :--- | :--- |
-| PDT-01 | Quản lý hồ sơ người dùng | Mã SV/GV, ngành, khoa/bộ môn, liên hệ; gán `ctdt` cho SV. |
-| PDT-02 | Quản lý ngành | Thêm/sửa/ngừng ngành. |
+| PDT-01 | Quản lý hồ sơ người dùng | Mã SV/GV, ngành, khoa/viện, liên hệ; gán `ctdt` cho SV. |
+| PDT-02 | Quản lý khoa/viện và ngành | Thêm/sửa/ngừng khoa/viện và ngành; mỗi ngành thuộc một khoa/viện. **Do PĐT quản lý** (Admin chỉ cấp tài khoản). |
 | PDT-03 | Quản lý CTĐT | CTĐT theo ngành × khóa; gán môn với `khoi_kien_thuc`, `loai_mon`, `hoc_ky_goi_y`. |
 | PDT-04 | Quản lý môn học | Tín chỉ (tổng/LT/TH), số tiết, `loai_danh_gia`, trạng thái. |
 | PDT-05 | Quản lý môn tiên quyết | Thiết lập tiên quyết (chống chu trình). |
 | PDT-06 | Quản lý học kỳ | Tạo, đặt thời gian, mở/đóng. |
-| PDT-07 | Cấu hình cửa sổ đăng ký | Thời gian bắt đầu/kết thúc đăng ký của học kỳ. |
+| PDT-07 | Cấu hình đăng ký của học kỳ | Cửa sổ đăng ký (bắt đầu/kết thúc) **và giới hạn tín chỉ** (tối thiểu, tối đa, tối đa khi SV bị cảnh báo học vụ) — do PĐT đặt theo từng học kỳ. |
 | PDT-08 | Quản lý lớp học phần | Mở lớp, phân công GV, sĩ số, trạng thái, gia hạn nhập điểm. |
 | PDT-09 | Quản lý lịch học | Thứ, tiết bắt đầu, số tiết, phòng. |
 | PDT-10 | Theo dõi đăng ký | Xem danh sách đăng ký theo môn/lớp/ngành/học kỳ; xuất Excel. |
@@ -164,7 +163,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | SV-01 | Đăng nhập / đăng xuất | |
 | SV-02 | Hồ sơ cá nhân | Xem thông tin, GPA, tín chỉ tích lũy; sửa email/sdt; đổi mật khẩu. |
 | SV-03 | Xem CTĐT | Môn bắt buộc/tự chọn, khối kiến thức, học kỳ gợi ý. |
-| SV-04 | Xem lớp đang mở | Đã lọc theo CTĐT, còn chỗ, không trùng lịch. |
+| SV-04 | Xem lớp đang mở | Đã lọc theo CTĐT, còn chỗ, không trùng lịch. Client thêm bộ lọc *Môn chưa học* / *Theo CTĐT* + chọn *kỳ trong CTĐT* (ghép với `curriculums/my`, không thêm endpoint). |
 | SV-05 | Đăng ký môn thủ công | BR-01..07. |
 | SV-06 | Tạo TKB tự động | Gợi ý tổ hợp (client-side), SV xác nhận rồi đăng ký (Pha 8, **tùy chọn**). |
 | SV-07 | Hủy đăng ký | BR-05. |
@@ -203,7 +202,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | KT-05 | Miễn giảm / học bổng | `Discount` (BR-18). |
 | KT-06 | Tính học phí | Tự động khi đăng ký/hủy + KT bấm tính lại (BR-15..17). |
 | KT-07 | Danh sách học phí | Theo học kỳ/ngành/lớp/trạng thái. |
-| KT-08 | Xác nhận thu / hoàn tiền | Ghi `Payment` loại `THU` hoặc `HOAN` (BR-26). |
+| KT-08 | Xác nhận thu / hoàn tiền | Ghi `Payment` loại `THU` hoặc `HOAN` (BR-26); đối soát khoản SV chuyển khoản theo nội dung `HOCPHI <ma_sv> <hoc_ky>`. |
 | KT-09 | Công nợ | SV còn nợ, quá hạn, chờ hoàn tiền. |
 | KT-10 | Biên lai | Xuất phiếu thu Excel. |
 | KT-11 | Báo cáo tài chính | Phải thu/đã thu/còn nợ theo học kỳ/ngành/lớp/SV; xuất Excel. |
@@ -216,7 +215,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | ADM-02 | Quản lý tài khoản | Tạo/sửa/khóa/mở khóa/reset mật khẩu cho 5 vai trò. |
 | ADM-03 | Tra cứu hồ sơ | Chỉ đọc (sửa hồ sơ học vụ là của PĐT, PDT-01). |
 | ADM-04 | Xem ma trận quyền | **Chỉ đọc** ma trận mục 9; gán vai trò khi tạo tài khoản (ADM-02). |
-| ADM-05 | Cấu hình hệ thống | `SystemConfig`: 3 trần tín chỉ, `max_absent_pct`, `so_ngay_cho_phep_nhap_diem`, `backup_retention_days`. |
+| ADM-05 | Cấu hình hệ thống | `SystemConfig`: `max_absent_pct`, `so_ngay_cho_phep_nhap_diem`, `backup_retention_days`, thông tin nhận chuyển khoản học phí (`ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan`). |
 | ADM-06 | Audit log | Admin xem tất cả; PĐT chỉ scope `training`; KT chỉ scope `finance`. |
 | ADM-07 | Thông báo hệ thống | Soạn/thu hồi thông báo toàn hệ thống. |
 | ADM-08 | Sao lưu | Tạo backup, xem danh sách (restore làm tay — mục 0). |
@@ -232,10 +231,10 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | BR-01 | SV chỉ đăng ký khi: học kỳ `MO` **và** trong cửa sổ đăng ký (PDT-07) **và** lớp `MO`. Sai → `NGOAI_CUA_SO_DANG_KY` / `LOP_CHUA_MO`. |
 | BR-02 | Không đăng ký khi `si_so_hien_tai ≥ si_so_toi_da` (`LOP_DAY`). |
 | BR-03 | **Trùng lịch:** hai lịch trùng khi cùng `thu` **và** khoảng tiết `[tiet_bat_dau, tiet_ket_thuc]` giao nhau. So giữa lớp mới với mọi lớp `DA_DANG_KY` cùng học kỳ của SV (`TRUNG_LICH`). Chỉ có lịch định kỳ. |
-| BR-04 | **Tiên quyết & đã đạt.** *Đạt* một môn = tồn tại `Grade` `KHOA` của môn đó với `diem_chu ≠ F` (D vẫn đạt; môn `DAT_KHONG_DAT` đạt khi `P`) — không phân biệt CTĐT. (a) Mọi môn tiên quyết phải đạt, sai → `THIEU_TIEN_QUYET`. (b) Môn **đã đạt** không đăng ký lại, → `DA_DAT_MON`. (c) Môn đã học nhưng **chưa đạt (F)** đăng ký lại bình thường (lớp mới); GPA lấy lần mới nhất (BR-25). |
+| BR-04 | **Tiên quyết & đã đạt.** *Đạt* một môn = tồn tại `Grade` `KHOA` của môn đó với `diem_chu ≠ F` (D vẫn đạt; môn `DAT_KHONG_DAT` đạt khi `P`) — không phân biệt CTĐT. (a) Mọi môn tiên quyết phải đạt, sai → `THIEU_TIEN_QUYET`. (b) Môn **đã đạt** không đăng ký lại, → `DA_DAT_MON`. (c) Môn đã học nhưng **chưa đạt (F)** đăng ký lại bình thường (lớp mới); GPA lấy lần mới nhất (BR-25). (d) **Mỗi môn chỉ một lớp trong một học kỳ:** nếu SV đã có `Registration` `DA_DANG_KY` của **cùng `mon_hoc`** trong học kỳ của lớp mới (kể cả lớp khác) → `DA_DANG_KY_MON`. Hủy lớp đó thì đăng ký lớp khác của môn được. |
 | BR-05 | **Hủy.** *SV:* chỉ khi lớp `MO` **và** trong cửa sổ đăng ký; học phí môn đó bị trừ (tính lại, BR-15). *PĐT (force-cancel, PDT-11):* khi lớp `MO` **hoặc `DANG_HOC`**, bắt buộc `ly_do`, ghi audit log; học phí tính lại, nếu SV đã thu dư thì phát sinh `can_hoan` (BR-26). Hủy luôn `si_so_hien_tai −= 1` trong transaction (BR-06), không xuống dưới 0. |
 | BR-06 | **Chống overbook.** Đăng ký/hủy chạy trong **một transaction**: `SELECT … FOR UPDATE` dòng `ClassSection` → **đọc lại** `si_so_hien_tai` trong lock → còn chỗ mới tạo/kích hoạt `Registration` và `+= 1` → COMMIT. `UNIQUE(sinh_vien, lop_hoc_phan)` chỉ chống trùng 1 SV, **không** chống overbook. |
-| BR-07 | **Giới hạn tín chỉ** (đọc từ `SystemConfig`: `tin_chi_toi_thieu`=12, `tin_chi_toi_da`=24, `tin_chi_toi_da_canh_bao`=14), tính trên tổng tín chỉ các `Registration` `DA_DANG_KY` cùng học kỳ **cộng** môn mới. Vượt tối đa → chặn `VUOT_TIN_TC_TOI_DA`. Dưới tối thiểu → **chỉ cảnh báo** (`warnings[]`). SV diện cảnh báo học vụ (`StudentProfile.gpa` không NULL và `< 2.0`) bị giới hạn `min(tối đa, tín chỉ cảnh báo)` → `VUOT_TIN_TC_CANH_BAO`. `gpa IS NULL` (học kỳ đầu) không thuộc diện cảnh báo. |
+| BR-07 | **Giới hạn tín chỉ** (đọc từ `Semester` của lớp: `tin_chi_toi_thieu`, `tin_chi_toi_da`, `tin_chi_toi_da_canh_bao` — PĐT đặt theo từng học kỳ, mặc định 12 / 24 / 14), tính trên tổng tín chỉ các `Registration` `DA_DANG_KY` cùng học kỳ **cộng** môn mới. Vượt tối đa → chặn `VUOT_TIN_TC_TOI_DA`. Dưới tối thiểu → **chỉ cảnh báo** (`warnings[]`). SV diện cảnh báo học vụ (`StudentProfile.gpa` không NULL và `< 2.0`) bị giới hạn `min(tối đa, tín chỉ cảnh báo)` → `VUOT_TIN_TC_CANH_BAO`. `gpa IS NULL` (học kỳ đầu) không thuộc diện cảnh báo. |
 | BR-08 | TKB 15 tiết/ngày: sáng 1–5, chiều 6–10, tối 11–15; `thu` ∈ 2..8 (thứ 2 → thứ 7; **8 = Chủ nhật**). |
 | BR-09 | Khi tạo lịch bắt buộc nhập `so_tiet_moi_buoi`; `tiet_bat_dau + so_tiet_moi_buoi − 1` **không vượt hết nhóm tiết** của buổi chứa `tiet_bat_dau`. |
 
@@ -248,7 +247,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | BR-12 | GV chỉ nhập/sửa điểm của lớp mình phụ trách. |
 | BR-13 | **Hạn nhập điểm** = `han_nhap_diem` của lớp; nếu NULL thì = `(ClassSection.ngay_ket_thuc ?? Semester.ngay_ket_thuc) + SystemConfig.so_ngay_cho_phep_nhap_diem` ngày (mặc định 14). Quá hạn → `QUA_HAN_NHAP_DIEM`. PĐT **gia hạn** (đặt `han_nhap_diem` mới) hoặc **nhập hộ** (điểm lưu thẳng ở `CHINH_THUC`, vì PĐT không có quyền khóa); cả hai ghi audit log. |
 | BR-14 | **Trạng thái điểm:** `NHAP_TAM` → `CHINH_THUC` (GV khóa) → `KHOA` (PĐT duyệt cả lớp, lớp đã `DA_DONG`). GV **mở khóa** `CHINH_THUC` → `NHAP_TAM` được khi lớp còn `DANG_HOC` và trong hạn (ghi audit log). `KHOA` bất biến. SV chỉ thấy điểm `KHOA`. |
-| BR-25 | **GPA & xếp loại.** (a) GPA học kỳ = Σ(`gpa_thang_4`×tín chỉ)/Σ tín chỉ trên `Grade` `KHOA` thuộc học kỳ đó; GPA tích lũy trên toàn bộ. (b) `P` bị loại cả tử lẫn mẫu; `F` vẫn vào mẫu. (c) Mỗi `(sinh_vien, mon_hoc)` chỉ tính **lần học mới nhất**: `Grade` `KHOA` có `lop_hoc_phan.hoc_ky.ngay_bat_dau` lớn nhất (không dùng thời điểm tạo bản ghi). (d) `tin_chi_tich_luy` = Σ tín chỉ môn có `Grade` `KHOA` đạt (BR-11). (e) Cập nhật `StudentProfile.gpa` / `tin_chi_tich_luy` **đồng bộ** khi PĐT duyệt `KHOA` (không cần job). (f) Xếp loại thang 4: Xuất sắc 3.60–4.00, Giỏi 3.20–3.59, Khá 2.50–3.19, TB 2.00–2.49, Yếu 1.00–1.99, Kém <1.00. |
+| BR-25 | **GPA & xếp loại.** (a) GPA học kỳ = Σ(`gpa_thang_4`×tín chỉ)/Σ tín chỉ trên `Grade` `KHOA` thuộc học kỳ đó; GPA tích lũy trên toàn bộ. (b) `P` bị loại cả tử lẫn mẫu; `F` vẫn vào mẫu. (c) Mỗi `(sinh_vien, mon_hoc)` chỉ tính **lần học mới nhất**: `Grade` `KHOA` có `lop_hoc_phan.hoc_ky.ngay_bat_dau` lớn nhất (không dùng thời điểm tạo bản ghi). (d) `tin_chi_tich_luy` = Σ tín chỉ môn có `Grade` `KHOA` đạt (BR-11). (e) Cập nhật `StudentProfile.gpa` / `tin_chi_tich_luy` **đồng bộ** khi PĐT duyệt `KHOA` (không cần job). (f) Xếp loại thang 4: Xuất sắc 3.60–4.00, Giỏi 3.20–3.59, Khá 2.50–3.19, TB 2.00–2.49, Yếu 1.00–1.99, Kém <1.00. (g) **Thống kê học kỳ:** `tin_chi_hoc` = Σ tín chỉ mọi môn của học kỳ; `tin_chi_dat` = Σ tín chỉ môn không `F`; **điểm TB (hệ 10)** = Σ(`diem_tong_ket`×tín chỉ)/Σ tín chỉ, loại môn `P` (như GPA); `xep_loai` theo (f) trên GPA học kỳ. |
 
 ### 4.3. Học phí
 
@@ -278,7 +277,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 
 ---
 
-## 5. THỰC THỂ (25)
+## 5. THỰC THỂ (26)
 
 Quy ước: FK người dùng trỏ `User`; SV/GV phân biệt qua `role` + profile.
 
@@ -286,19 +285,20 @@ Quy ước: FK người dùng trỏ `User`; SV/GV phân biệt qua `role` + prof
 | :--- | :--- | :--- |
 | **User** | `username`, `password`, `role` ∈ {`ADMIN`, `PHONG_DAO_TAO`, `SINH_VIEN`, `GIAO_VIEN`, `KE_TOAN`}, `is_locked`, `last_login`, `email` | `role` là enum cứng. `is_locked` chặn login + refresh. Dùng `is_locked` thay cho `is_active`; không dùng Django admin site cho nghiệp vụ. |
 | **StudentProfile** | `user` (1-1), `ma_sv`, `ho_ten`, `nganh`, `khoa_nhap_hoc`, `ctdt`, `gpa` (NULL = chưa có), `tin_chi_tich_luy`, `email`, `sdt` | `ma_sv` duy nhất. `ctdt` gán lúc tạo hồ sơ (CTĐT `HOAT_DONG` khớp ngành + khóa); cố định cho SV. `gpa`/`tin_chi_tich_luy` là cache BR-25, không nhập tay. |
-| **TeacherProfile** | `user` (1-1), `ma_gv`, `ho_ten`, `khoa_bo_mon`, `hoc_vi`, `email`, `sdt` | `ma_gv` duy nhất. |
-| **Major** | `ma_nganh`, `ten_nganh`, `thoi_gian_dao_tao`, `trang_thai` ∈ {`HOAT_DONG`, `NGUNG`} | `ma_nganh` duy nhất. |
+| **TeacherProfile** | `user` (1-1), `ma_gv`, `ho_ten`, `khoa` (FK Faculty), `hoc_vi`, `email`, `sdt` | `ma_gv` duy nhất. |
+| **Faculty** | `ma_khoa`, `ten_khoa`, `trang_thai` ∈ {`HOAT_DONG`, `NGUNG`} | `ma_khoa` duy nhất. Không xóa; chỉ **ngừng** được khi không còn ngành hoặc giáo viên đang hoạt động thuộc về (`TRANG_THAI_KHONG_HOP_LE`). |
+| **Major** | `ma_nganh`, `ten_nganh`, `thoi_gian_dao_tao`, `khoa` (FK Faculty), `trang_thai` ∈ {`HOAT_DONG`, `NGUNG`} | `ma_nganh` duy nhất. |
 | **Curriculum** | `ma_ctdt`, `nganh`, `khoa_tuyen_sinh`, `tong_tin_chi_yeu_cau`, `trang_thai` ∈ {`HOAT_DONG`, `NGUNG`} | `tong_tin_chi_yeu_cau > 0`. Chỉ 1 `HOAT_DONG` mỗi `(nganh, khoa_tuyen_sinh)` (unique có điều kiện). |
 | **CurriculumCourse** | `ctdt`, `mon_hoc`, `khoi_kien_thuc` ∈ {`chung`, `co_so_nganh`, `chuyen_nganh`, `tu_chon`, `tot_nghiep`}, `loai_mon` ∈ {`bat_buoc`, `tu_chon`}, `hoc_ky_goi_y` | `(ctdt, mon_hoc)` duy nhất. Nơi gán khối kiến thức. |
-| **Course** | `ma_mon`, `ten_mon`, `tong_tin_chi`, `tin_chi_ly_thuyet`, `tin_chi_thuc_hanh`, `so_tiet_ly_thuyet`, `so_tiet_thuc_hanh`, `loai_danh_gia` ∈ {`DIEM`, `DAT_KHONG_DAT`}, `trang_thai` ∈ {`HOAT_DONG`, `NGUNG_SU_DUNG`} | `tong_tin_chi = LT + TH`. `so_tiet_*` chỉ để truyền dạy, không tính phí. `NGUNG_SU_DUNG`: chặn mở lớp mới; môn đã có lớp/CTĐT không xóa. |
+| **Course** | `ma_mon`, `ten_mon`, `tong_tin_chi`, `tin_chi_ly_thuyet`, `tin_chi_thuc_hanh`, `so_tiet_ly_thuyet`, `so_tiet_thuc_hanh`, `loai_danh_gia` ∈ {`DIEM`, `DAT_KHONG_DAT`}, `khoa` (FK Faculty — khoa/viện phụ trách), `trang_thai` ∈ {`HOAT_DONG`, `NGUNG_SU_DUNG`} | `tong_tin_chi = LT + TH`. `khoa` dùng để gợi ý giáo viên cùng khoa/viện khi tạo lớp. `so_tiet_*` chỉ để truyền dạy, không tính phí. `NGUNG_SU_DUNG`: chặn mở lớp mới; môn đã có lớp/CTĐT không xóa. |
 | **Prerequisite** | `mon_hoc`, `mon_tien_quyet` | Cặp duy nhất; `mon_hoc ≠ mon_tien_quyet`; **không chu trình** (DFS, vi phạm → 400). |
-| **Semester** | `ten_hk`, `nam_hoc`, `ngay_bat_dau`, `ngay_ket_thuc`, `cua_so_dk_bat_dau`, `cua_so_dk_ket_thuc`, `trang_thai` ∈ {`MO`, `DONG`} | Cửa sổ đăng ký ⊂ thời gian học kỳ. *(Không còn cột `tin_chi_*` — BR-07 đọc `SystemConfig`.)* |
+| **Semester** | `ten_hk`, `nam_hoc`, `ngay_bat_dau`, `ngay_ket_thuc`, `cua_so_dk_bat_dau`, `cua_so_dk_ket_thuc`, `tin_chi_toi_thieu`, `tin_chi_toi_da`, `tin_chi_toi_da_canh_bao`, `trang_thai` ∈ {`MO`, `DONG`} | Cửa sổ đăng ký ⊂ thời gian học kỳ. `tin_chi_toi_thieu` (≥ 1) ≤ `tin_chi_toi_da`; `tin_chi_toi_da_canh_bao` ≤ `tin_chi_toi_da` (mặc định 12 / 24 / 14 khi tạo học kỳ). |
 | **ClassSection** | `ma_lop`, `mon_hoc`, `hoc_ky`, `giao_vien`, `si_so_toi_da`, `si_so_hien_tai`, `ngay_bat_dau` (NULL = theo học kỳ), `ngay_ket_thuc` (NULL = theo học kỳ), `han_nhap_diem` (NULL, BR-13), `trang_thai` ∈ {`KE_HOACH`, `MO`, `DANG_HOC`, `DA_DONG`} | `0 ≤ si_so_hien_tai ≤ si_so_toi_da`. Chuyển trạng thái xem mục 6. |
 | **Schedule** | `lop_hoc_phan`, `thu` (2..8; 8 = Chủ nhật), `tiet_bat_dau`, `so_tiet_moi_buoi`, `phong` | `tiet_ket_thuc = tiet_bat_dau + so_tiet_moi_buoi − 1` và `buoi` đều **dẫn xuất** (không lưu). Không vượt nhóm tiết (BR-09). **Phòng và GV không giao tiết cùng `thu`** (khoảng tiết `[bat_dau, ket_thuc]`). Cho phép 2 lịch cùng lớp/thứ/buổi nếu không giao tiết. |
 | **Registration** | `sinh_vien`, `lop_hoc_phan`, `trang_thai` ∈ {`DA_DANG_KY`, `DA_HUY`}, `ngay_dang_ky`, `ngay_huy`, `ly_do_huy`, `request_id` (UUID, NULL) | `UNIQUE(sinh_vien, lop_hoc_phan)`. Học kỳ lấy qua `lop_hoc_phan.hoc_ky` (không lưu trùng). `request_id` UNIQUE khi khác NULL, **gán một lần lúc tạo, không ghi đè khi kích hoạt lại** (mục 8.3). |
 | **AttendanceSession** | `lop_hoc_phan`, `ngay_hoc`, `buoi`, `tiet_bat_dau`, `trang_thai` ∈ {`MO`, `DA_DIEM_DANH`} | `UNIQUE(lop_hoc_phan, ngay_hoc, buoi)` — 1 buổi điểm danh mỗi (lớp, ngày, buổi). **Sinh tự động** (BR-20); tổng số buổi là mẫu số của tỷ lệ vắng. `MO` → `DA_DIEM_DANH` ở lần `PUT records` thành công đầu tiên. |
 | **Attendance** | `attendance_session`, `lop_hoc_phan`, `ngay_hoc`, `sinh_vien`, `trang_thai`, `di_tre`, `ghi_chu`, `cap_nhat_luc` | `UNIQUE(attendance_session, sinh_vien)`. |
-| **AttendanceRequest** | `attendance`, `sinh_vien`, `ly_do`, `trang_thai_mong_muon`, `trang_thai` ∈ {`CHO_DUYET`, `DUYET`, `TU_CHOI`}, `nguoi_duyet`, `ngay_duyet` | SV gửi; GV (lớp mình) hoặc PĐT duyệt; `DUYET` ghi `Attendance.trang_thai = trang_thai_mong_muon`. |
+| **AttendanceRequest** | `attendance`, `sinh_vien`, `ly_do`, `trang_thai_mong_muon` (∈ `CO_MAT`/`VANG_CO_PHEP`), `di_tre_mong_muon` (bool), `minh_chung` (tệp ảnh/PDF ≤ 5 MB, tùy chọn), `ngay_gui`, `trang_thai` ∈ {`CHO_DUYET`, `DUYET`, `TU_CHOI`}, `nguoi_duyet`, `ngay_duyet`, `ghi_chu` | SV gửi cho buổi đã điểm danh (mỗi buổi tối đa 1 yêu cầu `CHO_DUYET`); **chỉ GV phụ trách lớp duyệt** (PĐT không tham gia); **chỉ gửi/duyệt khi lớp `DANG_HOC`** — khi lớp chuyển `DA_DONG`, mọi yêu cầu `CHO_DUYET` của lớp **tự chuyển `TU_CHOI`** (`nguoi_duyet` NULL, `ghi_chu` = "Quá hạn — lớp đã đóng"); `DUYET` ghi `Attendance.trang_thai = trang_thai_mong_muon` và `di_tre = di_tre_mong_muon`. `ly_do` bắt buộc. |
 | **Grade** | `lop_hoc_phan`, `sinh_vien`, `diem_qua_trinh`, `diem_giua_ky`, `diem_cuoi_ky`, `diem_tong_ket`, `diem_chu`, `gpa_thang_4`, `trang_thai` ∈ {`NHAP_TAM`, `CHINH_THUC`, `KHOA`}, `ngay_nhap` | `UNIQUE(lop_hoc_phan, sinh_vien)`; điểm ∈ [0,10]. Tổng kết/chữ/GPA theo BR-10/11. |
 | **HocPhanGia** | `hoc_ky` (NULL = mặc định), `pham_vi` ∈ {`MAC_DINH`, `KHOI_KIEN_THUC`, `NGANH`, `GIA_TH`}, `tham_chieu`, `don_gia` | `tham_chieu`: NULL khi `MAC_DINH`/`GIA_TH`; `ma_nganh` khi `NGANH`; tên khối khi `KHOI_KIEN_THUC`. `don_gia ≥ 0`. UNIQUE `(hoc_ky, pham_vi, tham_chieu)` bằng **functional index** `COALESCE(hoc_ky_id,0), pham_vi, COALESCE(tham_chieu,'')` (PostgreSQL: `NULL ≠ NULL` trong UNIQUE thường). |
 | **TuitionConfig** | `hoc_ky` (1-1), `han_dong`, `ghi_chu` | KT-01. |
@@ -308,7 +308,7 @@ Quy ước: FK người dùng trỏ `User`; SV/GV phân biệt qua `role` + prof
 | **Notification** | `tieu_de`, `noi_dung`, `audience` ∈ {`ROLE`, `CLASS`, `USER`}, `target_refs` (JSON array), `nguoi_gui`, `ngay_gui`, `trang_thai` ∈ {`DA_GUI`, `THU_HOI`} | `ROLE` → mã role; `CLASS` → id `ClassSection`; `USER` → id `User`. Thu hồi → `THU_HOI` (biến khỏi danh sách người nhận). |
 | **NotificationRead** | `notification`, `user`, `da_doc`, `ngay_doc` | `(notification, user)` duy nhất. |
 | **AuditLog** | `user`, `hanh_dong` ∈ {`CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `PHAN_QUYEN`}, `doi_tuong`, `doi_tuong_id` (chuỗi id, không FK), `chi_tiet` (JSON), `thoi_gian`, `ip` | **Scope theo tiền tố `doi_tuong`:** `training` = User/Profile, Major, Curriculum, CurriculumCourse, Course, Prerequisite, Semester, ClassSection, Schedule, Registration, Attendance*, Grade, Notification; `finance` = HocPhanGia, TuitionConfig, Discount, Payment, Tuition; còn lại (SystemConfig, backup) chỉ Admin. |
-| **SystemConfig** | `khoa`, `gia_tri` (chuỗi), `mo_ta` | ADM-05. Khóa: `tin_chi_toi_thieu`, `tin_chi_toi_da`, `tin_chi_toi_da_canh_bao`, `max_absent_pct`, `so_ngay_cho_phep_nhap_diem`, `backup_retention_days`. |
+| **SystemConfig** | `khoa`, `gia_tri` (chuỗi), `mo_ta` | ADM-05. Khóa: `max_absent_pct`, `so_ngay_cho_phep_nhap_diem`, `backup_retention_days`, `ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan` (thông tin nhận chuyển khoản học phí). |
 
 **Công thức dẫn xuất của Tuition** (tính khi đọc, không lưu):
 ```
@@ -331,7 +331,7 @@ Hủy môn / giá đổi ⇒ chỉ tính lại `tong_*`; `con_no`/`can_hoan` t�
 | Đối tượng | Chuyển hợp lệ | Điều kiện | Ai |
 | :--- | :--- | :--- | :--- |
 | **Học kỳ** | `MO` ↔ `DONG` | Mở: đã đặt cửa sổ đăng ký. Đóng: không còn lớp `MO`/`DANG_HOC` (còn → `409 TRANG_THAI_KHONG_HOP_LE`). | PĐT |
-| **Lớp HP** | `KE_HOACH` → `MO` → `DANG_HOC` → `DA_DONG` | `MO`: có GV, sĩ số, ≥1 lịch (PĐT bấm `/open/`; môn `NGUNG_SU_DUNG` không mở được). `DANG_HOC`: **chỉ job daily** khi qua `ngay_bat_dau` (không có thao tác thủ công; muốn học sớm thì PĐT sửa `ngay_bat_dau`). `DA_DONG`: sau `ngay_ket_thuc`, **mọi `Registration` `DA_DANG_KY` đều có `Grade` ≥ `CHINH_THUC`** — job daily tự đóng khi đủ điều kiện, hoặc PĐT bấm. Override tay thắng job. Điểm `KHOA` là bước **sau** đóng lớp. Học phí không phải điều kiện đóng lớp. | PĐT / job |
+| **Lớp HP** | `KE_HOACH` → `MO` → `DANG_HOC` → `DA_DONG` | `MO`: có GV, sĩ số, ≥1 lịch (PĐT bấm `/open/`; môn `NGUNG_SU_DUNG` không mở được). `DANG_HOC`: **chỉ job daily** khi qua `ngay_bat_dau` (không có thao tác thủ công; muốn học sớm thì PĐT sửa `ngay_bat_dau`). `DA_DONG`: sau `ngay_ket_thuc`, **mọi `Registration` `DA_DANG_KY` đều có `Grade` ≥ `CHINH_THUC`** — job daily tự đóng khi đủ điều kiện, hoặc PĐT bấm. Override tay thắng job. Điểm `KHOA` là bước **sau** đóng lớp. Khi chuyển `DA_DONG`, các `AttendanceRequest` `CHO_DUYET` của lớp tự chuyển `TU_CHOI` (quá hạn). Học phí không phải điều kiện đóng lớp. | PĐT / job |
 | **Đăng ký** | `DA_DANG_KY` ↔ `DA_HUY` | Hủy theo BR-05; đăng ký lại = kích hoạt lại bản ghi cũ và chạy lại BR-01..07. | SV / PĐT |
 | **Điểm** | `NHAP_TAM` → `CHINH_THUC` → `KHOA`; `CHINH_THUC` → `NHAP_TAM` | BR-14. | GV → PĐT |
 | **Học phí** | `CHUA_TINH` → `DA_TINH` | Lần tính đầu thành công (BR-15). Sau đó luôn `DA_TINH`; trạng thái hiển thị dẫn xuất (mục 5). | hệ thống / KT |
@@ -345,6 +345,7 @@ Hủy môn / giá đổi ⇒ chỉ tính lại `tong_*`; `con_no`/`can_hoan` t�
 | SV đăng ký / hủy | lớp `MO` + học kỳ `MO` + trong cửa sổ (BR-01, BR-05) |
 | PĐT hủy hộ | lớp `MO` hoặc `DANG_HOC` (BR-05) |
 | Điểm danh (GV-06/07/08) | lớp `DANG_HOC` + buổi có `ngay_hoc` ≤ hôm nay (BR-20) |
+| SV gửi / GV duyệt yêu cầu sửa điểm danh | lớp `DANG_HOC` + buổi đã `DA_DIEM_DANH` |
 | Nhập / khóa / mở khóa điểm | lớp `DANG_HOC` + trong hạn (BR-13/14) |
 | PĐT duyệt `KHOA` | lớp `DA_DONG` |
 | Tính / thu học phí | không phụ thuộc trạng thái lớp |
@@ -369,8 +370,8 @@ SV chọn lớp → POST /api/registrations/  (Idempotency-Key bắt buộc)
 SV chọn môn + ưu tiên → AutoScheduleService (pure Dart, client) → tối đa 3 tổ hợp gợi ý
   → SV xác nhận → POST /api/registrations/ từng môn (server chạy lại BR-01..07)
 ```
-Gợi ý ≠ đăng ký. MVP greedy: môn bắt buộc theo `hoc_ky_goi_y` trước, mỗi môn chọn lớp đầu tiên không trùng
-lịch, điểm ưu tiên đơn giản. Dữ liệu từ `GET /api/auto-schedule/available-courses/` (toàn bộ lớp mở,
+Gợi ý ≠ đăng ký. **Chọn môn** dùng cùng bộ lọc với SV-04 (*Tất cả môn đang mở / Theo CTĐT* + kỳ trong CTĐT, kết hợp được với nút *Môn chưa học*) và cùng cách gom *môn → các lớp học phần*; SV có thể chọn **giáo viên mong muốn** cho từng môn (mặc định *Tự động chọn*). MVP greedy: môn bắt buộc theo `hoc_ky_goi_y` trước, mỗi môn chọn lớp đầu tiên không trùng
+lịch. **Ưu tiên cá nhân** (client): *tránh ngày* (T2–CN), *ngày muốn học*, *ca học ưu tiên* (sáng 1–5 / chiều 6–10 / tối 11–15). Điểm tổ hợp (40–99) = 70 − 12 cho mỗi buổi rơi vào ngày tránh + 6 cho mỗi môn vào ngày muốn học + 4 cho mỗi môn đúng ca ưu tiên + 4 nếu học ≤ 4 ngày/tuần + 8 cho mỗi môn xếp đúng giáo viên mong muốn − 10 cho mỗi môn không xếp được giáo viên đó; mỗi tổ hợp kèm **danh sách lý do** (điều kiện đạt/không đạt và chỗ bị vướng lịch) để SV hiểu vì sao điểm cao hoặc thấp. Dữ liệu từ `GET /api/auto-schedule/available-courses/` (toàn bộ lớp mở,
 **không lọc trùng lịch** — khác `/api/courses/available/`). Không có endpoint suggest phía server.
 
 ### 7.3. PĐT chuẩn bị dữ liệu
@@ -405,7 +406,7 @@ Tạo tài khoản + vai trò → khóa/mở khóa/reset mật khẩu → mọi 
 
 | Job | Lịch | Việc |
 | :--- | :--- | :--- |
-| `classes_transition_daily` | 00:05 | `MO` qua `ngay_bat_dau` → `DANG_HOC`; `DANG_HOC` qua `ngay_ket_thuc` và đủ điều kiện (mục 6) → `DA_DONG`. Bỏ qua lớp đã ở trạng thái đích. |
+| `classes_transition_daily` | 00:05 | `MO` qua `ngay_bat_dau` → `DANG_HOC`; `DANG_HOC` qua `ngay_ket_thuc` và đủ điều kiện (mục 6) → `DA_DONG` (kèm tự từ chối yêu cầu sửa điểm danh còn chờ). Bỏ qua lớp đã ở trạng thái đích. |
 | `tuition_overdue_notify` | 07:00 | `Tuition` `DA_TINH` có `con_no > 0` và quá `han_dong` → thông báo SV + KT. |
 | `backup_daily` | 02:00 | `pg_dump` → `BACKUP_DIR`; xóa file quá `backup_retention_days`. |
 | `flush_expired_tokens` | 03:00 | `flushexpiredtokens` của SimpleJWT blacklist. |
@@ -425,12 +426,12 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 
 | Method | Endpoint | Vai trò | Mô tả |
 | :--- | :--- | :--- | :--- |
-| POST | `/api/auth/login/` | Public | Trả access + refresh. |
-| POST | `/api/auth/logout/` | Mọi vai trò | Blacklist refresh token. |
+| POST | `/api/auth/login/` | Public | Trả `{access, refresh, user: {id, username, full_name, role, email}}`. Sai thông tin → `401` (cùng một lỗi cho user không tồn tại/sai mật khẩu); đúng mật khẩu nhưng bị khóa → `403 TAI_KHOAN_BI_KHOA`. Ghi audit `LOGIN`. |
+| POST | `/api/auth/logout/` | Mọi vai trò | Body `{refresh}` → `204`, blacklist refresh token (token của người khác → `400`). |
 | POST | `/api/auth/refresh/` | Public | Rotate + blacklist refresh cũ; chặn nếu `is_locked`. |
-| POST | `/api/auth/forgot-password/` | Public | **Luôn trả cùng một phản hồi** dù email có tồn tại hay không. Token TTL 30 phút, dùng 1 lần. |
-| POST | `/api/auth/reset-password/` | Public | Đặt lại bằng token; blacklist mọi refresh cũ. |
-| POST | `/api/auth/change-password/` | Mọi vai trò | Blacklist refresh cũ. |
+| POST | `/api/auth/forgot-password/` | Public | **Luôn trả cùng một phản hồi** dù email có tồn tại hay không (kể cả tài khoản khóa). Mã đặt lại có dạng `<uid>.<token>`, TTL 30 phút, dùng 1 lần; dev trả kèm `token` trong response. Đếm throttle theo email. |
+| POST | `/api/auth/reset-password/` | Public | Body `{token, new_password}` → `204`; blacklist mọi refresh cũ. Token sai/hết hạn → `400` field `token`. |
+| POST | `/api/auth/change-password/` | Mọi vai trò | Body `{old_password, new_password}` → `204`; blacklist refresh cũ (client phải đăng nhập lại). |
 | GET/PATCH | `/api/profiles/me/` | Mọi vai trò | Xem hồ sơ; sửa `email`, `sdt` (không sửa trường học vụ). |
 | GET | `/api/health/` · `/api/schema/` · `/api/docs/` | Public | Health, OpenAPI, Swagger. |
 | GET | `/api/notifications/` | Mọi vai trò | Thông báo của mình. |
@@ -443,8 +444,8 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
 | GET/POST/PATCH | `/api/users/` | Tài khoản (ADM-02). |
-| PATCH | `/api/users/{id}/lock/` | Khóa/mở khóa. |
-| POST | `/api/users/{id}/reset-password/` | Reset mật khẩu. |
+| PATCH | `/api/users/{id}/lock/` | Body `{is_locked}`. Không tự khóa chính mình (`409`); không tự đổi vai trò của mình. |
+| POST | `/api/users/{id}/reset-password/` | Admin đặt mật khẩu mới (body `{new_password}`, áp chính sách mật khẩu) → `204`, thu hồi refresh cũ. |
 | GET | `/api/admin/permissions/` | Ma trận quyền (**chỉ đọc**, ADM-04). |
 | GET/PATCH | `/api/admin/config/` | `SystemConfig` (ADM-05). |
 | GET | `/api/admin/audit-logs/` | Admin/PĐT/KT; `?scope=` server tự lọc theo role (ADM-06). |
@@ -455,9 +456,9 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
-| GET/POST/PATCH | `/api/profiles/students/` · `/api/profiles/teachers/` | Hồ sơ (PĐT sửa, Admin đọc). |
-| GET/POST/PATCH | `/api/majors/` · `/api/curriculums/` · `/api/curriculum-courses/` · `/api/courses/` · `/api/prerequisites/` | PDT-02..05. |
-| GET/POST/PATCH | `/api/semesters/` | PDT-06; cửa sổ đăng ký sửa qua `PATCH /api/semesters/{id}/window/` (PDT-07). |
+| GET/POST/PATCH | `/api/profiles/students/` · `/api/profiles/teachers/` | Hồ sơ (PĐT sửa, Admin đọc). Lọc `?khoa=` (giáo viên), `?nganh=` (sinh viên). |
+| GET/POST/PATCH | `/api/faculties/` · `/api/majors/` · `/api/curriculums/` · `/api/curriculum-courses/` · `/api/courses/` · `/api/prerequisites/` | PDT-02..05. `/api/courses/` lọc `?nganh=` (qua CTĐT) và `?khoa=`; `/api/classes/` lọc thêm `?nganh=`. |
+| GET/POST/PATCH | `/api/semesters/` | PDT-06; cửa sổ đăng ký sửa qua `PATCH /api/semesters/{id}/window/`, giới hạn tín chỉ qua `PATCH /api/semesters/{id}/` (PDT-07). |
 | POST | `/api/semesters/{id}/open/` · `/close/` | Mở/đóng học kỳ. |
 | GET/POST/PATCH | `/api/class-sections/` · `/api/schedules/` | PDT-08/09. |
 | POST | `/api/class-sections/{id}/open/` · `/close/` | Mở lớp; đóng lớp. |
@@ -466,7 +467,6 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET | `/api/registrations/` · `/api/registrations/export/` | Theo dõi; xuất Excel (PDT-10). |
 | DELETE | `/api/registrations/{id}/` | Hủy hộ (PDT-11, BR-05), body `ly_do`. |
 | GET | `/api/attendance/sessions/` | Xem điểm danh theo lớp (PDT-10). |
-| PATCH | `/api/attendance/requests/{id}/` | PĐT/GV duyệt yêu cầu sửa điểm danh. |
 | GET | `/api/reports/training/` · `/api/reports/training/export/` | PDT-14. |
 
 **Sinh viên**
@@ -474,16 +474,16 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
 | GET | `/api/curriculums/my/` | CTĐT của mình (SV-03). |
-| GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{tin_chi_toi_da, tin_chi_toi_da_canh_bao}` (SV không đọc được `SystemConfig`). |
+| GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{tin_chi_toi_da, tin_chi_toi_da_canh_bao}` (lấy từ `Semester`). |
 | GET | `/api/auto-schedule/available-courses/` | Toàn bộ lớp mở, **không lọc** (SV-06). |
 | POST | `/api/registrations/` | Đăng ký (BR-01..07). **Bắt buộc** `Idempotency-Key`. |
 | DELETE | `/api/registrations/{id}/` | Hủy (BR-05). |
 | GET | `/api/registrations/history/` | Lịch sử (SV-09). |
 | GET | `/api/timetable/my/` | TKB (dùng chung cho GV; phân giải theo role token). |
 | GET | `/api/attendance/my/` | Điểm danh + tỷ lệ vắng của mình; mỗi lớp kèm `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep` (BR-20). |
-| GET/POST | `/api/attendance/requests/` | Xem / gửi yêu cầu sửa (GV xem lớp mình, PĐT xem tất cả). |
-| GET | `/api/grades/my/` | Điểm `KHOA` + GPA. |
-| GET | `/api/tuition/my/` | Học phí (kèm giá trị dẫn xuất, `chi_tiet[]` từng môn, `payments[]` giao dịch). |
+| GET/POST | `/api/attendance/requests/` | SV gửi / xem yêu cầu của mình; GV xem yêu cầu của lớp mình. POST dạng `multipart/form-data` (kèm tệp `minh_chung` tùy chọn); response GET có link tải minh chứng cho GV. |
+| GET | `/api/grades/my/` | Điểm `KHOA` + GPA; kèm `thong_ke[]` theo học kỳ: `so_mon`, `tin_chi_hoc`, `tin_chi_dat`, `diem_tb`, `gpa`, `xep_loai` (BR-25g). |
+| GET | `/api/tuition/my/` | Học phí (kèm giá trị dẫn xuất, `chi_tiet[]` từng môn, `payments[]` giao dịch, `thanh_toan{ngan_hang, so_tai_khoan, chu_tai_khoan, noi_dung_ck}` để SV chuyển khoản/quét QR). |
 
 **Giáo viên**
 
@@ -492,6 +492,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET | `/api/class-sections/my/` · `/api/class-sections/{id}/` | Lớp phụ trách; chi tiết (BR-23). |
 | GET | `/api/class-sections/{id}/students/` | Danh sách SV (GV-04). |
 | GET/PUT | `/api/attendance/sessions/{id}/records/` | Xem / **lưu cả lớp** (upsert danh sách, GV-07/08). |
+| PATCH | `/api/attendance/requests/{id}/` | GV (lớp mình) duyệt / từ chối yêu cầu sửa điểm danh của SV (GV-08). |
 | GET | `/api/attendance/sessions/?lop_hoc_phan=` | Danh sách buổi sinh sẵn của lớp + tổng số buổi (GV-06, GV-09). Không có endpoint tạo buổi. |
 | GET/PUT | `/api/class-sections/{id}/grades/` | Xem / **nhập cả lớp** (upsert `NHAP_TAM`, GV-10). PĐT dùng PUT này để nhập hộ khi quá hạn. |
 | POST | `/api/class-sections/{id}/grades/lock/` | Body `{action: "lock" \| "unlock"}` cả lớp (BR-14). |
@@ -543,6 +544,7 @@ Cảnh báo không chặn trả ở `warnings: [{code, message}]` của response
 | 409 | `LOP_DAY` | BR-02 |
 | 409 | `TRUNG_LICH` | BR-03 |
 | 409 | `DA_DANG_KY` | đăng ký lớp đã đăng ký với key khác |
+| 409 | `DA_DANG_KY_MON` | BR-04(d): đã đăng ký một lớp khác của cùng môn trong học kỳ |
 | 409 | `QUA_HAN_NHAP_DIEM` | BR-13 |
 | 409 | `TRANG_THAI_KHONG_HOP_LE` | vi phạm mục 6 |
 | 403 | `KHONG_CO_QUYEN` · `TAI_KHOAN_BI_KHOA` | BR-21/23 · BR-22 |
@@ -564,10 +566,10 @@ Cảnh báo không chặn trả ở `warnings: [{code, message}]` của response
 | Ngành / CTĐT / Môn / Tiên quyết / Học kỳ / Lớp HP / Lịch | ✗ | ✓ | ✗ | ✗ | ✗ |
 | Theo dõi đăng ký | ✗ | ✓ | *(của mình)* | ✗ | ✗ |
 | Đăng ký / hủy đăng ký | ✗ | *(chỉ hủy hộ)* | ✓ | ✗ | ✗ |
-| Tạo buổi + điểm danh + sửa điểm danh | ✗ | ✗ | ✗ | ✓ *(lớp mình)* | ✗ |
+| Điểm danh + sửa điểm danh (buổi sinh sẵn) | ✗ | ✗ | ✗ | ✓ *(lớp mình)* | ✗ |
 | Xem điểm danh | ✗ | ✓ | *(của mình)* | *(lớp mình)* | ✗ |
 | Xin sửa điểm danh | ✗ | ✗ | ✓ | ✗ | ✗ |
-| Duyệt yêu cầu sửa điểm danh | ✗ | ✓ | ✗ | *(lớp mình)* | ✗ |
+| Duyệt yêu cầu sửa điểm danh | ✗ | ✗ | ✗ | ✓ *(lớp mình)* | ✗ |
 | Nhập / khóa / mở khóa điểm | ✗ | ✗ | ✗ | ✓ *(lớp mình, BR-13)* | ✗ |
 | Duyệt điểm, gia hạn, nhập hộ | ✗ | ✓ | ✗ | ✗ | ✗ |
 | Xem điểm | ✗ | ✓ | *(của mình, `KHOA`)* | *(lớp mình)* | ✗ |
@@ -618,9 +620,9 @@ lib/
 | :--- | :--- | :--- |
 | Public | `/login`, `/forgot-password` | Web + App |
 | Admin | `/admin`, `/admin/accounts`, `/admin/permissions`, `/admin/config`, `/admin/logs`, `/admin/backups`, `/admin/notifications` | Web |
-| PĐT | `/pdt`, `/pdt/profiles`, `/pdt/majors`, `/pdt/curriculums`, `/pdt/courses`, `/pdt/semesters`, `/pdt/classes`, `/pdt/registrations`, `/pdt/grade-sheets`, `/pdt/reports`, `/pdt/notifications`, `/pdt/logs` | Web |
-| SV | `/student`, `/student/profile`, `/student/curriculum`, `/student/register`, `/student/auto-schedule`, `/student/schedule`, `/student/grades`, `/student/attendance`, `/student/tuition`, `/student/notifications` | Web + App |
-| GV | `/teacher`, `/teacher/profile`, `/teacher/classes`, `/teacher/attendance`, `/teacher/grades`, `/teacher/notifications` | Web + App |
+| PĐT | `/pdt`, `/pdt/profiles`, `/pdt/faculties`, `/pdt/majors`, `/pdt/curriculums`, `/pdt/courses`, `/pdt/semesters`, `/pdt/classes`, `/pdt/registrations`, `/pdt/grade-sheets`, `/pdt/reports`, `/pdt/notifications`, `/pdt/logs` | Web |
+| SV | `/student`, `/student/profile`, `/student/curriculum`, `/student/register`, `/student/auto-schedule`, `/student/schedule`, `/student/grades`, `/student/attendance`, `/student/tuition`, `/student/tuition/pay`, `/student/notifications` | Web + App |
+| GV | `/teacher`, `/teacher/profile`, `/teacher/classes`, `/teacher/schedule`, `/teacher/attendance`, `/teacher/grades`, `/teacher/notifications` | Web + App |
 | KT | `/accountant`, `/accountant/config`, `/accountant/tuition`, `/accountant/debts`, `/accountant/reports`, `/accountant/notifications`, `/accountant/logs` | Web |
 
 ### 10.4. Responsive
@@ -668,12 +670,15 @@ sequenceDiagram
     API-->>B: 409 LOP_DAY
 ```
 
-### 11.2. ERD (25 thực thể)
+### 11.2. ERD (26 thực thể)
 
 ```mermaid
 erDiagram
     USER ||--o| STUDENT_PROFILE : "hồ sơ"
     USER ||--o| TEACHER_PROFILE : "hồ sơ"
+    FACULTY ||--o{ MAJOR : "khoa"
+    FACULTY ||--o{ TEACHER_PROFILE : "khoa"
+    FACULTY ||--o{ COURSE : "khoa"
     MAJOR ||--o{ STUDENT_PROFILE : "nganh"
     CURRICULUM ||--o{ STUDENT_PROFILE : "ctdt"
     MAJOR ||--o{ CURRICULUM : ""
@@ -725,7 +730,7 @@ Repo + CI; Docker Compose (Django + PostgreSQL + Redis + Celery); skeleton Djang
 - [ ] **Milestone:** đăng nhập cả 5 role; khóa tài khoản chặn cả token đang dùng
 
 ### Pha 2 — Dữ liệu đào tạo (1.5 tuần)
-- [ ] Major/Curriculum/CurriculumCourse/Course/Prerequisite (chống chu trình)
+- [ ] Faculty/Major/Curriculum/CurriculumCourse/Course/Prerequisite (chống chu trình)
 - [ ] Semester + cửa sổ; ClassSection + Schedule (BR-03 dữ liệu, BR-08/09, phòng/GV không giao tiết); open/close lớp và học kỳ; `grade-deadline`
 - [ ] Job `classes_transition_daily`
 - [ ] Flutter (Web): PĐT quản lý ngành/CTĐT/môn/học kỳ/lớp/lịch
@@ -740,8 +745,8 @@ Repo + CI; Docker Compose (Django + PostgreSQL + Redis + Celery); skeleton Djang
 
 ### Pha 4 — Điểm danh (1 tuần)
 - [ ] Session, `PUT records` cả lớp, `AttendanceRequest`, tỷ lệ vắng + cờ (BR-19/20)
-- [ ] Flutter: GV điểm danh; SV xem + xin sửa
-- [ ] **Milestone:** GV điểm danh, SV xin sửa, PĐT/GV duyệt
+- [ ] Flutter: GV điểm danh; SV xem + xin sửa (trạng thái mong muốn, lý do, minh chứng tùy chọn); GV/PĐT xem minh chứng
+- [ ] **Milestone:** GV điểm danh, SV xin sửa, GV duyệt
 
 ### Pha 5 — Điểm (1.5 tuần)
 - [ ] `PUT grades` cả lớp, lock/unlock cả lớp, approve cả lớp (BR-10..14); hạn nhập điểm + gia hạn/nhập hộ (BR-13)
@@ -790,6 +795,7 @@ Repo + CI; Docker Compose (Django + PostgreSQL + Redis + Celery); skeleton Djang
 - Thanh toán đồng thời 2 request cùng `con_no` → tổng thu không vượt `phai_nop`; thu vượt `con_no` / hoàn vượt `can_hoan` / `so_tien ≤ 0` → `SO_TIEN_KHONG_HOP_LE`
 - Đăng ký lớp `KE_HOACH`/`DANG_HOC`/`DA_DONG` → `LOP_CHUA_MO`; ngoài cửa sổ → `NGOAI_CUA_SO_DANG_KY`
 - Trùng lịch: cùng thứ giao tiết → `TRUNG_LICH`; cùng buổi nhưng không giao tiết (1–2 và 4–5) → hợp lệ; thứ 7 và Chủ nhật (`thu = 8`) hợp lệ; `thu = 1` hoặc `9` → 400
+- Một môn một lớp (BR-04d): đã `DA_DANG_KY` lớp A của môn X, đăng ký lớp B của X cùng học kỳ → `409 DA_DANG_KY_MON`; hủy A rồi đăng ký B → hợp lệ; cùng môn ở học kỳ khác → hợp lệ
 - Tiên quyết (BR-04): thiếu → `THIEU_TIEN_QUYET`; môn đã đạt (kể cả điểm D) → `DA_DAT_MON`; môn F → đăng ký lại được; chu trình tiên quyết → 400
 - Tín chỉ (BR-07): vượt tối đa → 400; dưới tối thiểu → 201 + warning; GPA < 2.0 vượt 14 → `VUOT_TIN_TC_CANH_BAO`; GPA NULL không bị giới hạn
 - Hủy: SV hủy khi lớp `DANG_HOC` → `TRANG_THAI_KHONG_HOP_LE`; PĐT hủy hộ lớp `DANG_HOC` thành công, bắt buộc lý do, sĩ số giảm, học phí tính lại
@@ -800,6 +806,7 @@ Repo + CI; Docker Compose (Django + PostgreSQL + Redis + Celery); skeleton Djang
 - BR-14: GV mở khóa khi `DANG_HOC` trong hạn; sau `DA_DONG` không mở; `KHOA` bất biến
 - Đóng lớp: chỉ khi mọi ĐK `DA_DANG_KY` có `Grade ≥ CHINH_THUC`; học phí chưa thu không chặn; đóng học kỳ còn lớp `MO`/`DANG_HOC` → `409`
 - Buổi sinh sẵn (BR-20): lớp 01/10–05/11 chỉ thứ 5 → đúng 6 buổi; thêm lịch thứ 7 → sinh thêm; sửa lịch sau khi đã điểm danh chỉ đổi buổi tương lai chưa điểm danh; điểm danh buổi tương lai → `TRANG_THAI_KHONG_HOP_LE`
+- Yêu cầu sửa điểm danh: SV gửi khi lớp `DA_DONG` → `TRANG_THAI_KHONG_HOP_LE`; buổi chưa `DA_DIEM_DANH` → từ chối; buổi đã có yêu cầu `CHO_DUYET` → không gửi thêm; đóng lớp → yêu cầu chờ tự `TU_CHOI` (`ghi_chu` quá hạn, `nguoi_duyet` NULL); chỉ GV lớp đó duyệt được (GV khác / PĐT → `KHONG_CO_QUYEN`)
 - Tỷ lệ vắng (BR-20): mẫu số = tổng buổi theo lịch (6): vắng không phép 1/6 = 16,7% → không cờ; 2/6 = 33% → cờ; `VANG_CO_PHEP` không tính; cờ **không** chặn GV nhập CK
 - Học phí: ưu tiên `hoc_ky` → NULL; khối → ngành → mặc định; LT/TH; không có giá → `calculate` 400, nhưng đăng ký vẫn 201 + warning; hủy hết môn đã thu → `can_hoan > 0`, `con_no = 0`; `UNIQUE` `MAC_DINH` cùng `hoc_ky` bị chặn
 - Token: khóa tài khoản chặn mọi request và refresh; logout / đổi / reset mật khẩu blacklist refresh cũ; reset token hết hạn 30 phút, dùng 1 lần; forgot-password trả cùng phản hồi dù email có/không tồn tại
@@ -902,3 +909,9 @@ Pha 3 làm theo cặp để không trượt nếu một người nghỉ.
 | **v3.0** (2026-10-10) | **Viết lại và rút gọn** (1500 → ~900 dòng; 63 → 59 CN; 27 → 25 thực thể; 5 → 4 job). Gỡ: cấm thi tự động (BR-24), `GradeRetake`, lịch bù, `RolePermission`, restore, trần tín chỉ theo học kỳ, `LECH_LT/LECH_TH`, hoàn tiền nhiều trạng thái, PDF. Thay: học phí dẫn xuất + `Payment` loại `HOAN`; idempotency chỉ dựa DB; thông báo 3 audience. **Sửa lỗi:** PĐT hủy hộ khi lớp `DANG_HOC` (BR-05); `thu` 2..8 (có Chủ nhật); fallback `ngay_ket_thuc` (BR-13); “lần học mới nhất” theo `hoc_ky.ngay_bat_dau` (BR-25); “đạt” = `diem_chu ≠ F`; quy tắc thanh toán + khóa (BR-26); API điểm/điểm danh theo cả lớp; CORS regex; hai entrypoint Flutter; Python 3.12; job dọn token; forgot-password không lộ email; bỏ khóa đăng nhập theo tài khoản; thêm lớp `services.py`. Bỏ `Registration.hoc_ky`. |
 | **v3.1** (2026-10-10) | Đồng bộ với `design.md` v3.1: thêm route `/pdt/profiles`, `/pdt/logs`, `/student/curriculum`, `/accountant/logs`; `courses/available` trả `meta` giới hạn tín chỉ, `attendance/my` trả `canh_bao_vang`, `tuition/my` trả `chi_tiet[]` + `payments[]`; PĐT nhập hộ điểm lưu `CHINH_THUC`; bỏ chuyển `DANG_HOC` thủ công; buổi điểm danh sang `DA_DIEM_DANH` ở lần lưu đầu. |
 | **v3.2** (2026-10-10) | BR-20: buổi điểm danh **sinh sẵn** theo lịch × thời gian lớp; tỷ lệ vắng = vắng không phép / **tổng số buổi theo lịch** (không phải số buổi đã điểm danh); GV-06 đổi thành “chọn buổi”, bỏ `POST /attendance/sessions/`; không điểm danh buổi tương lai. |
+| **v3.3** (2026-10-10) | `AttendanceRequest` thêm `di_tre_mong_muon` và `minh_chung` (ảnh/PDF ≤ 5 MB, tùy chọn); `POST /attendance/requests/` dạng `multipart`; mỗi buổi tối đa 1 yêu cầu chờ duyệt; **chỉ GV lớp đó duyệt yêu cầu sửa điểm danh (bỏ quyền duyệt/xem của PĐT)**. Chỉ gửi được khi lớp `DANG_HOC`; đóng lớp thì yêu cầu chờ tự `TU_CHOI` (quá hạn). Giao diện: CTĐT sinh viên hiển thị theo từng học kỳ gợi ý (không đổi API). |
+| **v3.4** (2026-10-10) | Học phí: SV thanh toán bằng **chuyển khoản qua mã QR** (không tích hợp cổng), KT vẫn đối soát và ghi `Payment`; `SystemConfig` thêm `ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan`; `tuition/my` trả `thanh_toan{…}`; route `/student/tuition/pay`. Điểm: BR-25(g) thống kê học kỳ (`tin_chi_hoc`, `tin_chi_dat`, `diem_tb`, `gpa`, `xep_loai`), `grades/my` trả `thong_ke[]`. TKB tự động: thêm ưu tiên *tránh ngày / ngày muốn học / ca học* và giải thích lý do điểm từng tổ hợp (mục 7.2). |
+| **v3.5** (2026-10-10) | Đăng ký môn (SV-04) và TKB tự động (SV-06): thêm bộ lọc *Môn chưa học* / *Theo CTĐT* + chọn *kỳ trong CTĐT* (client, ghép `curriculums/my`); TKB tự động gom *môn → lớp học phần* như màn đăng ký và cho chọn *giáo viên mong muốn* từng môn (+8 / −10 điểm). Không đổi API. |
+| **v3.6** (2026-10-10) | BR-04(d): mỗi môn chỉ đăng ký **một lớp** trong một học kỳ, vi phạm → `409 DA_DANG_KY_MON`. Bộ lọc *Theo CTĐT* và *Môn chưa học* ở SV-04/SV-06 dùng **kết hợp** được. |
+| **v3.7** (2026-10-10) | **Trần tín chỉ do PĐT cấu hình theo từng học kỳ** (đặt trên `Semester`, thay cho `SystemConfig`; Admin không còn cấu hình mục này) — đảo lại quyết định gỡ ở v3.0. `Course` thêm `khoa_bo_mon`; bộ lọc liên động ở màn PĐT: ngành → môn, môn → giáo viên cùng khoa. Học kỳ phụ gọi là "Học kỳ 3". |
+| **v3.8** (2026-10-10) | Thêm thực thể **Faculty (khoa/viện)** do **PĐT** quản lý (route `/pdt/faculties`, API `/api/faculties/`): `Major`, `TeacherProfile`, `Course` trỏ tới Faculty qua FK `khoa` (thay cho chuỗi `khoa_bo_mon`); ngừng khoa/viện chỉ khi không còn ngành/giáo viên hoạt động. Đổi tên hiển thị "khoa / bộ môn" → "khoa / viện". 25 → 26 thực thể. |

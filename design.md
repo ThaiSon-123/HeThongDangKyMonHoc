@@ -1,12 +1,12 @@
 # DESIGN SPEC — Hệ thống Đăng ký Môn học
 
-**Phiên bản:** 3.1 — khớp `plan.md` v3.1 (5 vai trò · 59 CN · BR-01..26, BR-24 đã gỡ)
+**Phiên bản:** 3.8 — khớp `plan.md` v3.8 (5 vai trò · 59 CN · BR-01..26, BR-24 đã gỡ)
 **Nền tảng:** SV + GV = **Flutter Web + Flutter App (Android/iOS)**; Admin + PĐT + KT = **chỉ Flutter Web**.
 
 > **Nguyên tắc:** UI chỉ *hiển thị và gọi API*; mọi quy tắc nghiệp vụ do backend quyết (plan.md mục 4–6).
 > File này **tham chiếu** BR/endpoint/mã lỗi của plan, không định nghĩa lại. Nghiệp vụ đổi ⇒ sửa `plan.md` trước, rồi đồng bộ lại đây.
 > Ký hiệu **(bổ sung)** = route/endpoint/trường chưa có trong `plan.md` nhưng design này **chốt dùng**; danh sách cần đồng bộ ngược vào plan ở mục 13.
-> **Đã gỡ so với design cũ (v2.5):** `cam_thi`, đơn học lại/cải thiện (`/student/retakes`, `/pdt/retakes`), restore backup, PDF, phân quyền sửa được, trần tín chỉ theo học kỳ, `LECH_LT/LECH_TH`, `GIAM_TRU`, hoàn tiền nhiều trạng thái, `IDEMPOTENCY_KEY_REUSED`, giỏ đăng ký.
+> **Đã gỡ so với design cũ (v2.5):** `cam_thi`, đơn học lại/cải thiện (`/student/retakes`, `/pdt/retakes`), restore backup, PDF, phân quyền sửa được, `LECH_LT/LECH_TH`, `GIAM_TRU`, hoàn tiền nhiều trạng thái, `IDEMPOTENCY_KEY_REUSED`, giỏ đăng ký.
 
 ---
 
@@ -97,6 +97,7 @@ Tables: zebra rows, status chips, pagination. All UI text in Vietnamese.
 | `LOP_DAY` | 409 | "Lớp vừa hết chỗ" → refetch danh sách |
 | `TRUNG_LICH` | 409 | "Trùng lịch với lớp đã đăng ký" |
 | `DA_DANG_KY` | 409 | "Bạn đã đăng ký lớp này" |
+| `DA_DANG_KY_MON` | 409 | "Bạn đã đăng ký một lớp khác của môn này — hủy lớp đó trước khi đổi lớp" |
 | `QUA_HAN_NHAP_DIEM` | 409 | "Đã quá hạn nhập điểm — liên hệ PĐT gia hạn" |
 | `TRANG_THAI_KHONG_HOP_LE` | 409 | Nêu rõ trạng thái hiện tại (vd "Còn lớp đang mở/đang học nên chưa đóng được học kỳ") |
 | `KHONG_CO_QUYEN` | 403 | "Bạn không có quyền thực hiện" |
@@ -135,6 +136,24 @@ Dữ liệu con **chỉ xuất hiện sau khi đã chọn đủ cha**. Quy tắc
 | KT `/accountant/tuition`, `/debts`, `/reports` | Học kỳ → bảng → chọn SV → drawer chi tiết / dialog thu–hoàn |
 | Form soạn thông báo | `audience` → ô người nhận tương ứng (vai trò / lớp / người dùng) |
 
+### 1.8. Phong cách giao diện (Navy + cam) — áp dụng cho Web và App
+
+Tham chiếu: ảnh màn Thời khóa biểu sinh viên (header navy bo góc, thẻ bo tròn, thanh dưới nổi). Quy tắc dưới đây **thay** các màu/layout tương ứng ở 1.1–1.2 khi khác nhau; logic và nội dung màn hình không đổi.
+
+| Thành phần | Quy định |
+| :--- | :--- |
+| Màu | Navy header `#1F2A5C → #2C3A7A` (gradient 160°) · nền trang `#F4F5FA` · thẻ trắng · **nút chính vẫn indigo `#3F51B5`** · **điểm nhấn cam `#D9480F`** (nhãn "Hôm nay", ngày hôm nay, avatar, chấm thông báo); nền cam nhạt `#FFF1E6` + chữ `#9A3412` |
+| Màu theo môn | Mỗi lớp một cặp pastel + vạch trái: indigo `#E8EAF6/#2C3A7A`, xanh `#E6F4EA/#1B6E3A`, tím `#F3E5F5/#6A1B9A`, cam `#FFF1E6/#9A3412`, xám `#ECEFF1/#37474F`. Tên lớp luôn kèm mã lớp để không chỉ dựa vào màu |
+| Thẻ | Bo 16, không viền, bóng nhẹ `0 2px 10px rgba(31,42,92,.08)`; input vẫn viền 1px `#9AA1B2` bo 8–12 |
+| **App — header** | Khối navy bo đáy 28: hàng trên gồm ô logo trắng "ĐK" + học kỳ, chuông (chấm cam khi có tin) và avatar cam (bấm vào Hồ sơ); dưới là tiêu đề 28px bold + dòng phụ (khoảng tuần, số lớp…); có thể thêm dải nút "pill". Màn cấp sâu dùng header gọn: nút Back + tiêu đề + dòng phụ |
+| **App — thanh dưới** | Thanh trắng **nổi** (cách mép 16px, bo 34, bóng nhẹ) gồm 5 mục **đều nhau**, không có nút nổi. **Mục đang chọn** là một viên thuốc navy bo tròn chứa icon + nhãn **trắng** (nền gradient navy, bóng nhẹ); mục còn lại icon + nhãn xám `#6B7280`, không nền. Giáo viên: Tổng quan · Lớp · Điểm danh · TKB · Nhập điểm. Sinh viên: Trang chủ · Đăng ký · TKB · Học phí · Hồ sơ. Chỉ hiện ở các màn cấp 1, ẩn ở màn cấp sâu |
+| **Web — khung** | **Sidebar navy rộng 260px, chia nhóm có tiêu đề in hoa** (Tổng quan / Giảng dạy / Học vụ / Khác; tiêu đề nhóm và dòng phụ của thương hiệu **không gắn học kỳ hay năm học** — học kỳ chỉ hiện ở `SemesterPicker` của từng màn): khối thương hiệu ở đầu (logo + tên + dòng phụ), mục đang chọn tô **đặc** indigo `#3F51B5` kèm bóng, huy hiệu số cam cho Thông báo chưa đọc, mục **Đăng xuất** trong nhóm Khác, và **khối người dùng ghim đáy** (avatar cam, họ tên, mã · vai trò, nút đăng xuất). Phần nội dung: tiêu đề trang 28px màu navy + dòng phụ, chuông thông báo nền trắng ở góc phải (không lặp lại avatar vì đã có ở sidebar); thẻ như trên. **Giữ sidebar**, không dùng thanh dưới trên Web |
+| Bố cục nội dung Web | Nội dung trang **trải hết chiều ngang** vùng bên phải sidebar — không đặt `max-width` làm trống một nửa trang; danh sách/bảng dài full width, form dài chia 2 cột hoặc lưới tự co (`auto-fit`) |
+| Chip trạng thái | Giữ bảng màu 1.3; nền nhạt + chữ đậm ≥ 11px (App) / 12px (Web) |
+| Truy cập | Chữ trên nền cam/navy phải đạt 4.5:1; không dùng chữ trắng trên cam `#F57C00` hay sáng hơn; mục thanh dưới ≥ 48px |
+
+**Màn Thời khóa biểu (GV-05, SV-08) — xem theo tuần có ngày thật.** Vì buổi học đã sinh sẵn theo ngày (plan BR-20), TKB hiện **ngày cụ thể**: nút *‹ Tuần trước · Tuần này · Cả học kỳ · Tuần sau ›*; mỗi ngày có tiết là một nhóm "Thứ 7 · 10/10" (nhãn **HÔM NAY** màu cam) gồm các thẻ có bong bóng ngày (T7 / 10), khối màu theo môn (tên, mã lớp · phòng · sĩ số, **Tiết 1–3 · Sáng**) và lối tắt **Điểm danh ›** nếu buổi đã đến ngày (buổi tương lai ghi "Chưa tới ngày điểm danh"). Chế độ *Cả học kỳ* hiện lịch lặp theo thứ ("Thứ 3 · mỗi tuần"). Giờ đồng hồ **không hiển thị** vì plan chưa có bảng đổi tiết sang giờ; muốn hiện giờ cần thêm bảng này vào cấu hình hệ thống. **Web:** lưới 7 cột (Thứ 2 → Chủ nhật) × 15 tiết. Cột trái là nhãn **"Tiết 1…15"** nền navy; **không có cột giờ, không có cột bên phải**. Tiêu đề cột ghi *Thứ + ngày* (vd "Thứ 5 (08/10)"); chuyển tuần bằng thanh bộ lọc phía trên; cột hôm nay tô cam nhạt. Mỗi khối môn trải đúng các tiết của buổi học và hiện: **Tên môn (LT+TH) (Mã môn)** · **Nhóm:** mã lớp học phần · **Phòng:** · **Sĩ số:** (bản giáo viên; **bản sinh viên thay dòng Sĩ số bằng `GV: <tên giáo viên>`** vì giáo viên luôn là chính người xem). Lưới chiếm toàn bộ chiều rộng, **không có panel chi tiết** — mọi thông tin cần xem đã nằm trong khối. **In được:** nút **"In thời khóa biểu"** ở thanh bộ lọc gọi `window.print()`; khi in chỉ còn tiêu đề (tên giáo viên, khoảng tuần/học kỳ), chú giải màu và lưới — ẩn sidebar, thanh bộ lọc và panel chi tiết; khổ A4 ngang, giữ màu nền. Không cần API. Bản App không có nút in. Học kỳ đã kết thúc chỉ xem được chế độ Cả học kỳ.
+
 ---
 
 ## 2. Điều hướng, nền tảng & responsive
@@ -163,7 +182,7 @@ Bản App **không import** `routes_admin/pdt/accountant` (plan 10.2). Guard: ch
 | :--- | :--- |
 | **SV** | Tổng quan · Đăng ký môn · TKB tự động · Thời khóa biểu · CTĐT *(bổ sung)* · Điểm · Điểm danh · Học phí · Thông báo · Hồ sơ |
 | **GV** | Tổng quan · Lớp phụ trách · Điểm danh · Nhập điểm · Thông báo · Hồ sơ |
-| **PĐT** | Tổng quan · Hồ sơ SV/GV *(bổ sung)* · Ngành · CTĐT · Môn học · Học kỳ · Lớp học phần · Đăng ký · Duyệt điểm · Báo cáo · Thông báo · Nhật ký *(bổ sung)* |
+| **PĐT** | Tổng quan · Hồ sơ SV/GV *(bổ sung)* · Khoa / viện *(bổ sung)* · Ngành · CTĐT · Môn học · Học kỳ · Lớp học phần · Đăng ký · Duyệt điểm · Báo cáo · Thông báo · Nhật ký *(bổ sung)* |
 | **KT** | Tổng quan · Cấu hình học phí · Học phí · Công nợ · Báo cáo · Thông báo · Nhật ký *(bổ sung)* |
 | **Admin** | Tổng quan · Tài khoản · Ma trận quyền · Cấu hình · Audit log · Sao lưu · Thông báo |
 
@@ -171,7 +190,7 @@ Bản App **không import** `routes_admin/pdt/accountant` (plan 10.2). Guard: ch
 
 | Vai trò | Bottom nav | Truy cập khác |
 | :--- | :--- | :--- |
-| **SV** (5 tab) | Tổng quan · Đăng ký · TKB · Điểm · Thêm | "Thêm": Điểm danh, Học phí, TKB tự động, CTĐT, Hồ sơ. Chuông 🔔 ở AppBar (Thông báo) |
+| **SV** (5 tab) | Trang chủ · Đăng ký · TKB · Học phí · Hồ sơ | Điểm, Điểm danh, CTĐT, TKB tự động và Thông báo mở từ **Trang chủ** (lối tắt) hoặc chuông ở header; Hồ sơ mở bằng avatar |
 | **GV** (4 tab) | Tổng quan · Lớp · Điểm danh · Nhập điểm | Chuông 🔔 (Thông báo), avatar (Hồ sơ, Đăng xuất) |
 
 ### 2.5. Route map (khớp plan 10.3)
@@ -181,10 +200,11 @@ Bản App **không import** `routes_admin/pdt/accountant` (plan 10.2). Guard: ch
 | Public | `/login`, `/forgot-password` | SV/GV/PDT/KT/ADM-01 | ✓ | ✓ |
 | Admin | `/admin` · `/admin/accounts` · `/admin/permissions` · `/admin/config` · `/admin/logs` · `/admin/backups` · `/admin/notifications` | ADM-02..08 | ✓ | — |
 | PĐT | `/pdt` · `/pdt/majors` · `/pdt/curriculums` · `/pdt/courses` · `/pdt/semesters` · `/pdt/classes` · `/pdt/registrations` · `/pdt/grade-sheets` · `/pdt/reports` · `/pdt/notifications` | PDT-02..14 | ✓ | — |
-| | **(bổ sung)** `/pdt/profiles` · `/pdt/logs` | PDT-01 · ADM-06 | ✓ | — |
+| | **(bổ sung)** `/pdt/profiles` · `/pdt/faculties` · `/pdt/logs` | PDT-01 · PDT-02 · ADM-06 | ✓ | — |
 | SV | `/student` · `/student/profile` · `/student/register` · `/student/auto-schedule` · `/student/schedule` · `/student/grades` · `/student/attendance` · `/student/tuition` · `/student/notifications` | SV-02..13 | ✓ | ✓ |
-| | **(bổ sung)** `/student/curriculum` | SV-03 | ✓ | ✓ |
+| | **(bổ sung)** `/student/curriculum` · `/student/tuition/pay` | SV-03 · SV-12 | ✓ | ✓ |
 | GV | `/teacher` · `/teacher/profile` · `/teacher/classes` · `/teacher/attendance` · `/teacher/grades` · `/teacher/notifications` | GV-02..12 | ✓ | ✓ |
+| | **(bổ sung)** `/teacher/schedule` | GV-05 | ✓ | ✓ |
 | KT | `/accountant` · `/accountant/config` · `/accountant/tuition` · `/accountant/debts` · `/accountant/reports` · `/accountant/notifications` | KT-01..11 | ✓ | — |
 | | **(bổ sung)** `/accountant/logs` | ADM-06 | ✓ | — |
 
@@ -280,10 +300,10 @@ Student dashboard. Greeting "Xin chào, <tên> — <mã SV>, <ngành>". Four sta
 - App: avatar tròn lớn trên cùng, các khối xếp dọc; nút Đăng xuất cuối trang.
 
 ### 5.2. `/student/curriculum` *(bổ sung)* — Chương trình đào tạo (SV-03)
-- `GET /api/curriculums/my/`. Nhóm theo **khối kiến thức** (chung · cơ sở ngành · chuyên ngành · tự chọn · tốt nghiệp); mỗi khối có tổng tín chỉ.
-- Dòng môn: mã, tên, tín chỉ, **Bắt buộc/Tự chọn** (chip), học kỳ gợi ý, môn tiên quyết, trạng thái cá nhân: ✓ Đã đạt / ✗ Chưa đạt (F) / — Chưa học (suy từ `grades/my`).
-- Đầu trang: thanh tiến độ `tin_chi_tich_luy / tong_tin_chi_yeu_cau`.
-- App: accordion theo khối.
+- `GET /api/curriculums/my/`. Hiển thị **theo từng học kỳ gợi ý** (`hoc_ky_goi_y`): mỗi học kỳ một khối "Học kỳ n · Năm học YYYY–YYYY" (năm học tính từ khóa nhập học), dòng phụ "x môn · y tín chỉ · z bắt buộc · w tự chọn", học kỳ đang học có nhãn "Học kỳ hiện tại". Bảng: **Mã môn · Tên môn (kèm "Tiên quyết: …") · TC · Khối kiến thức (chip) · Loại (Bắt buộc/Tự chọn) · Điểm · Trạng thái**.
+- Trạng thái cá nhân: **Đã đạt** / **Chưa đạt (F)** / **Đang học** / **Chưa học** (suy từ `grades/my` và đăng ký hiện tại). Cột Điểm hiện tổng kết (hoặc `P`), `—` nếu chưa có điểm chính thức. Bộ lọc theo trạng thái ẩn học kỳ không còn môn phù hợp.
+- Đầu trang: thẻ tiến độ `tín chỉ đã đạt / tong_tin_chi_yeu_cau` (thanh progress), 4 thẻ số liệu (tổng số môn · tín chỉ đã đạt · môn đã đạt · đang học) và khối **"Phân bổ theo khối kiến thức"** (5 khối: Chung · Cơ sở ngành · Chuyên ngành · Tự chọn · Tốt nghiệp, mỗi khối `đã đạt / tổng` tín chỉ).
+- App: cùng cấu trúc, mỗi môn là một thẻ (điểm + trạng thái bên phải, chip khối và loại bên dưới), phân bổ khối cuộn ngang.
 
 ### 5.3. `/student/register` — Đăng ký môn học (SV-04, 05, 07, 09)
 
@@ -293,8 +313,12 @@ Student dashboard. Greeting "Xin chào, <tên> — <mã SV>, <ngành>". Four sta
 
 **Tab 1 — Lớp đang mở** (`GET /api/courses/available/`)
 - Server **đã lọc**: đúng CTĐT, còn chỗ, không trùng lịch với lớp đã đăng ký ⇒ client **không** tự lọc lại. Vì vậy lỗi `LOP_DAY` / `TRUNG_LICH` chỉ xảy ra khi tranh chấp (người khác đăng ký trước) → toast lỗi + **refetch danh sách**.
-- Bộ lọc: tìm theo mã/tên, khối kiến thức, bắt buộc/tự chọn, ngày học (thứ).
-- Mỗi `ClassCard` có nút **Đăng ký** → `POST /api/registrations/` (`Idempotency-Key`). **Bấm là đăng ký ngay** — *không có giỏ hàng*, vì chỗ chỉ được giữ khi POST thành công (BR-06); giỏ sẽ tạo cảm giác "đã giữ chỗ" sai. Gộp nhiều môn một lượt là việc của `/student/auto-schedule`.
+- **Gom nhóm theo môn:** danh sách là các **dòng môn có thể mở rộng** (chevron `›`, mã học phần dạng mono, tên môn, chip TC · Bắt buộc/Tự chọn · khối kiến thức, và số lớp đang mở). Bấm vào môn để xổ ra **các lớp học phần** của môn đó — mỗi lớp là một dòng/thẻ gồm *mã lớp · giáo viên · lịch học · phòng · sĩ số (thanh) · nút Đăng ký*. Client gom từ danh sách lớp của `/api/courses/available/` theo `mon_hoc`. Mặc định mở sẵn môn đầu tiên. Tiêu đề phụ: "x môn · y lớp học phần đang mở".
+- **Một môn một lớp:** sau khi đăng ký một lớp, cả môn đó rời khỏi tab *Lớp đang mở* (không hiện các lớp còn lại của môn); hủy lớp thì môn quay lại. Backend chặn thật bằng BR-04(d): lỗi `DA_DANG_KY_MON` (409) khi tranh chấp/đăng ký từ nơi khác → toast + refetch.
+- Bộ lọc: tìm theo mã/tên, bắt buộc/tự chọn (Web có thêm khối kiến thức, ngày học) và **bộ lọc theo CTĐT** (client ghép `GET /api/curriculums/my/`, không thêm endpoint):
+  - *Bộ lọc môn* (hai nút chọn một **Tất cả môn đang mở** / **Theo CTĐT**, cộng nút bật-tắt **Môn chưa học** — dùng **kết hợp** được, ví dụ "Theo CTĐT" + kỳ 8 + "Môn chưa học"; "chưa học" = chưa có điểm trong bảng điểm, môn **học lại** không tính). **Theo CTĐT** (sắp xếp tăng dần theo `hoc_ky_goi_y`, mỗi môn có chip "Kỳ n · HKx năm học"; môn học lại có chip "Học lại").
+  - *Kỳ trong chương trình đào tạo* (dropdown): "Tất cả các kỳ" + 8 kỳ của CTĐT, ví dụ "Kỳ 1 · HK1 2023–2024" … "Kỳ 8 · HK2 2026–2027 · kỳ đang đăng ký", kèm số môn đang mở của kỳ đó. **Chỉ bật khi chọn "Theo CTĐT"** (chọn tuần tự, mục 1.7); chọn lại phạm vi thì kỳ về "Tất cả".
+- Mỗi lớp trong môn đã mở rộng có nút **Đăng ký** → `POST /api/registrations/` (`Idempotency-Key`). **Bấm là đăng ký ngay** — *không có giỏ hàng*, vì chỗ chỉ được giữ khi POST thành công (BR-06); giỏ sẽ tạo cảm giác "đã giữ chỗ" sai. Gộp nhiều môn một lượt là việc của `/student/auto-schedule`.
 - Sau 201: toast thành công; nếu `warnings[]` → `WarningsBanner` (vd dưới tín chỉ tối thiểu BR-07, hoặc `CHUA_CAU_HINH_GIA` "Học phí chưa được tính"); lớp chuyển sang tab "Đã đăng ký".
 - Lỗi theo mục 1.6. `NGOAI_CUA_SO_DANG_KY`/`LOP_CHUA_MO` → khóa toàn bộ nút Đăng ký + banner giải thích.
 
@@ -319,8 +343,9 @@ Mobile course registration, single column. Top app bar with semester and credit 
 ```
 
 ### 5.4. `/student/auto-schedule` — TKB tự động (SV-06, **tùy chọn · Pha 8**)
-- Chọn môn muốn học (từ CTĐT, ưu tiên môn bắt buộc theo `hoc_ky_goi_y`) + ưu tiên (sáng/chiều, tránh thứ 7) → **client** (`AutoScheduleService`, pure Dart) sinh tối đa **3 tổ hợp** từ `GET /api/auto-schedule/available-courses/` (toàn bộ lớp mở, **chưa lọc trùng lịch**).
-- Mỗi tổ hợp: lưới tuần thu nhỏ + danh sách môn/lớp + nhãn "Không trùng lịch" + tổng tín chỉ. Cho phép đổi lớp từng môn (dropdown các lớp khác không gây trùng).
+- **Bước 1 gồm hai khối đánh số, trải hết chiều ngang trang:** *"1. Chọn môn muốn học"* — cùng bộ lọc với màn Đăng ký (*Tất cả môn đang mở / Theo CTĐT* + nút *Môn chưa học*, kết hợp được, + dropdown *Kỳ trong chương trình đào tạo*, mục 5.3); mỗi môn là một dòng có checkbox + chevron: bấm vào xổ ra **chọn Giáo viên mong muốn** (nút "Tự động chọn" + từng giáo viên của môn; chọn một giáo viên thì tự tick môn đó) và **bảng các lớp học phần** (mã lớp · giáo viên · lịch · phòng · sĩ số) như màn Đăng ký — lớp không thuộc giáo viên đã chọn bị làm mờ, lớp thuộc giáo viên đó có nhãn "Đã chọn". Môn bắt buộc theo `hoc_ky_goi_y` chọn sẵn và *"2. Ưu tiên cá nhân"* gồm: **Tránh ngày trong tuần** (T2…CN, nhiều lựa chọn, chú thích "Chọn các thứ bạn KHÔNG muốn xếp lịch học"), **Ngày muốn học** (T2…CN, chú thích về việc lớp có buổi vào ngày đó được điểm cao hơn; chọn ngày này thì tự bỏ khỏi "tránh" và ngược lại) và **Ca học ưu tiên** (Sáng tiết 1–5 · Chiều tiết 6–10 · Tối tiết 11–15, ba nút rộng). Mỗi nhóm nút chia đều bằng chiều ngang.
+- Chọn môn + ưu tiên → **client** (`AutoScheduleService`, pure Dart) sinh tối đa **3 tổ hợp** từ `GET /api/auto-schedule/available-courses/` (toàn bộ lớp mở, **chưa lọc trùng lịch**).
+- **Bước 2:** đầu trang có câu giải thích tổng quát ("Tổ hợp 1 được điểm cao nhất vì: …"). Mỗi tổ hợp là một thẻ có **điểm /100 + thanh điểm**, nhãn "Điểm cao nhất" cho tổ hợp đầu, khối **"Vì sao có điểm này"** liệt kê các lý do với dấu ✓ (đạt: không có buổi vào ngày tránh, đúng ca ưu tiên, học ≤ 4 ngày/tuần, không trùng tiết…) hoặc ! (chưa đạt hoặc bị vướng — ví dụ "Chiều thứ 5 bị vướng môn Trí tuệ nhân tạo (CNTT401-03, tiết 6–8) ngay sau buổi sáng An toàn thông tin"; "Đúng giáo viên mong muốn: Trí tuệ nhân tạo – Vũ Đức Anh" / "Chưa xếp được giáo viên mong muốn: … học với A thay vì B"), danh sách môn/lớp + tổng tín chỉ. Tổ hợp xếp theo điểm giảm dần; Web hiển thị các thẻ cạnh nhau, App xếp dọc. Cho phép đổi lớp từng môn (dropdown các lớp khác không gây trùng).
 - **Gợi ý ≠ đăng ký.** Nút "Đăng ký tổ hợp này" → `ConfirmDialog` liệt kê môn → POST **tuần tự từng môn**, mỗi môn một `Idempotency-Key`, nghỉ giữa các request để không vượt 30 lần/phút. Hiển thị tiến trình từng dòng ✓/✗ + mã lỗi; môn lỗi không làm hủy môn đã thành công; cuối cùng nút "Xem lớp đã đăng ký".
 - Không có endpoint suggest phía server; không lưu gợi ý.
 
@@ -330,21 +355,22 @@ Auto-schedule screen. Step 1: chips to pick subjects and two preference toggles.
 ```
 
 ### 5.5. `/student/schedule` — Thời khóa biểu (SV-08)
-- `GET /api/timetable/my/` + chọn học kỳ. Lịch là **định kỳ theo thứ × tiết** (không có ngày cụ thể) ⇒ **không có nút chuyển tuần**; hiển thị một "tuần mẫu" cho cả học kỳ, kèm khoảng ngày của lớp nếu có (`ngay_bat_dau`–`ngay_ket_thuc`).
+- `GET /api/timetable/my/` + chọn học kỳ. Hiển thị **theo tuần có ngày thật** (nút Tuần trước / Tuần này / Cả học kỳ / Tuần sau, nhãn HÔM NAY) theo mục 1.8; chế độ *Cả học kỳ* hiện lịch lặp theo thứ × tiết. Mỗi tuần chỉ hiện lớp có ngày nằm trong `[ngay_bat_dau, ngay_ket_thuc]` của lớp.
 - **Lưới Web:** cột Thứ 2 … Thứ 7, **Chủ nhật** (`thu=8`); hàng tiết 1–15 chia 3 nhóm *Sáng 1–5 · Chiều 6–10 · Tối 11–15* (dải nền phân biệt); khối môn trải đúng số tiết (`so_tiet_moi_buoi`), mỗi môn một màu cố định; trong khối: mã lớp, phòng. Click khối → popover: tên môn, GV, phòng, tiết `a–b`.
 - Cột CN ẩn nếu không có lịch.
-- **App:** chuyển sang dạng *danh sách theo thứ* (tab chọn Thứ 2…CN, mặc định hôm nay), mỗi mục là một thẻ có giờ tiết; nút chuyển "Xem lưới" (cuộn ngang) tùy chọn.
+- **App:** *danh sách theo ngày* như mục 1.8 (header navy + nút pill chuyển tuần, nhóm theo ngày, nhãn HÔM NAY, thanh dưới nổi).
 - Chưa có lớp → EmptyState + CTA "Đăng ký môn học".
 
 **Prompt:**
 ```
-Weekly timetable. Semester dropdown. Grid: columns Thứ 2–Thứ 7 and Chủ nhật, rows periods 1–15 grouped into Sáng (1–5), Chiều (6–10), Tối (11–15) with subtle background bands. Colored rounded blocks spanning the class's periods showing mã lớp and phòng; legend below. No week navigation. Mobile variant: day tabs with a vertical list of cards per day.
+Weekly timetable. Semester dropdown. Grid: columns Thứ 2–Thứ 7 and Chủ nhật, rows periods 1–15 grouped into Sáng (1–5), Chiều (6–10), Tối (11–15) with subtle background bands. Colored rounded blocks spanning the class's periods showing mã lớp and phòng; legend below. Week navigation with real dates (previous week, this week, whole term, next week) and an orange HÔM NAY badge on today. Mobile variant: navy hero header with pill controls, day groups of rounded cards, floating bottom bar.
 ```
 
 ### 5.6. `/student/grades` — Bảng điểm (SV-11)
 - `GET /api/grades/my/`. **Chỉ điểm `KHOA` là chính thức** — lớp chưa duyệt hiện dòng mờ "Chưa có điểm chính thức" (không lộ điểm nháp).
 - **Bộ lọc Học kỳ** (mục 1.7): mặc định **"Tất cả học kỳ"** → bảng nhóm theo từng học kỳ; chọn một học kỳ → chỉ hiện học kỳ đó.
-- Thẻ trên: **GPA tích lũy** · **Tín chỉ tích lũy** · **Xếp loại** (BR-25f) luôn hiện; thẻ **GPA học kỳ** chỉ hiện khi đã chọn một học kỳ cụ thể. `gpa=NULL` → "Chưa có".
+- Thẻ trên: **GPA tích lũy** · **Tín chỉ tích lũy** · **Xếp loại** (BR-25f) luôn hiện; khi chọn **một học kỳ cụ thể** thêm 3 thẻ: **GPA học kỳ** (kèm xếp loại học kỳ) · **Điểm TB học kỳ (hệ 10)** · **Tín chỉ học kỳ** (đạt / đã học). `gpa=NULL` → "Chưa có".
+- **Thống kê ở đầu mỗi khối học kỳ** (cả khi xem "Tất cả học kỳ"): *Số môn · Tín chỉ đã học · Tín chỉ đạt · Điểm TB (hệ 10) · GPA học kỳ (hệ 4) · Xếp loại học kỳ* — số liệu từ `thong_ke[]` của `/api/grades/my/` (BR-25g: môn `P` không tính vào điểm TB và GPA; `F` vẫn tính vào mẫu số). Học kỳ đang học chưa có điểm hiện "4 môn · 12 tín chỉ đang học".
 - Bảng nhóm theo học kỳ: Mã môn · Tên · TC · QT · GK · CK · Tổng kết (2 chữ số) · Chữ · Hệ 4. Chip chữ theo 1.3.
 - Quy tắc hiển thị: môn `DAT_KHONG_DAT` đạt → chữ **P**, hệ 4 = "—" (không vào GPA); **F** vẫn tính vào GPA; `diem_cuoi_ky` NULL (khi `KHOA`) hiện "—".
 - Môn học lại: chú thích "Tính lần học mới nhất" (BR-25c) — dòng lần cũ mờ, nhãn "Đã thay thế".
@@ -363,8 +389,8 @@ Weekly timetable. Semester dropdown. Grid: columns Thứ 2–Thứ 7 and Chủ n
 - **Thống kê lớp** (thẻ): **tổng số buổi theo lịch** (cố định cả khóa, vd 42) · đã điểm danh · có mặt · vắng có phép · **vắng không phép** · số buổi đi trễ · **tỷ lệ vắng `= VANG_KHONG_PHEP / tổng số buổi theo lịch`** (vd 9/42 = 21%; vắng có phép không tính). Thanh tiến trình so số buổi vắng không phép với **ngưỡng `max_absent_pct × tổng số buổi`** (vd 20% × 42 = 8,4 ⇒ bị cờ từ 9 buổi); vượt ngưỡng → đỏ + nhãn "Nguy cơ cấm thi". Dòng phụ "Còn được vắng không phép thêm n buổi" (n ≥ 0). Server trả `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep` trong `/api/attendance/my/` — UI không tự suy ngưỡng. Chú thích: "Chỉ là cảnh báo, quyết định thuộc giáo viên/Phòng đào tạo".
 - **Danh sách buổi theo lịch** (chỉ buổi của lớp đã chọn, mới nhất trước): Ngày · Buổi · Tiết · Trạng thái (chip) + "Trễ" nếu `di_tre` · ghi chú của GV. Buổi **sắp tới** hiện mờ, nhãn "Chưa tới ngày" (không xin sửa được). Buổi đã đến ngày nhưng GV chưa điểm danh (`MO`) hiện "Chưa điểm danh" — vẫn nằm trong tổng số buổi.
 - **Chi tiết buổi:** ngày, buổi, tiết, trạng thái, `di_tre`, ghi chú; nếu từng có yêu cầu sửa → lịch sử yêu cầu của buổi đó.
-- **Xin sửa:** nút trong chi tiết buổi/hàng buổi → dialog (Web) / bottom sheet (App): trạng thái hiện tại (chỉ đọc) · trạng thái mong muốn (3 giá trị, khác hiện tại) · lý do (bắt buộc) → `POST /api/attendance/requests/`. Buổi đã có yêu cầu `CHO_DUYET` → nút thành chip "Đang chờ duyệt" (không gửi trùng).
-- Tab **Yêu cầu của tôi** (`GET /api/attendance/requests/`, lọc theo lớp đã chọn): buổi, mong muốn, lý do, trạng thái, người duyệt, ngày duyệt.
+- **Xin sửa:** chọn một buổi đã điểm danh → nút "Xin sửa điểm danh buổi này" mở **form ngay trong panel chi tiết buổi** (Web) / bottom sheet (App): trạng thái hiện tại (chỉ đọc) · **trạng thái mong muốn** chọn một trong *Có mặt*, *Có mặt – đi trễ*, *Vắng có phép* (bỏ giá trị trùng trạng thái hiện tại; mỗi lựa chọn có mô tả ngắn) · **lý do** (bắt buộc, báo lỗi dưới ô) · **minh chứng** ảnh hoặc PDF, không bắt buộc, tối đa 5 MB, hiện tên tệp đã chọn và nút bỏ tệp → `POST /api/attendance/requests/` (`multipart`). Buổi chưa diễn ra không có nút; buổi đã có yêu cầu `CHO_DUYET` → chip "Chờ duyệt" thay nút (không gửi trùng). **Lớp đã đóng (`DA_DONG`)** → ẩn nút, hiện dòng "Lớp đã đóng nên không thể gửi yêu cầu sửa điểm danh"; yêu cầu còn chờ lúc đóng lớp tự thành **"Từ chối"** kèm ghi chú đỏ "Quá hạn — lớp đã đóng".
+- Tab **Yêu cầu của tôi** (`GET /api/attendance/requests/`, lọc theo lớp đã chọn): buổi, "hiện tại → mong muốn", lý do, **tệp minh chứng** (nếu có), thời điểm gửi, trạng thái (`Chờ duyệt`/`Đã duyệt`/`Từ chối`), người duyệt. App liệt kê các yêu cầu đã gửi ngay dưới danh sách buổi.
 
 | | Web | App |
 | :--- | :--- | :--- |
@@ -379,8 +405,14 @@ Student attendance, step-by-step. Top bar with two dependent dropdowns: "Học k
 - `GET /api/tuition/my/` (kèm giá trị dẫn xuất, plan mục 5). Chọn học kỳ.
 - **Thẻ tổng hợp:** `tong_tien` · `mien_giam` · `phai_nop` · `thuc_thu` · **`con_no`** · `can_hoan`, kèm `hien_thi` làm chip chính: `CHUA_TINH` (hiện "Học phí chưa được tính" — không hiện số 0) · `CON_NO` · `CHO_HOAN_TIEN` ("Bạn được hoàn <can_hoan>") · `DA_DONG`. Thanh tiến độ `thực thu / phải nộp`.
 - **Hạn đóng** (`TuitionConfig.han_dong`): còn `con_no>0` và quá hạn → chip "Quá hạn" đỏ.
-- Bảng chi tiết: môn · TC lý thuyết · TC thực hành · thành tiền (từ `chi_tiet[]` của `/api/tuition/my/`); lịch sử giao dịch (`THU`/`HOAN`, ngày, số tiền, phương thức, mã biên lai — từ `payments[]`). SV **chỉ xem**, không có nút thanh toán (cổng thanh toán ngoài phạm vi) — hiện hướng dẫn "Nộp tại phòng Kế toán".
+- Bảng chi tiết: môn · TC lý thuyết · TC thực hành · thành tiền (từ `chi_tiet[]` của `/api/tuition/my/`); lịch sử giao dịch (`THU`/`HOAN`, ngày, số tiền, phương thức, mã biên lai — từ `payments[]`). Khi `con_no > 0` (học kỳ chưa đóng đủ) hiện nút cam **"Thanh toán học phí"** trong thẻ trạng thái → mở trang `/student/tuition/pay` (mục 5.8a). Học kỳ đã đóng đủ không có nút.
 - App: thẻ tóm tắt lớn + accordion "Chi tiết môn" / "Giao dịch".
+
+### 5.8a. `/student/tuition/pay` *(bổ sung)* — Thanh toán học phí bằng mã QR
+- Không tích hợp cổng thanh toán: SV **chuyển khoản** vào tài khoản của trường, **Phòng Kế toán đối soát và ghi `Payment` THU** (KT-08). Học phí chỉ cập nhật sau khi kế toán xác nhận.
+- Thông tin nhận tiền lấy từ `tuition/my` → `thanh_toan{ngan_hang, so_tai_khoan, chu_tai_khoan, noi_dung_ck}` (cấu hình ở `SystemConfig`). Mã QR (VietQR) **sinh ở client** từ các thông tin này + số tiền; bản thiết kế dùng mã minh họa.
+- Bố cục Web: hai cột — trái: thẻ **công nợ hiện tại**, chọn **Thanh toán toàn bộ** hoặc **một phần** (ô nhập số tiền, kiểm tra > 0 và ≤ `con_no` theo BR-26), danh sách **các bước thanh toán** + hộp lưu ý chờ kế toán xác nhận; phải — **mã QR**, các dòng *Ngân hàng · Số tài khoản · Chủ tài khoản · Số tiền · Nội dung chuyển khoản* mỗi dòng có nút **Sao chép**, nút **Tải mã QR**. Nhập số tiền sai → ẩn QR, báo lỗi dưới ô. Nội dung chuyển khoản cố định `HOCPHI <mã SV> <học kỳ>` để kế toán đối soát.
+- App: một cột — công nợ + chọn hình thức → QR → thông tin tài khoản (nút Sao chép ≥ 48px) → các bước. Nút "Lưu mã QR vào máy".
 
 ### 5.9. `/student/notifications`
 Mục 4.4 (chỉ nhận, không soạn).
@@ -398,7 +430,7 @@ Quy ước GV: chỉ thấy **lớp mình phụ trách** (BR-12/23). Mọi màn 
 - App: 1 cột; "Hôm nay" nổi bật nhất.
 
 ### 6.1. `/teacher/profile` — Hồ sơ (GV-02)
-Như 5.1: chỉ đọc `ma_gv`, họ tên, khoa/bộ môn, học vị; sửa `email`, `sdt`; đổi mật khẩu.
+Như 5.1: chỉ đọc `ma_gv`, họ tên, khoa/viện, học vị; sửa `email`, `sdt`; đổi mật khẩu.
 
 ### 6.2. `/teacher/classes` — Lớp phụ trách (GV-03, 04, 05, 12)
 - **Danh sách:** thẻ/bảng lớp: mã lớp, môn, học kỳ, sĩ số, trạng thái, lịch (chip `Thứ·Tiết`). Lọc theo học kỳ + trạng thái.
@@ -423,7 +455,7 @@ Teacher "My classes". Filter row (semester, status). Class cards: mã lớp, mô
 | Bước | Trạng thái màn hình |
 | :--- | :--- |
 | 0. Mới vào | Chỉ có ô **Chọn lớp** (lớp mình phụ trách, kèm học kỳ + trạng thái). `EmptyState` "Chọn lớp để xem các buổi điểm danh". **Không hiện buổi, không hiện danh sách SV.** |
-| 1. Chọn lớp | Gọi `GET /api/attendance/sessions/?lop_hoc_phan=`. Hiện: **thẻ tóm tắt** ("42 buổi theo lịch · đã đến hạn 16 · đã điểm danh 15 · sắp tới 26" và "Cấm thi khi vắng không phép > 20% × 42 = 8,4 buổi ⇒ từ 9 buổi"), **danh sách buổi** (ngày · buổi · tiết · chip · số vắng) và tab **Yêu cầu sửa của SV**. Buổi **sắp tới** hiện mờ, không chọn được ("Chưa tới ngày"). Panel điểm danh còn trống: "Chọn một buổi để điểm danh". |
+| 1. Chọn lớp | Gọi `GET /api/attendance/sessions/?lop_hoc_phan=`. Hiện: **thẻ tóm tắt** chỉ gồm số liệu ("42 buổi theo lịch · đã đến hạn 16 · đã điểm danh 15 · sắp tới 26"; **không** ghi chú giải thích quy tắc nghiệp vụ trên giao diện — cờ "Nguy cơ cấm thi" ở từng sinh viên đã đủ), **danh sách buổi** (ngày · buổi · tiết · chip · số vắng) và tab **Yêu cầu sửa của SV**. Buổi **sắp tới** hiện mờ, không chọn được ("Chưa tới ngày"). Panel điểm danh còn trống: "Chọn một buổi để điểm danh". |
 | 2. Chọn một buổi đã đến ngày | Mở **panel điểm danh** của buổi đó với danh sách SV `DA_DANG_KY` (`GET …/records/`). |
 | 3. Lưu | `PUT …/records/` cả lớp một lần → refetch danh sách buổi (chip chuyển `DA_DIEM_DANH`, số vắng và tỷ lệ vắng cập nhật). |
 | Đổi lớp | Xóa buổi đang chọn và panel; có thay đổi chưa lưu → `ConfirmDialog` "Bỏ các thay đổi chưa lưu?". |
@@ -437,7 +469,7 @@ Teacher "My classes". Filter row (semester, status). Class cards: mã lớp, mô
 - **Sửa điểm danh (GV-08):** mở lại buổi cũ → cùng panel; sửa được **bất kỳ lúc nào khi lớp còn `DANG_HOC`** (không có cửa sổ 24h); lớp `DA_DONG` → chỉ xem.
 - Buổi **tương lai** không mở được panel (server từ chối `TRANG_THAI_KHONG_HOP_LE`).
 
-**Tab Yêu cầu sửa của SV (GV-08)** — chỉ của lớp đã chọn (`GET /api/attendance/requests/`): SV · buổi · trạng thái hiện tại → mong muốn · lý do. Nút **Duyệt / Từ chối** (`PATCH /api/attendance/requests/{id}/`). Bấm vào dòng nhảy tới buổi tương ứng. `DUYET` ⇒ server ghi trạng thái mong muốn; UI refetch buổi và tỷ lệ vắng.
+**Tab Yêu cầu sửa của SV (GV-08)** — chỉ của lớp đã chọn (`GET /api/attendance/requests/`): mỗi yêu cầu là một thẻ gồm SV (tên · mã) · buổi · thời điểm gửi · **"hiện tại → mong muốn"** (kể cả *Có mặt – đi trễ*) · **lý do** · **minh chứng** (chip tên tệp + liên kết "Xem minh chứng", hoặc "Không đính kèm minh chứng") · chip trạng thái. Nút **Duyệt / Từ chối** (`PATCH /api/attendance/requests/{id}/`); sau khi xử lý thẻ hiện ghi chú kết quả và nhãn trên tab đếm lại số yêu cầu còn chờ. Với **lớp đã đóng**, các yêu cầu hiện chip "Từ chối" + ghi chú "Tự động từ chối — quá hạn, lớp đã đóng" và không còn nút Duyệt/Từ chối. `DUYET` ⇒ server ghi trạng thái mong muốn và cờ đi trễ; UI refetch buổi và tỷ lệ vắng. Bản App: cùng nội dung (kể cả chip minh chứng) trong tab "Yêu cầu sửa" của danh sách buổi.
 
 | | Web | App |
 | :--- | :--- | :--- |
@@ -445,7 +477,7 @@ Teacher "My classes". Filter row (semester, status). Class cards: mã lớp, mô
 
 **Prompt (Web):**
 ```
-Teacher attendance, step-by-step master–detail. Top: a single "Chọn lớp" dropdown (class code, course, semester, status chip). Initial state: empty state "Chọn lớp để xem các buổi điểm danh", nothing else. After choosing a class: left column shows a summary card ("42 buổi theo lịch · đã đến hạn 16 · đã điểm danh 15 · sắp tới 26" and the rule "Cấm thi khi vắng không phép > 20% × 42 = 8,4 buổi"), then a list of pre-generated sessions (date, buổi, periods, status chip MO/DA_DIEM_DANH, absence count) with upcoming sessions faded and not selectable, and a second tab "Yêu cầu sửa của SV" with a pending badge. There is NO "create session" button. Right column shows placeholder "Chọn một buổi để điểm danh". After selecting a session: roster table — mã SV, họ tên, segmented control (Có mặt / Vắng có phép / Vắng không phép), "Đi trễ" switch, ghi chú, "Vắng KP 9/42 (21%)" with red "Nguy cơ cấm thi" tag when over threshold; sticky bottom bar with counts and "Lưu". Vietnamese.
+Teacher attendance, step-by-step master–detail. Top: a single "Chọn lớp" dropdown (class code, course, semester, status chip). Initial state: empty state "Chọn lớp để xem các buổi điểm danh", nothing else. After choosing a class: left column shows a summary card with numbers only ("42 buổi theo lịch · đã đến hạn 16 · đã điểm danh 15 · sắp tới 26", no explanatory rule text), then a list of pre-generated sessions (date, buổi, periods, status chip MO/DA_DIEM_DANH, absence count) with upcoming sessions faded and not selectable, and a second tab "Yêu cầu sửa của SV" with a pending badge. There is NO "create session" button. Right column shows placeholder "Chọn một buổi để điểm danh". After selecting a session: roster table — mã SV, họ tên, segmented control (Có mặt / Vắng có phép / Vắng không phép), "Đi trễ" switch, ghi chú, "Vắng KP 9/42 (21%)" with red "Nguy cơ cấm thi" tag when over threshold; sticky bottom bar with counts and "Lưu". Vietnamese.
 ```
 **Prompt (App):**
 ```
@@ -483,9 +515,13 @@ Mục 4.4: nhận + **chỉ gửi `CLASS` cho lớp mình** (GV-11).
 
 ---
 
-## 7. PHÒNG ĐÀO TẠO — Web only (10 route + 2 bổ sung)
+## 7. PHÒNG ĐÀO TẠO — Web only (10 route + 3 bổ sung)
 
 Quy ước PĐT: toàn bộ màn dùng `DataTable` + drawer chi tiết bên phải (≥1024px) hoặc trang con (<1024px). Nút tạo/sửa mở dialog (≤6 trường) hoặc drawer (nhiều trường). Xóa cứng không tồn tại — chỉ **ngừng** (`NGUNG`/`NGUNG_SU_DUNG`) vì đối tượng đã có dữ liệu liên quan.
+
+> **Ô chọn có gợi ý (combobox):** mọi danh sách dài (môn học, lớp, giáo viên, người nhận) là ô gõ để tìm — bấm vào là hiện đủ danh sách, gõ từng chữ (không cần dấu) thì lọc theo khớp. **Lọc liên động:** chọn *ngành* thì danh sách môn chỉ còn môn của ngành đó; chọn *môn* thì danh sách giáo viên chỉ còn giáo viên cùng khoa phụ trách môn (khi tạo lớp) hoặc giáo viên đang dạy môn (khi lọc). Thông báo gửi một người: chọn *vai trò* → *khoa* → gõ *tên*.
+>
+> **Mockup Claude Design:** đã dựng đủ 13 màn Web PĐT (`PDT-Web-*.dc.html`: Tổng quan, Hồ sơ SV/GV, Khoa / viện, Ngành, CTĐT, Môn học, Học kỳ, Lớp học phần, Đăng ký, Duyệt điểm, Báo cáo, Thông báo, Nhật ký). Ngày "hôm nay" trong dữ liệu mẫu là 12/01/2027 (cửa sổ đăng ký HK2 còn 7 ngày). Nhật ký PĐT dùng `AuditLogScreen` với `scope=training` cố định (mục 9.5).
 
 ### 7.0. `/pdt` — Tổng quan
 - Thẻ (học kỳ chọn): lớp theo trạng thái (`KE_HOACH`/`MO`/`DANG_HOC`/`DA_DONG`) · tổng lượt đăng ký `DA_DANG_KY` · lớp đầy · lớp còn chỗ.
@@ -493,18 +529,21 @@ Quy ước PĐT: toàn bộ màn dùng `DataTable` + drawer chi tiết bên ph�
   - Lớp `KE_HOACH` thiếu GV/lịch → "n lớp chưa đủ điều kiện mở".
   - Lớp `DANG_HOC` quá `han_nhap_diem` → "n lớp quá hạn nhập điểm" → `/pdt/grade-sheets`.
   - Lớp `DA_DONG` chưa duyệt `KHOA` → "n lớp chờ duyệt điểm".
-  - Học kỳ có cửa sổ đăng ký sắp đóng.
+  - Học kỳ có cửa sổ đăng ký sắp đóng (còn ≤ 10 ngày) → link `/pdt/semesters`.
 - Lối tắt: Học kỳ · Lớp HP · Đăng ký · Duyệt điểm. Dữ liệu từ các list đã có (dùng `count` của list phân trang).
 
 ### 7.1. `/pdt/profiles` *(bổ sung)* — Hồ sơ SV/GV (PDT-01)
 - Hai tab *Sinh viên* · *Giáo viên*; bảng + tìm theo mã/tên, lọc ngành/khoa.
 - **Tạo hồ sơ** chọn một `User` đã được Admin tạo (vai trò SV/GV) và **chưa có hồ sơ**; danh sách tài khoản chưa có hồ sơ hiện thành badge "Chưa có hồ sơ" để PĐT biết cần làm.
   - SV: `ma_sv` (duy nhất), họ tên, ngành, khóa nhập học, **CTĐT** (chỉ liệt kê CTĐT `HOAT_DONG` khớp *ngành + khóa*; sau khi gán **cố định**, không sửa — ô khóa kèm tooltip), email, sđt. `gpa` / `tin_chi_tich_luy` hiển thị chỉ đọc (cache BR-25).
-  - GV: `ma_gv` (duy nhất), họ tên, khoa/bộ môn, học vị, email, sđt.
+  - GV: `ma_gv` (duy nhất), họ tên, khoa/viện (chọn từ danh mục `/pdt/faculties`), học vị, email, sđt.
 - API: `/api/profiles/students/`, `/api/profiles/teachers/` (GET/POST/PATCH).
 
+### 7.1a. `/pdt/faculties` *(bổ sung)* — Khoa / viện (PDT-02)
+**Do PĐT quản lý** (Admin chỉ cấp tài khoản, không đụng danh mục này). Bảng: mã · tên · số ngành · số giáo viên · số môn · trạng thái. Dialog thêm/sửa (mã không đổi sau khi tạo). **Ngừng** (không xóa): nếu còn ngành hoặc giáo viên đang thuộc khoa/viện thì nút xác nhận bị khóa kèm thông báo "Hãy chuyển họ sang nơi khác trước khi ngừng". Danh mục này là nguồn cho ô chọn khoa/viện ở hồ sơ giáo viên, ngành, môn học và cho bộ lọc liên động (môn → giáo viên cùng khoa/viện).
+
 ### 7.2. `/pdt/majors` — Ngành (PDT-02)
-Bảng: mã ngành · tên · thời gian đào tạo · trạng thái. Dialog thêm/sửa; "Ngừng ngành" (không xóa). `ma_nganh` duy nhất.
+Bảng: mã ngành · tên · **khoa / viện quản lý** · thời gian đào tạo · số CTĐT · trạng thái. Dialog thêm/sửa; "Ngừng ngành" (không xóa). `ma_nganh` duy nhất.
 
 ### 7.3. `/pdt/curriculums` — CTĐT & gán môn (PDT-03)
 - **Tab CTĐT:** mã CTĐT · ngành · khóa tuyển sinh · tổng tín chỉ yêu cầu (>0) · trạng thái. Chỉ **một** CTĐT `HOAT_DONG` cho mỗi (ngành, khóa) — vi phạm → lỗi field.
@@ -517,7 +556,7 @@ Bảng: mã ngành · tên · thời gian đào tạo · trạng thái. Dialog t
 
 ### 7.5. `/pdt/semesters` — Học kỳ & cửa sổ đăng ký (PDT-06, 07)
 - Bảng: tên · năm học · thời gian · **cửa sổ đăng ký** · trạng thái `MO`/`DONG`.
-- Form: ngày bắt đầu/kết thúc; **cửa sổ ĐK phải nằm trong thời gian học kỳ** (kiểm tra ngay trên date picker). *Không còn* ô trần tín chỉ (đã chuyển sang cấu hình hệ thống, Admin).
+- Form: ngày bắt đầu/kết thúc; **cửa sổ ĐK phải nằm trong thời gian học kỳ** (kiểm tra ngay trên date picker). Khối **Giới hạn tín chỉ đăng ký** của từng học kỳ: *tối thiểu* (12) · *tối đa* (24) · *tối đa khi bị cảnh báo học vụ* (14); kiểm tra tối thiểu ≤ tối đa và mức cảnh báo ≤ tối đa. Học kỳ phụ gọi là "Học kỳ 3".
 - Nút **Mở học kỳ** (chỉ khi đã đặt cửa sổ) · **Đóng học kỳ** (còn lớp `MO`/`DANG_HOC` ⇒ `409 TRANG_THAI_KHONG_HOP_LE`: nút bị vô hiệu kèm tooltip "Còn n lớp chưa đóng" + link lọc sang `/pdt/classes`). Sửa cửa sổ: `PATCH …/window/`.
 
 ### 7.6. `/pdt/classes` — Lớp học phần & lịch (PDT-08, 09, + xem điểm danh PDT-10)
@@ -526,7 +565,7 @@ Bảng: mã ngành · tên · thời gian đào tạo · trạng thái. Dialog t
 - **Drawer chi tiết — 4 tab:**
   1. *Lịch học* (PDT-09): bảng lịch + form: **Thứ** (2–7, **8 = Chủ nhật**), **tiết bắt đầu** (1–15), **số tiết/buổi**, phòng. Tự hiển thị *tiết kết thúc* và *buổi* (Sáng 1–5/Chiều 6–10/Tối 11–15). Chặn khi **vượt hết nhóm tiết** của buổi (BR-09) — báo trước khi gửi. Server từ chối khi **phòng hoặc GV bị giao tiết** cùng thứ → hiển thị lớp đang chiếm. Mini-lưới 7×15 tô màu lịch lớp này để PĐT thấy trực quan.
   2. *Sinh viên:* danh sách đăng ký của lớp (liên kết sang `/pdt/registrations`).
-  3. *Điểm danh:* danh sách buổi + tỷ lệ vắng từng SV (chỉ xem) và **duyệt yêu cầu sửa điểm danh** của SV (PĐT được phép — `PATCH /attendance/requests/{id}/`).
+  3. *Điểm danh:* danh sách buổi + tỷ lệ vắng từng SV (chỉ xem). Việc xem và duyệt yêu cầu sửa điểm danh của SV là của **giáo viên lớp đó**, PĐT không tham gia.
   4. *Điểm & hạn:* hạn nhập điểm hiện tại + nút **Gia hạn nhập điểm** (chọn ngày mới, bắt buộc > hạn hiện tại; có audit log).
 - **Nút vòng đời** (hiện/ẩn theo trạng thái, đúng mục 3):
   - `KE_HOACH` → **Mở lớp**. Nút disable + checklist điều kiện: ☐ có GV ☐ có sĩ số ☐ ≥ 1 lịch ☐ môn chưa `NGUNG_SU_DUNG`.
@@ -567,6 +606,8 @@ Widget `AuditLogScreen` (mục 9.5) với `scope=training` cố định, không 
 ## 8. KẾ TOÁN — Web only (6 route + 1 bổ sung)
 
 Quy ước KT: số tiền căn phải, định dạng `₫`; KT chỉ thấy tối thiểu `ma_sv`, `ho_ten`, `nganh` của SV (không sdt/email/GPA).
+
+> **Mockup Claude Design:** đã dựng đủ 7 màn Web Kế toán (`KT-Web-*.dc.html`: Tổng quan, Cấu hình học phí, Học phí, Công nợ, Báo cáo tài chính, Thông báo, Nhật ký). Cùng quy ước với PĐT: ô gõ để tìm cho danh sách dài, lọc liên động (ngành → lớp → sinh viên), bảng số tiền căn phải, không hiện mã trạng thái kỹ thuật. Ngày "hôm nay" trong dữ liệu mẫu là 12/01/2027 (học kỳ 1 đã quá hạn đóng học phí 31/10/2026). Nhật ký KT dùng `AuditLogScreen` với `scope=finance` cố định.
 
 ### 8.0. `/accountant` — Tổng quan
 - Thẻ (học kỳ chọn): **Phải thu** (Σ phải nộp) · **Đã thu** · **Còn nợ** · **Chờ hoàn** (Σ `can_hoan`). Dữ liệu `reports/finance`.
@@ -624,6 +665,8 @@ Accountant tuition screen. Top bar: semester picker and button "Tính học phí
 
 Admin xử lý *tài khoản & hệ thống*, **không** có quyền nghiệp vụ đào tạo/tài chính (menu không hiện).
 
+> **Mockup Claude Design:** đã dựng đủ 7 màn Web Quản trị (`AD-Web-*.dc.html`: Tổng quan, Tài khoản, Ma trận quyền, Cấu hình hệ thống, Sao lưu, Thông báo, Nhật ký). Giao diện dùng tên gọi thường ("Máy chủ ứng dụng", "Cơ sở dữ liệu", "Bộ nhớ đệm", "Tác vụ chạy nền") thay cho tên kỹ thuật; nhật ký Admin có bộ chọn phạm vi Tất cả / Đào tạo / Tài chính / Hệ thống.
+
 ### 9.0. `/admin` — Tổng quan
 - Thẻ **Sức khỏe hệ thống** (`/api/health/`): API · DB · Redis · Celery · job gần nhất lỗi (nếu có).
 - Thẻ số tài khoản theo vai trò + số tài khoản đang khóa (dùng `count` của `/api/users/?role=&is_locked=`).
@@ -647,12 +690,12 @@ Admin xử lý *tài khoản & hệ thống*, **không** có quyền nghiệp v�
 
 | Nhóm | Khóa | Mặc định | Kiểm tra |
 | :--- | :--- | :---: | :--- |
-| Tín chỉ (BR-07) | `tin_chi_toi_thieu` | 12 | nguyên ≥ 0 |
-| | `tin_chi_toi_da` | 24 | ≥ tối thiểu |
-| | `tin_chi_toi_da_canh_bao` | 14 | ≤ tối đa |
 | Điểm danh (BR-20) | `max_absent_pct` | 20 | 0–100 |
 | Điểm (BR-13) | `so_ngay_cho_phep_nhap_diem` | 14 | nguyên ≥ 0 |
-| Sao lưu | `backup_retention_days` | — | nguyên ≥ 1 |
+| Sao lưu | `backup_retention_days` | 30 | nguyên ≥ 1 |
+| Nhận chuyển khoản học phí | `ck_ngan_hang` | — | chuỗi, bắt buộc |
+| | `ck_so_tai_khoan` | — | chỉ chữ số, bắt buộc |
+| | `ck_chu_tai_khoan` | — | chữ in hoa không dấu, bắt buộc |
 
 `PATCH /api/admin/config/`; lưu theo từng nhóm; thay đổi áp dụng cho thao tác *sau đó* (không tính lại dữ liệu cũ) — ghi chú nhỏ. Hiện người sửa + thời gian gần nhất nếu API trả.
 
@@ -702,7 +745,7 @@ Admin accounts screen. Toolbar: search, role filter chips (Admin, PĐT, SV, GV, 
 | :--- | :--- |
 | **SV (13)** | 01 `/login` · 02 `/student/profile` · 03 `/student/curriculum`* · 04–05 `/student/register` tab 1 · 06 `/student/auto-schedule` · 07 `/student/register` tab 2 · 08 `/student/schedule` · 09 `/student/register` tab 3 · 10 `/student/attendance` · 11 `/student/grades` · 12 `/student/tuition` · 13 `/student/notifications` |
 | **GV (12)** | 01 `/login` · 02 `/teacher/profile` · 03–04 `/teacher/classes` · 05 `/teacher/classes` tab Lịch dạy · 06–09 `/teacher/attendance` · 10 `/teacher/grades` · 11 `/teacher/notifications` · 12 `/teacher/classes` (Xuất Excel) |
-| **PĐT (15)** | 01 `/pdt/profiles`* · 02 `/pdt/majors` · 03 `/pdt/curriculums` · 04–05 `/pdt/courses` · 06–07 `/pdt/semesters` · 08–09 `/pdt/classes` · 10–11 `/pdt/registrations` (+ điểm danh trong `/pdt/classes`) · 12 `/pdt/grade-sheets` · 13 `/pdt/notifications` · 14 `/pdt/reports` · 15 bộ lọc/tìm kiếm ở mọi bảng |
+| **PĐT (15)** | 01 `/pdt/profiles`* · 02 `/pdt/faculties`* + `/pdt/majors` · 03 `/pdt/curriculums` · 04–05 `/pdt/courses` · 06–07 `/pdt/semesters` · 08–09 `/pdt/classes` · 10–11 `/pdt/registrations` (+ điểm danh trong `/pdt/classes`) · 12 `/pdt/grade-sheets` · 13 `/pdt/notifications` · 14 `/pdt/reports` · 15 bộ lọc/tìm kiếm ở mọi bảng |
 | **KT (11)** | 01–05 `/accountant/config` · 06–08, 10 `/accountant/tuition` · 09 `/accountant/debts` · 11 `/accountant/reports` |
 | **Admin (8)** | 01 `/login` · 02–03 `/admin/accounts` · 04 `/admin/permissions` · 05 `/admin/config` · 06 `/admin/logs` (+ PĐT/KT logs*) · 07 `/admin/notifications` · 08 `/admin/backups` |
 
@@ -721,14 +764,14 @@ Admin accounts screen. Toolbar: search, role filter chips (Admin, PĐT, SV, GV, 
 
 ---
 
-## 13. Quyết định thiết kế (đã đồng bộ vào `plan.md` v3.1)
+## 13. Quyết định thiết kế (đã đồng bộ vào `plan.md`)
 
 Các điểm sau đã được ghi vào `plan.md` (trừ mục 10 là việc của mã Flutter):
 
 | # | Nội dung chốt | Sửa trong plan |
 | :--- | :--- | :--- |
 | 1 | Thêm 4 route: `/pdt/profiles` (PDT-01), `/student/curriculum` (SV-03), `/pdt/logs` và `/accountant/logs` (ADM-06 cho PĐT/KT, dùng chung `AuditLogScreen`) | Mục 10.3 + `routes_<role>.dart` |
-| 2 | SV không đọc được `SystemConfig` ⇒ `GET /api/courses/available/` trả thêm `meta{tin_chi_toi_da, tin_chi_toi_da_canh_bao}`; `GET /api/attendance/my/` trả cờ `canh_bao_vang` mỗi lớp | Mục 8.1 (Sinh viên) |
+| 2 | Trần tín chỉ nằm trên `Semester` (PĐT đặt) ⇒ `GET /api/courses/available/` trả thêm `meta{tin_chi_toi_da, tin_chi_toi_da_canh_bao}`; `GET /api/attendance/my/` trả cờ `canh_bao_vang` mỗi lớp | Mục 8.1 (Sinh viên) |
 | 3 | `GET /api/tuition/my/` trả thêm `chi_tiet[]` (môn, TC LT/TH, thành tiền) và `payments[]` | Mục 8.1 + mục 5 (Tuition) |
 | 4 | PĐT "nhập hộ" điểm lưu thẳng `CHINH_THUC` | BR-13 |
 | 5 | Không có nút/endpoint chuyển lớp `MO` → `DANG_HOC` thủ công; chỉ job `classes_transition_daily` | Mục 6 (bỏ chữ "hoặc PĐT bấm" ở `DANG_HOC`) |
@@ -737,3 +780,7 @@ Các điểm sau đã được ghi vào `plan.md` (trừ mục 10 là việc c�
 | 8 | Bỏ tiện ích "đếm người nhận thông báo" và "thử tra giá" (không có endpoint) | — |
 | 9 | Đổi mật khẩu ⇒ client đăng xuất, yêu cầu đăng nhập lại (vì refresh cũ bị blacklist) | — |
 | 10 | `app_theme.dart`: đổi seed `0xFF1A56DB` → `#3F51B5`, thêm secondary teal `#009688` | Mã Flutter (checklist 1.4) |
+| 11 | Mỗi môn chỉ đăng ký một lớp trong một học kỳ — UI ẩn các lớp còn lại của môn đã đăng ký; backend chặn bằng BR-04(d), `DA_DANG_KY_MON` (409) | Đã chốt (plan v3.6) |
+| 12 | Trần tín chỉ (tối thiểu / tối đa / tối đa khi cảnh báo học vụ) do **PĐT** đặt theo từng học kỳ, không còn ở cấu hình hệ thống của Admin | Đã chốt (plan v3.7) |
+| 13 | Thêm danh mục **Khoa / viện** do PĐT quản lý (`/pdt/faculties`); ngành, môn học, giáo viên trỏ tới khoa/viện; ngừng chỉ khi không còn ngành/giáo viên hoạt động | Đã chốt (plan v3.8) |
+| 14 | Danh sách dài là ô gõ để tìm (bấm là hiện đủ, gõ không dấu vẫn khớp); bộ lọc liên động ngành → môn → giáo viên cùng khoa/viện; UI không hiện mã trạng thái kỹ thuật | Chỉ là quy ước giao diện (mục 7) |
