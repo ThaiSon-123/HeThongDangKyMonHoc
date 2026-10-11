@@ -1,9 +1,10 @@
 # CHECKLIST TRIỂN KHAI — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-> **Nguồn:** `plan.md` v3.8 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
+> **Nguồn:** `plan.md` v3.9 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
 > mỗi dòng trỏ về mục/BR trong plan. Có chỗ lệch giữa hai file ⇒ plan thắng, sửa checklist.
 > **Cách dùng:** tick `[x]` khi xong; mỗi pha phải đạt **Milestone + DoD** (mục 10) mới sang pha sau.
 > **Thời lượng:** ~10–11 tuần cho đội 4–5 người (plan mục 12).
+> **Giao diện:** mọi màn Flutter bám mockup trong [`design_mockups/`](design_mockups/README.md) (bố cục, màu, câu chữ, hành vi); quy ước ở `design.md` mục 1.7–1.9.
 
 ---
 
@@ -45,14 +46,18 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
       `CACHES` Redis dùng chung · lỗi throttle → envelope `429 QUA_NHIEU_YEU_CAU` · hạ tầng test
       (`config/settings/test.py`, `conftest.py`, `core/factories.py`) · CI có PostgreSQL service ·
       worker/beat đợi web healthy · sửa `authentication.py` (gọi `business_error` sai tham số) ·
-      Flutter `ApiClient` (đường dẫn `/api`, gắn Bearer, refresh lưu token xoay vòng, không deadlock)
+      Flutter `ApiClient` (đường dẫn `/api`, gắn Bearer, refresh lưu token xoay vòng, không deadlock) ·
+      Swagger hợp lệ 0 cảnh báo (nút Authorize + request/response mọi view; có test) ·
+      test hạ tầng `core/` (envelope, phân trang, middleware idempotency, IP client) ·
+      `NUM_PROXIES` (rate limit không bị lách bằng `X-Forwarded-For`) · `createsuperuser` tạo `ADMIN`
+      (migration `user.0002`) · `pytest-cov` (coverage `auth/services` 96%, tổng 85%)
 - [ ] Thêm `services.py` cho từng app khi bắt đầu pha tương ứng (mục 1.2) — đã có: `auth`, `profiles`
 
 ---
 
 ## 2. PHA 1 — AUTH & HỒ SƠ (1 tuần)
 
-**Backend (đã xong, 79 test qua trên PostgreSQL và SQLite):**
+**Backend (đã xong, 91 test qua trên PostgreSQL và SQLite):**
 - [x] `User` 5 role, `is_locked`; login / refresh (rotate + blacklist) / logout — BR-22
 - [x] `LockedAwareJWTAuthentication` chặn cả login lẫn refresh khi khóa
 - [x] `forgot-password` (phản hồi **giống nhau** dù email có/không tồn tại; token 30 phút, 1 lần) · `reset-password` · `change-password` (blacklist refresh cũ)
@@ -65,8 +70,11 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 **Flutter:**
 - [x] Ống dẫn API + phiên đăng nhập (không có giao diện): `ApiClient`, `AuthController`, map `role` backend → `UserRole`; 8 test
-- [ ] Màn hình: login, forgot/reset, đổi mật khẩu, hồ sơ SV/GV, `/web-only`, AccountMenu *(chờ thiết kế xong — `design.md` mục 4, 5.1, 6.1)*
-- [ ] Màn Admin quản lý tài khoản (`/admin/accounts`) *(quyết định có làm trong Pha 1 không)*
+- [x] Build được cả hai entrypoint (`web -t lib/main.dart`, `web -t lib/main_app.dart`); đã kiểm tra bản App **không chứa** route `/admin`, `/pdt`, `/accountant`
+- [x] Màn hình theo `design_mockups/`: đăng nhập (Web 2 cột / App), quên + đặt lại mật khẩu 3 bước, đổi mật khẩu, hồ sơ SV/GV (Web + App), `/web-only`, hộp thoại tài khoản (Admin/PĐT/KT)
+- [x] Khung điều hướng: sidebar navy 260 · thanh icon 600–1024 · header navy + thanh dưới nổi (App) · AppBar + Drawer (3 vai trò Web-only) — đã xem trên trình duyệt với backend thật
+- [x] Màn Admin quản lý tài khoản (`/admin/accounts`, ADM-02): lọc/tìm/phân trang, khóa-mở khóa (xác nhận), tạo, sửa (đổi vai trò có xác nhận), đặt lại mật khẩu, ngăn chi tiết hồ sơ học vụ
+- [ ] Màn PĐT quản lý hồ sơ SV/GV (`/pdt/profiles`, PDT-01) — **chưa làm**: mockup chọn tuần tự Khoa/viện → Ngành → CTĐT, cần thực thể `Faculty` (plan v3.8, làm ở Pha 2) nên để sau Pha 2
 - [ ] **Milestone:** đăng nhập cả 5 role; khóa tài khoản chặn cả token đang dùng *(API đã đạt, còn phần màn hình)*
 
 ## 3. PHA 2 — DỮ LIỆU ĐÀO TẠO (1.5 tuần)
@@ -223,7 +231,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | BR-16 | Tra giá 2 trục `hoc_ky` × khối → ngành → mặc định | 6 | [ ] |
 | BR-17 | LT = giá gốc; TH = `GIA_TH` nếu có | 6 | [ ] |
 | BR-18 | Miễn giảm do KT, có audit log | 6 | [ ] |
-| BR-19 | 3 trạng thái điểm danh + cờ `di_tre` | 4 | [ ] |
+| BR-19 | 3 trạng thái điểm danh + cờ `di_tre` (chỉ khi `CO_MAT`; UI 4 nút) | 4 | [ ] |
 | BR-20 | Buổi điểm danh sinh sẵn theo lịch; tỷ lệ vắng = vắng KP / tổng số buổi theo lịch + cờ cảnh báo | 4 | [ ] |
 | BR-21 | Phân quyền 5 vai trò | 1–10 | [ ] |
 | BR-22 | JWT; khóa tài khoản chặn login + refresh | 1 | [ ] |
@@ -284,6 +292,8 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 - [ ] `DEBUG=False`, `SECRET_KEY` từ env, `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE=False`
 - [ ] CORS prod = danh sách origin tường minh (không dùng regex localhost)
+- [ ] `NUM_PROXIES=1` (mặc định ở `prod.py`) và **không publish cổng `web`** ra ngoài, chỉ nginx
+- [ ] Tạo Admin đầu tiên: `python manage.py createsuperuser` (vai trò tự là `ADMIN`)
 - [ ] HTTPS (nginx + certbot)
 - [ ] `pg_dump` trước mỗi lần migrate prod
 - [ ] Backup daily chạy được; thử restore tay một lần bằng `pg_restore`
@@ -291,4 +301,4 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 ---
 
-*Tạo từ `plan.md` v3.0 (2026-10-10). Cập nhật khi plan đổi.*
+*Tạo từ `plan.md` v3.9 (cập nhật 2026-10-11). Cập nhật khi plan đổi.*

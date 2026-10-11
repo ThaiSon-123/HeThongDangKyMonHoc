@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Điểm danh — các buổi (app)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:#F5F6FA}
+a{text-decoration:none}
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div class="ui-approot" style="position:relative;width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);overflow:hidden">
+  <header style="flex:0 0 auto;position:relative;overflow:hidden;background:linear-gradient(160deg,var(--navy) 0%,var(--primary-dark) 100%);color:#FFFFFF;border-radius:0 0 24px 24px;padding:14px 16px 18px 4px;display:flex;align-items:center;gap:4px"><span aria-hidden="true" style="position:absolute;right:-50px;top:-70px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.07)"></span><a href="App-ChonLop.dc.html" aria-label="Quay lại" style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#FFFFFF;flex:0 0 auto"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a><div style="position:relative;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lập trình hướng đối tượng</span><span style="font-size:12px;opacity:.88">CNTT101-01 · Đang học · Bước 2/3</span></div></header>
+
+  <div style="flex:1 1 auto;overflow:auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6B7280">
+      <span style="width:24px;height:24px;border-radius:50%;background:#2E7D32;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">✓</span>
+      <span>Chọn lớp</span><span>›</span>
+      <span style="width:24px;height:24px;border-radius:50%;background:var(--primary);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">2</span>
+      <span style="font-weight:600;color:#212121">Chọn buổi</span><span>›</span><span>Điểm danh</span>
+    </div>
+
+    <div role="tablist" style="display:flex;background:#E8EAF6;border-radius:12px;padding:4px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+        <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{tabBuoi}}" hint-placeholder-val="{{true}}">
+    <div style="background:#F5F6FF;border:1px solid #C5CAE9;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px">
+      <div style="font-weight:600;font-size:15px">42 buổi theo lịch của lớp</div>
+      <div style="font-size:13px;color:#374151;line-height:1.5">Đã đến hạn 16 · Đã điểm danh 15 · Sắp tới 26</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <sc-for list="{{sessions}}" as="s" hint-placeholder-count="4">
+        <a href="App-DiemDanh.dc.html" class="ui-click" style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:14px 16px;min-height:64px;color:#212121">
+          <span style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-weight:600;font-size:15px">{{s.title}}</span>
+            <span style="font-size:13px;color:#6B7280">{{s.meta}}</span>
+          </span>
+          <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+            <span style="{{s.chip}}">{{s.label}}</span>
+            <span style="font-size:12px;color:#6B7280">{{s.vang}}</span>
+          </span>
+        </a>
+      </sc-for>
+      <div style="font-size:12px;color:#6B7280;line-height:1.5;padding:2px">… và 12 buổi trước đó</div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{tabYc}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{requests}}" as="r" hint-placeholder-count="2">
+          <div style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:14px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+              <span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:15px">{{r.sv}}</span><span style="font-size:12px;color:#6B7280">{{r.ma}} · {{r.buoi}}</span></span>
+              <span style="{{r.chip}}">{{r.statusLabel}}</span>
+            </div>
+            <div style="font-size:13px;color:#374151">{{r.doi}}</div>
+            <div style="font-size:13px;color:#6B7280">Lý do: {{r.lyDo}}</div>
+            <sc-if value="{{r.hasFile}}" hint-placeholder-val="{{false}}"><span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:999px;background:#F1F3F9;color:#374151"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 01-7-7L14 4a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 7"></path></svg>{{r.file}}</span></sc-if>
+            <sc-if value="{{r.pending}}" hint-placeholder-val="{{true}}">
+              <div style="display:flex;gap:10px">
+                <button onClick="{{r.reject}}" style="flex:1;min-height:48px;border-radius:12px;border:1px solid #C62828;background:#FFFFFF;color:#C62828;font-weight:600;font-size:14px">Từ chối</button>
+                <button onClick="{{r.approve}}" style="flex:1;min-height:48px;border-radius:12px;border:0;background:#2E7D32;color:#FFFFFF;font-weight:600;font-size:14px">Duyệt</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 'buoi', decided: {} }; }
+  renderVals() {
+    const S = this.state;
+    const b = 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;';
+    const tb = 'flex:1;min-height:44px;border:0;border-radius:10px;font-size:14px;';
+    const tabs = [['buoi', 'Các buổi (42)'], ['yc', 'Yêu cầu sửa (' + Object.keys({ r1: 1, r2: 1 }).filter((k) => !S.decided[k]).length + ')']].map(([id, label]) => ({
+      label, on: S.tab === id, pick: () => this.setState({ tab: id }),
+      style: tb + (S.tab === id ? 'background:#FFFFFF;color:var(--primary);font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.12)' : 'background:transparent;color:#374151;font-weight:500')
+    }));
+    const REQ = [
+      { id: 'r1', sv: 'Lê Hoàng Cường', ma: 'SV2026003', buoi: '06/10/2026 · Sáng', doi: 'Vắng không phép → Vắng có phép', lyDo: 'Em nghỉ ốm, có giấy khám bệnh đính kèm.', file: 'giay-kham-benh.pdf' },
+      { id: 'r2', sv: 'Võ Thị Hà', ma: 'SV2026005', buoi: '03/10/2026 · Sáng', doi: 'Vắng có phép → Có mặt – đi trễ', lyDo: 'Em đến muộn nhưng có mặt từ tiết 2.', file: '' }
+    ];
+    const requests = REQ.map((r) => {
+      const d = S.decided[r.id];
+      return {
+        ...r, hasFile: !!r.file, pending: !d,
+        statusLabel: d === 'ok' ? 'Đã duyệt' : d === 'no' ? 'Từ chối' : 'Chờ duyệt',
+        chip: b + (d === 'ok' ? 'background:#E6F4EA;color:#2E7D32' : d === 'no' ? 'background:#FDECEA;color:#C62828' : 'background:#FFF4D6;color:#8A5A00'),
+        approve: () => this.setState({ decided: { ...S.decided, [r.id]: 'ok' } }),
+        reject: () => this.setState({ decided: { ...S.decided, [r.id]: 'no' } })
+      };
+    });
+    const open = b + 'background:#FFF4D6;color:#8A5A00';
+    const done = b + 'background:#E6F4EA;color:#2E7D32';
+    return {
+      tabs, requests, tabBuoi: S.tab === 'buoi', tabYc: S.tab === 'yc',
+      sessions: [
+        { title: 'Thứ 7, 10/10/2026', meta: 'Sáng · Tiết 1–3 · Hôm nay', chip: open, label: 'Chưa điểm danh', vang: '—' },
+        { title: 'Thứ 3, 06/10/2026', meta: 'Sáng · Tiết 1–3', chip: done, label: 'Đã điểm danh', vang: 'Vắng 2' },
+        { title: 'Thứ 7, 03/10/2026', meta: 'Sáng · Tiết 1–3', chip: done, label: 'Đã điểm danh', vang: 'Vắng 1' },
+        { title: 'Thứ 3, 29/09/2026', meta: 'Sáng · Tiết 1–3', chip: done, label: 'Đã điểm danh', vang: 'Vắng 0' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

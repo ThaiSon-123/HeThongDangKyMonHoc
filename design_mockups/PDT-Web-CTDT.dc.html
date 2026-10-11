@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>CTĐT — Phòng đào tạo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:var(--bg)}
+a{text-decoration:none}
+button,select,input,textarea{font-family:inherit}
+
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1000px;background:var(--bg)">
+  <nav class="np" aria-label="Điều hướng phòng đào tạo" style="flex:1 1 260px;max-width:260px;min-width:220px;background:linear-gradient(180deg,var(--navy) 0%,#26357A 100%);padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)">
+        <div style="flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">ĐK</div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-weight:700;font-size:15px;color:#FFFFFF">Đăng ký môn học</span>
+          <span style="font-size:12px;color:#AEB8E6">Cổng phòng đào tạo</span>
+        </div>
+      </div>
+      <sc-for list="{{navGroups}}" as="grp" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:0 12px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8E9AD6">{{grp.title}}</div>
+          <sc-for list="{{grp.items}}" as="item" hint-placeholder-count="2">
+            <a href="{{item.href}}" style="{{item.style}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+              <span style="flex:1">{{item.label}}</span>
+              <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{false}}">
+                <span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--accent);color:#FFFFFF;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{item.badge}}</span>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.12)">
+      <a href="#" aria-label="Tài khoản" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">LH</a>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+        <span style="font-weight:600;font-size:14px;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lê Thị Hương</span>
+        <span style="font-size:12px;color:#AEB8E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Phòng đào tạo · pdt01</span>
+      </div>
+      <a href="Web-DangNhap.dc.html" aria-label="Đăng xuất" style="flex:0 0 auto;width:44px;height:44px;border-radius:12px;color:#C9D0F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"></path></svg></a>
+    </div>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header class="np" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:32px 32px 4px;color:var(--navy);flex-wrap:wrap">
+      <div>
+        <div class="ui-bc" aria-label="Đường dẫn"><a href="PDT-Web-TongQuan.dc.html">Phòng đào tạo</a><span aria-hidden="true">›</span><span style="color:#5B6488;font-weight:600">Chương trình đào tạo</span></div><h1 style="margin:0;font-size:28px;font-weight:700">Chương trình đào tạo</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:#5B6488">Quản lý chương trình đào tạo và các môn trong từng chương trình</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        
+        <a href="PDT-Web-ThongBao.dc.html" aria-label="Thông báo, có tin chưa đọc" style="position:relative;width:44px;height:44px;border-radius:12px;border:0;background:#FFFFFF;color:var(--navy);box-shadow:0 2px 10px rgba(31,42,92,.1);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0"></path></svg><span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid #FFFFFF"></span></a>
+      </div>
+    </header>
+
+    <main style="padding:32px;display:flex;flex-direction:column;gap:24px">
+      <sc-if value="{{uiLoading}}" hint-placeholder-val="{{false}}"><div aria-busy="true" aria-label="Đang tải dữ liệu" style="display:flex;flex-direction:column;gap:20px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div></div><div style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:14px"><div class="ui-skel" style="height:20px;width:220px;border-radius:8px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div></div></div></sc-if>
+      <sc-if value="{{uiError}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center"><span style="width:56px;height:56px;border-radius:50%;background:#FDECEA;color:#C62828;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">!</span><span style="font-size:18px;font-weight:700;color:var(--navy)">Không tải được dữ liệu</span><span style="font-size:14px;color:#6B7280;max-width:420px;line-height:1.5">Kết nối bị gián đoạn hoặc máy chủ đang bận. Hãy thử lại sau ít giây.</span><button onClick="{{uiRetry}}" style="min-height:44px;padding:0 24px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Thử lại</button></div></sc-if>
+      <sc-if value="{{uiOk}}" hint-placeholder-val="{{true}}"><div style="display:flex;flex-direction:column;gap:24px">
+      <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);">
+        <div style="padding:16px 0 0"><div role="tablist" style="display:flex;gap:4px;border-bottom:1px solid #E3E6EE;padding:0 24px"><sc-for list="{{tabs}}" as="t" hint-placeholder-count="2"><button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button></sc-for></div></div>
+        <sc-if value="{{tabCtdt}}" hint-placeholder-val="{{true}}">
+          <div style="padding:18px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span style="font-size:13px;color:#6B7280">Mỗi ngành theo từng khóa chỉ có <strong>một</strong> CTĐT đang hoạt động.</span><button onClick="{{openNew}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">+ Thêm CTĐT</button></div>
+          <div class="ui-tscroll" style="overflow-x:auto"><div style="min-width:820px"><div class="ui-thead" style="display:grid;grid-template-columns:minmax(200px,1fr) 100px 140px 140px 120px 130px;column-gap:16px;align-items:center;padding:12px 20px;background:#FAFAFA;font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.03em"><span style="min-width:0">Mã CTĐT</span><span style="min-width:0">Ngành</span><span style="min-width:0">Khóa tuyển sinh</span><span style="min-width:0">Tổng TC yêu cầu</span><span style="min-width:0">Trạng thái</span><span style="min-width:0"></span></div><sc-for list="{{ctdtRows}}" as="r" hint-placeholder-count="4"><div class="ui-trow" style="display:grid;grid-template-columns:minmax(200px,1fr) 100px 140px 140px 120px 130px;column-gap:16px;align-items:center;padding:12px 20px;border-top:1px solid #EEF0F5;font-size:14px;"><span style="min-width:0"><span style="font-weight:600;font-family:ui-monospace,Menlo,monospace">{{r.id}}</span></span><span style="min-width:0">{{r.nganh}}</span><span style="min-width:0">{{r.khoa}}</span><span style="min-width:0">{{r.tong}}</span><span style="min-width:0"><span style="{{r.chip}}">{{r.stLabel}}</span></span><span style="min-width:0"><button onClick="{{r.view}}" style="min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #C4C9D4;background:#FFFFFF;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap">Xem môn</button></span></div></sc-for></div></div><div class="ui-trow" style="padding:12px 20px;border-top:1px solid #EEF0F5;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:#6B7280"><span>{{ctdtTotal}} bản ghi</span><span>Trang 1/1 · 25 dòng/trang</span></div>
+        </sc-if>
+        <sc-if value="{{tabMon}}" hint-placeholder-val="{{false}}">
+          <div style="padding:18px 24px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap">
+            <label style="flex:0 1 340px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Chương trình đào tạo<select value="{{cur}}" onChange="{{setCur}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{curOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+            <span style="flex:1"></span>
+            <button onClick="{{openAdd}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">+ Gán môn vào CTĐT</button>
+          </div>
+          <div style="margin:0 24px 16px;padding:12px 16px;border-radius:12px;background:#F5F6FF;display:flex;align-items:center;gap:12px 24px;flex-wrap:wrap;font-size:14px">
+            <span>Đã gán <strong>{{assigned}}</strong> / {{required}} tín chỉ</span><span style="{{gapChip}}">{{gapText}}</span>
+            <span style="flex:1"></span><span style="font-size:12px;color:#6B7280">Đổi khối kiến thức có thể làm thay đổi học phí.</span>
+          </div>
+          <div class="ui-tscroll" style="overflow-x:auto"><div style="min-width:860px"><div class="ui-thead" style="display:grid;grid-template-columns:minmax(260px,1fr) 50px 150px 110px 120px 80px;column-gap:16px;align-items:center;padding:12px 20px;background:#FAFAFA;font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.03em"><span style="min-width:0">Môn học</span><span style="min-width:0">TC</span><span style="min-width:0">Khối kiến thức</span><span style="min-width:0">Loại môn</span><span style="min-width:0">Học kỳ gợi ý</span><span style="min-width:0"></span></div><sc-for list="{{monRows}}" as="r" hint-placeholder-count="4"><div class="ui-trow" style="display:grid;grid-template-columns:minmax(260px,1fr) 50px 150px 110px 120px 80px;column-gap:16px;align-items:center;padding:12px 20px;border-top:1px solid #EEF0F5;font-size:14px;"><span style="min-width:0"><span style="display:flex;flex-direction:column"><span style="font-weight:600">{{r.ten}}</span><span style="font-size:12px;color:#6B7280;font-family:ui-monospace,Menlo,monospace">{{r.code}}</span></span></span><span style="min-width:0">{{r.tc}}</span><span style="min-width:0"><span style="{{r.khoiChip}}">{{r.khoi}}</span></span><span style="min-width:0"><span style="{{r.loaiChip}}">{{r.loai}}</span></span><span style="min-width:0">Kỳ {{r.ky}}</span><span style="min-width:0"><button onClick="{{r.remove}}" style="min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #C4C9D4;background:#FFFFFF;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;color:#C62828">Bỏ</button></span></div></sc-for></div></div><div class="ui-trow" style="padding:12px 20px;border-top:1px solid #EEF0F5;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:#6B7280"><span>{{monTotal}} bản ghi</span><span>Trang 1/1 · 25 dòng/trang</span></div>
+        </sc-if>
+      </section>
+<sc-if value="{{dlgNew}}" hint-placeholder-val="{{false}}"><div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;overflow:auto"><div role="dialog" aria-modal="true" aria-label="Thêm CTĐT" style="background:#FFFFFF;border-radius:16px;width:100%;max-width:520px;box-shadow:0 20px 50px rgba(17,24,39,.3);padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:18px;font-weight:700;color:var(--navy)">Thêm CTĐT</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Ngành<select value="{{nNg}}" onChange="{{setNNg}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{ngOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Khóa tuyển sinh<select value="{{nKh}}" onChange="{{setNKh}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{khOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label></div><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Tổng tín chỉ yêu cầu<input type="number" value="{{nTong}}" onChange="{{setNTong}}" placeholder="130" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><sc-if value="{{hasErr}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FDECEA;color:#8C1D18;border:1px solid #F3B8B3;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5">{{err}}</div></sc-if><div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px"><button onClick="{{closeNew}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Hủy</button><button onClick="{{saveNew}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Lưu</button></div></div></div></sc-if><sc-if value="{{dlgAdd}}" hint-placeholder-val="{{false}}"><div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;overflow:auto"><div role="dialog" aria-modal="true" aria-label="Gán môn vào CTĐT" style="background:#FFFFFF;border-radius:16px;width:100%;max-width:600px;box-shadow:0 20px 50px rgba(17,24,39,.3);padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:18px;font-weight:700;color:var(--navy)">Gán môn vào CTĐT</h2><div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0"><span>Môn học</span><div style="position:relative"><input type="text" autocomplete="off" value="{{aMonC.text}}" onFocus="{{aMonC.focus}}" onBlur="{{aMonC.blur}}" onChange="{{aMonC.change}}" placeholder="Gõ mã hoặc tên môn…" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;padding-right:58px"><sc-if value="{{aMonC.canClear}}" hint-placeholder-val="{{false}}"><button type="button" aria-label="Bỏ chọn" onMouseDown="{{aMonC.clear}}" style="position:absolute;right:28px;top:6px;width:32px;height:32px;border:0;background:transparent;color:#6B7280;font-size:13px;cursor:pointer;border-radius:8px">✕</button></sc-if><span style="position:absolute;right:12px;top:0;bottom:0;display:flex;align-items:center;color:#6B7280;pointer-events:none;font-size:12px">▾</span><sc-if value="{{aMonC.open}}" hint-placeholder-val="{{false}}"><div role="listbox" style="position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:4px;max-height:260px;overflow:auto;background:#FFFFFF;border:1px solid #C4C9D4;border-radius:12px;box-shadow:0 10px 28px rgba(17,24,39,.18)"><sc-for list="{{aMonC.list}}" as="o" hint-placeholder-count="4"><div role="option" onMouseDown="{{o.pick}}" style="{{o.style}}"><span>{{o.pre}}</span><span style="font-weight:700;color:var(--primary-dark);background:#FFF4D6;border-radius:3px">{{o.mid}}</span><span>{{o.post}}</span></div></sc-for><sc-if value="{{aMonC.none}}" hint-placeholder-val="{{false}}"><div style="padding:12px 14px;font-size:14px;color:#6B7280">Không có kết quả phù hợp</div></sc-if></div></sc-if></div></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Khối kiến thức<select value="{{aKhoi}}" onChange="{{setAKhoi}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{khoiOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Loại môn<select value="{{aLoai}}" onChange="{{setALoai}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{loaiOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Học kỳ gợi ý<select value="{{aKy}}" onChange="{{setAKy}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{kyOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label></div><sc-if value="{{hasErr}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FDECEA;color:#8C1D18;border:1px solid #F3B8B3;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5">{{err}}</div></sc-if><div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px"><button onClick="{{closeAdd}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Hủy</button><button onClick="{{saveAdd}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Gán môn</button></div></div></div></sc-if><sc-if value="{{toast}}" hint-placeholder-val="{{false}}"><div role="status" class="ui-toast" style="position:fixed;right:32px;bottom:32px;background:#1F2937;color:#FFFFFF;padding:14px 20px;border-radius:12px;font-size:14px;z-index:60">{{toastText}}</div></sc-if>
+      </div></sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000},"uiState":{"editor":"enum","default":"ready","options":["ready","loading","error"],"section":"Trạng thái dữ liệu"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'ctdt', cur: 'CTDT-CNTT-K2023', list: [], extra: {}, removed: {}, dlgNew: false, dlgAdd: false, nNg: 'CNTT', nKh: 'K2026', nTong: '130', aMon: '', aKhoi: 'Chuyên ngành', aLoai: 'Bắt buộc', aKy: '5', err: '', toast: false, toastText: '' };
+  }
+  renderVals() {
+    const NAVG = (active) => {
+      const base = 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;';
+      const on = base + 'background:var(--primary);color:#FFFFFF;font-weight:600;box-shadow:0 4px 12px rgba(63,81,181,.35);';
+      const off = base + 'color:#C9D0F2;font-weight:500;';
+      const it = (k, label, href, icon, badge) => ({ label, href, icon, style: k === active ? on : off, hasBadge: !!badge, badge: badge || '' });
+      return [
+        { title: 'TỔNG QUAN', items: [it('home', 'Tổng quan', 'PDT-Web-TongQuan.dc.html', 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10')] },
+        { title: 'DANH MỤC', items: [
+          it('hs', 'Hồ sơ SV / GV', 'PDT-Web-HoSo.dc.html', 'M9 11a4 4 0 100-8 4 4 0 000 8zM2 21a7 7 0 0114 0M17 11a3 3 0 100-6M18 21a6 6 0 00-3-5'),
+          it('kv', 'Khoa / viện', 'PDT-Web-KhoaVien.dc.html', 'M4 21V5l8-2 8 2v16M9 21v-5h6v5M8 9h2M14 9h2M8 13h2M14 13h2'),
+          it('nganh', 'Ngành', 'PDT-Web-Nganh.dc.html', 'M2 9l10-5 10 5-10 5L2 9zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5'),
+          it('ctdt', 'Chương trình đào tạo', 'PDT-Web-CTDT.dc.html', 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13'),
+          it('mon', 'Môn học', 'PDT-Web-MonHoc.dc.html', 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5')] },
+        { title: 'TỔ CHỨC ĐÀO TẠO', items: [
+          it('hk', 'Học kỳ', 'PDT-Web-HocKy.dc.html', 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4'),
+          it('lop', 'Lớp học phần', 'PDT-Web-LopHP.dc.html', 'M4 6h16M4 12h10M4 18h7'),
+          it('dk', 'Đăng ký', 'PDT-Web-DangKy.dc.html', 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6'),
+          it('diem', 'Duyệt điểm', 'PDT-Web-DuyetDiem.dc.html', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z', '2')] },
+        { title: 'KHÁC', items: [
+          it('bc', 'Báo cáo', 'PDT-Web-BaoCao.dc.html', 'M4 20V10M10 20V4M16 20v-7M22 20H2'),
+          it('tb', 'Thông báo', 'PDT-Web-ThongBao.dc.html', 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0', '2'),
+          it('nk', 'Nhật ký', 'PDT-Web-NhatKy.dc.html', 'M6 3h9l4 4v14H6V3zM14 3v5h5M9 13h7M9 17h7'),
+          it('out', 'Đăng xuất', 'Web-DangNhap.dc.html', 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9')] }
+      ];
+    };
+
+    const S = this.state;
+    const chip = (bg, fg) => 'font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:' + bg + ';color:' + fg;
+    const CH = { green: chip('#E6F4EA', '#2E7D32'), gray: chip('#ECEFF1', '#455A64'), dgray: chip('#CFD8DC', '#263238'), indigo: chip('#E8EAF6', '#2C3A7A'), yellow: chip('#FFF4D6', '#8A5A00'), red: chip('#FDECEA', '#8C1D18'), teal: chip('#E0F2F1', '#00695C'), orange: chip('#FFF1E6', '#9A3412') };
+    const CLS_ST = { KE_HOACH: ['Kế hoạch', CH.gray], MO: ['Đang mở', CH.green], DANG_HOC: ['Đang học', CH.indigo], DA_DONG: ['Đã đóng', CH.dgray] };
+    const set = (k) => (e) => this.setState({ [k]: e.target.value });
+    const toast = (t) => { this.setState({ toast: true, toastText: t }); setTimeout(() => this.setState({ toast: false }), 2600); };
+    const TODAY = new Date(2027, 0, 12);
+    const pd = (s) => { const a = s.split('/'); return new Date(Number(a[2]), Number(a[1]) - 1, Number(a[0])); };
+    const norm = (t) => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    const hl = (label, q) => { const t = q ? String(q).trim() : ''; const i = t ? norm(label).indexOf(norm(t)) : -1; return i < 0 ? { pre: label, mid: '', post: '' } : { pre: label.slice(0, i), mid: label.slice(i, i + t.length), post: label.slice(i + t.length) }; };
+    const combo = (key, opts, ph, extra, off) => {
+      const sel = opts.find((o) => o.v === S[key]);
+      const def = opts.length && (opts[0].v === 'all' || opts[0].v === '') ? opts[0].v : '';
+      const q = S[key + 'Q'];
+      const typed = q !== null && q !== undefined;
+      const shown = typed ? opts.filter((o) => norm(o.l).indexOf(norm(q)) >= 0) : opts;
+      return { text: typed ? q : (sel ? sel.l : ''), open: !!S[key + 'O'] && !off, off: !!off, none: shown.length === 0, ph, canClear: !off && S[key] !== undefined && S[key] !== def && !!S[key],
+        clear: () => this.setState({ [key]: def, [key + 'Q']: null, [key + 'O']: false, ...(extra ? extra(def) : {}) }),
+        focus: (e) => { this.setState({ [key + 'O']: true, [key + 'Q']: null }); if (e && e.target && e.target.select) e.target.select(); }, blur: () => this.setState({ [key + 'O']: false, [key + 'Q']: null }),
+        change: (e) => this.setState({ [key + 'Q']: e.target.value, [key + 'O']: true }),
+        list: shown.map((o) => ({ l: o.l, ...hl(o.l, typed ? q : ''), style: 'padding:10px 14px;font-size:14px;cursor:pointer;line-height:1.35;' + (o.v === S[key] ? 'background:#E8EAF6;font-weight:600;color:var(--primary-dark)' : 'color:#212121'),
+          pick: () => this.setState({ [key]: o.v, [key + 'Q']: null, [key + 'O']: false, ...(extra ? extra(o.v) : {}) }) })) };
+    };
+    const barColor = (p) => (p > 90 ? '#C62828' : p >= 70 ? '#F9A825' : '#2E7D32');
+    const KY = [
+      [['CNTT100', 'Nhập môn lập trình', 3, 'Cơ sở ngành', 'Bắt buộc', '9.00', 'dat', '—'], ['MAT101', 'Giải tích 1', 3, 'Chung', 'Bắt buộc', '7.75', 'dat', '—'], ['PHI101', 'Triết học Mác – Lênin', 3, 'Chung', 'Bắt buộc', '8.85', 'dat', '—'], ['ENG101', 'Tiếng Anh 1', 3, 'Chung', 'Bắt buộc', '8.10', 'dat', '—'], ['INT100', 'Nhập môn ngành Công nghệ thông tin', 2, 'Cơ sở ngành', 'Bắt buộc', '9.20', 'dat', '—'], ['MIL101', 'Giáo dục quốc phòng – an ninh', 2, 'Chung', 'Bắt buộc', '8.00', 'dat', '—']],
+      [['MAT102', 'Giải tích 2', 3, 'Chung', 'Bắt buộc', '3.35', 'f', 'MAT101'], ['PED101', 'Giáo dục thể chất', 2, 'Chung', 'Bắt buộc', 'P', 'dat', '—'], ['ENG102', 'Tiếng Anh 2', 3, 'Chung', 'Bắt buộc', '8.00', 'dat', 'ENG101'], ['CNTT105', 'Toán tin học', 3, 'Cơ sở ngành', 'Bắt buộc', '8.40', 'dat', '—'], ['CNTT106', 'Lập trình nâng cao', 3, 'Cơ sở ngành', 'Bắt buộc', '8.60', 'dat', 'CNTT100'], ['PHY101', 'Vật lý đại cương', 3, 'Chung', 'Bắt buộc', '7.20', 'dat', '—'], ['LAW101', 'Pháp luật đại cương', 2, 'Chung', 'Bắt buộc', '8.30', 'dat', '—']],
+      [['CNTT110', 'Cấu trúc dữ liệu và giải thuật', 3, 'Cơ sở ngành', 'Bắt buộc', '7.85', 'dat', 'CNTT106'], ['MAT201', 'Xác suất thống kê', 3, 'Chung', 'Bắt buộc', '6.20', 'dat', 'MAT101'], ['CNTT115', 'Kỹ thuật lập trình', 3, 'Cơ sở ngành', 'Bắt buộc', '8.20', 'dat', '—'], ['PHI102', 'Kinh tế chính trị Mác – Lênin', 2, 'Chung', 'Bắt buộc', '7.60', 'dat', 'PHI101'], ['CNTT118', 'Điện toán đám mây cơ bản', 3, 'Cơ sở ngành', 'Bắt buộc', '8.10', 'dat', '—'], ['ENG103', 'Tiếng Anh 3', 2, 'Chung', 'Bắt buộc', '8.50', 'dat', 'ENG102']],
+      [['CNTT210', 'Hệ điều hành', 3, 'Cơ sở ngành', 'Bắt buộc', '8.35', 'dat', 'CNTT110'], ['CNTT225', 'Phân tích thiết kế hệ thống', 3, 'Cơ sở ngành', 'Bắt buộc', '8.00', 'dat', '—'], ['MAT205', 'Đại số tuyến tính', 3, 'Chung', 'Bắt buộc', '7.40', 'dat', '—'], ['CNTT212', 'Lập trình hệ thống', 3, 'Cơ sở ngành', 'Bắt buộc', '8.20', 'dat', 'CNTT110'], ['CNTT214', 'Thiết kế giao diện người dùng', 2, 'Cơ sở ngành', 'Bắt buộc', '9.00', 'dat', '—'], ['PHI104', 'Lịch sử Đảng Cộng sản Việt Nam', 2, 'Chung', 'Bắt buộc', '8.00', 'dat', '—']],
+      [['CNTT230', 'Lập trình Web', 3, 'Cơ sở ngành', 'Bắt buộc', '9.00', 'dat', 'CNTT106'], ['CNTT240', 'Kiến trúc máy tính', 3, 'Cơ sở ngành', 'Bắt buộc', '7.75', 'dat', '—'], ['MAT210', 'Toán rời rạc', 3, 'Chung', 'Bắt buộc', '8.85', 'dat', 'MAT101'], ['ENG201', 'Tiếng Anh chuyên ngành', 2, 'Chung', 'Bắt buộc', '8.10', 'dat', 'ENG103'], ['CNTT235', 'Phát triển ứng dụng Web nâng cao', 3, 'Chuyên ngành', 'Bắt buộc', '8.40', 'dat', 'CNTT230'], ['CNTT245', 'Thiết kế trải nghiệm người dùng', 2, 'Chuyên ngành', 'Bắt buộc', '8.90', 'dat', 'CNTT214']],
+      [['CNTT250', 'Lập trình di động', 3, 'Chuyên ngành', 'Bắt buộc', '8.50', 'dat', 'CNTT106'], ['CNTT260', 'Công nghệ phần mềm', 3, 'Chuyên ngành', 'Bắt buộc', '8.00', 'dat', 'CNTT225'], ['CNTT265', 'Thực tập cơ sở', 2, 'Chuyên ngành', 'Bắt buộc', '9.00', 'dat', '—'], ['CNTT270', 'Khai phá dữ liệu', 3, 'Chuyên ngành', 'Bắt buộc', '7.90', 'dat', 'MAT201'], ['CNTT275', 'Kiểm thử phần mềm', 3, 'Chuyên ngành', 'Bắt buộc', '8.30', 'dat', 'CNTT260'], ['CNTT280', 'Quản lý dự án phần mềm', 2, 'Chuyên ngành', 'Bắt buộc', '8.60', 'dat', 'CNTT260']],
+      [['CNTT101', 'Lập trình hướng đối tượng', 3, 'Cơ sở ngành', 'Bắt buộc', '—', 'hoc', '—'], ['CNTT203', 'Cơ sở dữ liệu', 3, 'Cơ sở ngành', 'Bắt buộc', '—', 'hoc', '—'], ['CNTT305', 'Mạng máy tính', 3, 'Chuyên ngành', 'Bắt buộc', '—', 'hoc', '—'], ['CNTT320', 'Kỹ thuật phần mềm', 3, 'Chuyên ngành', 'Bắt buộc', '—', 'hoc', 'CNTT203'], ['CNTT401', 'Trí tuệ nhân tạo', 3, 'Chuyên ngành', 'Bắt buộc', '—', 'chua', 'CNTT110'], ['CNTT402', 'Học máy', 3, 'Tự chọn', 'Tự chọn', '—', 'chua', 'CNTT401']],
+      [['CNTT410', 'An toàn thông tin', 3, 'Tự chọn', 'Tự chọn', '—', 'chua', 'CNTT305'], ['CNTT431', 'Xử lý ảnh', 3, 'Tự chọn', 'Tự chọn', '—', 'chua', 'MAT101'], ['CNTT499', 'Đồ án chuyên ngành', 2, 'Tốt nghiệp', 'Bắt buộc', '—', 'chua', '—'], ['CNTT500', 'Khóa luận tốt nghiệp', 9, 'Tốt nghiệp', 'Bắt buộc', '—', 'chua', '—']]
+    ];    const tb = 'min-height:48px;padding:0 18px;border:0;background:transparent;font-size:14px;cursor:pointer;margin-bottom:-1px;';
+    const mkTabs = (arr) => arr.map(([id, label]) => ({ label, on: S.tab === id, pick: () => this.setState({ tab: id }), style: tb + (S.tab === id ? 'font-weight:600;color:var(--primary);border-bottom:2px solid var(--primary)' : 'font-weight:500;color:#6B7280;border-bottom:2px solid transparent') }));
+const stChip = (st) => (st === 'HOAT_DONG' ? { label: 'Hoạt động', style: CH.green } : { label: 'Ngừng', style: CH.gray });
+    const KHOI_CHIP = { 'Chung': 'background:#ECEFF1;color:#455A64', 'Cơ sở ngành': 'background:#E0F2F1;color:#00695C', 'Chuyên ngành': 'background:#F3E5F5;color:#6A1B9A', 'Tự chọn': 'background:#FFF4D6;color:#8A5A00', 'Tốt nghiệp': 'background:#FDECEA;color:#8C1D18' };
+    const LOAI_CHIP = { 'Bắt buộc': 'background:#E8EAF6;color:var(--primary-dark)', 'Tự chọn': 'background:#FFF4D6;color:#8A5A00' };
+    const kb = 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;';
+    const BASE = [['CTDT-CNTT-K2023', 'CNTT', 'K2023', 130, 'HOAT_DONG'], ['CTDT-CNTT-K2024', 'CNTT', 'K2024', 130, 'HOAT_DONG'], ['CTDT-CNTT-K2025', 'CNTT', 'K2025', 130, 'HOAT_DONG'], ['CTDT-KTPM-K2023', 'KTPM', 'K2023', 132, 'HOAT_DONG'], ['CTDT-KTPM-K2024', 'KTPM', 'K2024', 132, 'HOAT_DONG'], ['CTDT-HTTT-K2023', 'HTTT', 'K2023', 128, 'HOAT_DONG'], ['CTDT-CNTT-K2022', 'CNTT', 'K2022', 130, 'NGUNG']];
+    const all = BASE.concat(S.list).map((a) => ({ id: a[0], nganh: a[1], khoa: a[2], tong: a[3], st: a[4] }));
+    const ctdtRows = all.map((r) => ({ ...r, chip: stChip(r.st).style, stLabel: stChip(r.st).label, view: () => this.setState({ tab: 'mon', cur: r.id }) }));
+    const cur = all.find((r) => r.id === S.cur) || all[0];
+    const keep = cur.id === 'CTDT-CNTT-K2023' ? 8 : cur.nganh === 'KTPM' ? 4 : 3;
+    const baseMon = [].concat(...KY.slice(0, keep).map((rows, i) => rows.map((r) => ({ code: r[0], ten: r[1], tc: r[2], khoi: r[3], loai: r[4], ky: i + 1 }))));
+    const added = (S.extra[cur.id] || []);
+    const monAll = baseMon.concat(added).filter((m) => !S.removed[cur.id + ':' + m.code]);
+    const monRows = monAll.map((m) => ({ ...m, khoiChip: kb + (KHOI_CHIP[m.khoi] || KHOI_CHIP['Chung']), loaiChip: kb + LOAI_CHIP[m.loai], remove: () => { this.setState({ removed: { ...S.removed, [cur.id + ':' + m.code]: true } }); toast('Đã bỏ ' + m.code + ' khỏi ' + cur.id + '.'); } }));
+    const assigned = monAll.reduce((n, m) => n + m.tc, 0);
+    const POOL = [].concat(...KY.map((rows) => rows.map((r) => ({ code: r[0], ten: r[1], tc: r[2] })))).concat([{ code: 'CNTT360', ten: 'Phát triển ứng dụng di động', tc: 3 }, { code: 'CNTT370', ten: 'Điện toán đám mây', tc: 3 }]);
+    const free = POOL.filter((p) => !monAll.some((m) => m.code === p.code));
+    const gap = cur.tong - assigned;
+    const saveNew = () => {
+      if (all.some((r) => r.nganh === S.nNg && r.khoa === S.nKh && r.st === 'HOAT_DONG')) return this.setState({ err: 'Đã có CTĐT đang hoạt động cho ' + S.nNg + ' · ' + S.nKh + '.' });
+      if (!(Number(S.nTong) > 0)) return this.setState({ err: 'Tổng tín chỉ yêu cầu phải lớn hơn 0.' });
+      this.setState({ list: S.list.concat([['CTDT-' + S.nNg + '-' + S.nKh, S.nNg, S.nKh, Number(S.nTong), 'HOAT_DONG']]), dlgNew: false });
+      toast('Đã thêm CTĐT CTDT-' + S.nNg + '-' + S.nKh + '.');
+    };
+    const saveAdd = () => {
+      const p = free.find((x) => x.code === S.aMon);
+      if (!p) return this.setState({ err: 'Hãy chọn một môn.' });
+      this.setState({ extra: { ...S.extra, [cur.id]: added.concat([{ code: p.code, ten: p.ten, tc: p.tc, khoi: S.aKhoi, loai: S.aLoai, ky: Number(S.aKy) }]) }, dlgAdd: false, aMon: '' });
+      toast('Đã gán ' + p.code + ' vào ' + cur.id + '.');
+    };
+
+    const UI = (this.props && this.props.uiState) || 'ready';
+    const uiPending = UI !== 'ready' && !S.uiRetried;
+    return {
+      navGroups: NAVG('ctdt'),
+      uiLoading: uiPending && UI === 'loading', uiError: uiPending && UI === 'error', uiOk: !uiPending, uiRetry: () => this.setState({ uiRetried: true }),
+      tabs: mkTabs([['ctdt', 'CTĐT'], ['mon', 'Môn trong CTĐT']]), tabCtdt: S.tab === 'ctdt', tabMon: S.tab === 'mon', ctdtRows, ctdtTotal: ctdtRows.length, monRows, monTotal: monRows.length,
+      cur: S.cur, setCur: set('cur'), curOpts: all.map((r) => ({ v: r.id, l: r.id + (r.st === 'NGUNG' ? ' (ngừng)' : '') })), assigned, required: cur.tong,
+      gapText: gap === 0 ? 'Đủ tín chỉ yêu cầu' : gap > 0 ? 'Còn thiếu ' + gap + ' TC' : 'Vượt ' + (-gap) + ' TC', gapChip: gap === 0 ? CH.green : gap > 0 ? CH.yellow : CH.red,
+      openNew: () => this.setState({ dlgNew: true, err: '' }), closeNew: () => this.setState({ dlgNew: false }), dlgNew: S.dlgNew, saveNew,
+      nNg: S.nNg, setNNg: set('nNg'), ngOpts: ['CNTT', 'KTPM', 'HTTT', 'ATTT'].map((n) => ({ v: n, l: n })), nKh: S.nKh, setNKh: set('nKh'), khOpts: ['K2023', 'K2024', 'K2025', 'K2026'].map((n) => ({ v: n, l: n })), nTong: S.nTong, setNTong: set('nTong'),
+      openAdd: () => this.setState({ dlgAdd: true, err: '' }), closeAdd: () => this.setState({ dlgAdd: false }), dlgAdd: S.dlgAdd, saveAdd,
+      aMonC: combo('aMon', free.map((p) => ({ v: p.code, l: p.code + ' · ' + p.ten + ' (' + p.tc + ' TC)' })), ''),
+      aKhoi: S.aKhoi, setAKhoi: set('aKhoi'), khoiOpts: Object.keys(KHOI_CHIP).map((k) => ({ v: k, l: k })), aLoai: S.aLoai, setALoai: set('aLoai'), loaiOpts: ['Bắt buộc', 'Tự chọn'].map((k) => ({ v: k, l: k })),
+      aKy: S.aKy, setAKy: set('aKy'), kyOpts: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ v: String(n), l: 'Kỳ ' + n })), hasErr: !!S.err, err: S.err, toast: S.toast, toastText: S.toastText
+    };
+  }
+}
+</script>
+</body>
+</html>

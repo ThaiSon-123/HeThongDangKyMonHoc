@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Quên mật khẩu</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:#F5F6FA}
+a{text-decoration:none}
+button,input{font-family:inherit}
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="min-height:800px;display:flex;align-items:center;justify-content:center;padding:48px 24px;box-sizing:border-box;background:#F5F6FA">
+  <div style="width:100%;max-width:480px;background:#FFFFFF;border:1px solid #E3E6EE;border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:20px;box-shadow:0 4px 16px rgba(16,24,40,.06)">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap" aria-label="Các bước">
+      <sc-for list="{{steps}}" as="st" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="{{st.dot}}">{{st.n}}</span>
+          <span style="{{st.text}}">{{st.label}}</span>
+          <span style="color:#C4C9D4">›</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{step1}}" hint-placeholder-val="{{true}}">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div>
+          <h1 style="margin:0;font-size:24px;font-weight:700">Quên mật khẩu</h1>
+          <p style="margin:6px 0 0;font-size:14px;color:#6B7280;line-height:1.5">Nhập email gắn với tài khoản. Chúng tôi sẽ gửi hướng dẫn đặt lại mật khẩu.</p>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Email
+          <input type="email" placeholder="ten@truong.edu.vn" style="min-height:48px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:15px;font-weight:400">
+        </label>
+        <button onClick="{{toStep2}}" style="min-height:52px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:16px;cursor:pointer">Gửi yêu cầu</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{step2}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div>
+          <h1 style="margin:0;font-size:24px;font-weight:700">Đặt lại mật khẩu</h1>
+          <div role="status" style="margin-top:10px;background:#E8EAF6;color:#2C387E;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5">Nếu email tồn tại trong hệ thống, hướng dẫn đã được gửi. Mã có hiệu lực 30 phút và chỉ dùng một lần.</div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Mã đặt lại
+          <input type="text" placeholder="Dán mã từ email" style="min-height:48px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:15px;font-weight:400">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Mật khẩu mới
+          <input type="password" style="min-height:48px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:15px;font-weight:400">
+          <span style="font-size:12px;font-weight:400;color:#6B7280">Ít nhất 8 ký tự, gồm cả chữ và số.</span>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Nhập lại mật khẩu mới
+          <input type="password" style="min-height:48px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:15px;font-weight:400">
+        </label>
+        <button onClick="{{toStep3}}" style="min-height:52px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:16px;cursor:pointer">Đặt lại mật khẩu</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{step3}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:16px 0">
+        <div style="width:64px;height:64px;border-radius:50%;background:#E6F4EA;color:#2E7D32;display:flex;align-items:center;justify-content:center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+        </div>
+        <h1 style="margin:0;font-size:22px;font-weight:700">Đã đặt lại mật khẩu</h1>
+        <p style="margin:0;font-size:14px;color:#6B7280;line-height:1.5">Các phiên đăng nhập cũ đã bị đăng xuất. Hãy đăng nhập bằng mật khẩu mới.</p>
+        <a href="Web-DangNhap.dc.html" class="ui-click" style="min-height:52px;align-self:stretch;border-radius:12px;background:var(--primary);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:16px">Về trang đăng nhập</a>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{notDone}}" hint-placeholder-val="{{true}}">
+      <a href="Web-DangNhap.dc.html" style="min-height:44px;display:inline-flex;align-items:center;justify-content:center;color:var(--primary);font-weight:600;font-size:14px">Quay lại đăng nhập</a>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startStep":{"editor":"enum","default":"1","options":["1","2","3"],"section":"Bước ban đầu"},"$preview":{"width":1440,"height":800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: Number((props && props.startStep) || 1) };
+  }
+  renderVals() {
+    const step = this.state.step;
+    const on = 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--primary);color:#FFFFFF;';
+    const done = on.replace('#3F51B5', '#2E7D32');
+    const off = on.replace('#3F51B5', '#ECEFF1').replace('#FFFFFF', '#6B7280');
+    const steps = ['Nhập email', 'Mã và mật khẩu mới', 'Hoàn tất'].map((label, i) => {
+      const n = i + 1;
+      const st = n < step ? 'done' : n === step ? 'on' : 'off';
+      return { n: st === 'done' ? '✓' : String(n), label, dot: st === 'done' ? done : st === 'on' ? on : off, text: 'font-size:13px;font-weight:' + (st === 'on' ? '600' : '500') + ';color:' + (st === 'off' ? '#6B7280' : '#212121') };
+    });
+    return {
+      steps, step1: step === 1, step2: step === 2, step3: step === 3, notDone: step !== 3,
+      toStep2: () => this.setState({ step: 2 }),
+      toStep3: () => this.setState({ step: 3 })
+    };
+  }
+}
+</script>
+</body>
+</html>

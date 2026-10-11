@@ -1,7 +1,8 @@
 # DESIGN SPEC — Hệ thống Đăng ký Môn học
 
-**Phiên bản:** 3.8 — khớp `plan.md` v3.8 (5 vai trò · 59 CN · BR-01..26, BR-24 đã gỡ)
+**Phiên bản:** 3.9 — khớp `plan.md` v3.9 (5 vai trò · 59 CN · BR-01..26, BR-24 đã gỡ)
 **Nền tảng:** SV + GV = **Flutter Web + Flutter App (Android/iOS)**; Admin + PĐT + KT = **chỉ Flutter Web**.
+**Mockup tham chiếu:** [`design_mockups/`](design_mockups/README.md) — 70 màn của cả 5 vai trò (mở `design_mockups/index.html` bằng một máy chủ tĩnh). Dựng Flutter bám theo mockup; lệch với file này thì file này thắng.
 
 > **Nguyên tắc:** UI chỉ *hiển thị và gọi API*; mọi quy tắc nghiệp vụ do backend quyết (plan.md mục 4–6).
 > File này **tham chiếu** BR/endpoint/mã lỗi của plan, không định nghĩa lại. Nghiệp vụ đổi ⇒ sửa `plan.md` trước, rồi đồng bộ lại đây.
@@ -153,6 +154,25 @@ Tham chiếu: ảnh màn Thời khóa biểu sinh viên (header navy bo góc, th
 | Truy cập | Chữ trên nền cam/navy phải đạt 4.5:1; không dùng chữ trắng trên cam `#F57C00` hay sáng hơn; mục thanh dưới ≥ 48px |
 
 **Màn Thời khóa biểu (GV-05, SV-08) — xem theo tuần có ngày thật.** Vì buổi học đã sinh sẵn theo ngày (plan BR-20), TKB hiện **ngày cụ thể**: nút *‹ Tuần trước · Tuần này · Cả học kỳ · Tuần sau ›*; mỗi ngày có tiết là một nhóm "Thứ 7 · 10/10" (nhãn **HÔM NAY** màu cam) gồm các thẻ có bong bóng ngày (T7 / 10), khối màu theo môn (tên, mã lớp · phòng · sĩ số, **Tiết 1–3 · Sáng**) và lối tắt **Điểm danh ›** nếu buổi đã đến ngày (buổi tương lai ghi "Chưa tới ngày điểm danh"). Chế độ *Cả học kỳ* hiện lịch lặp theo thứ ("Thứ 3 · mỗi tuần"). Giờ đồng hồ **không hiển thị** vì plan chưa có bảng đổi tiết sang giờ; muốn hiện giờ cần thêm bảng này vào cấu hình hệ thống. **Web:** lưới 7 cột (Thứ 2 → Chủ nhật) × 15 tiết. Cột trái là nhãn **"Tiết 1…15"** nền navy; **không có cột giờ, không có cột bên phải**. Tiêu đề cột ghi *Thứ + ngày* (vd "Thứ 5 (08/10)"); chuyển tuần bằng thanh bộ lọc phía trên; cột hôm nay tô cam nhạt. Mỗi khối môn trải đúng các tiết của buổi học và hiện: **Tên môn (LT+TH) (Mã môn)** · **Nhóm:** mã lớp học phần · **Phòng:** · **Sĩ số:** (bản giáo viên; **bản sinh viên thay dòng Sĩ số bằng `GV: <tên giáo viên>`** vì giáo viên luôn là chính người xem). Lưới chiếm toàn bộ chiều rộng, **không có panel chi tiết** — mọi thông tin cần xem đã nằm trong khối. **In được:** nút **"In thời khóa biểu"** ở thanh bộ lọc gọi `window.print()`; khi in chỉ còn tiêu đề (tên giáo viên, khoảng tuần/học kỳ), chú giải màu và lưới — ẩn sidebar, thanh bộ lọc và panel chi tiết; khổ A4 ngang, giữ màu nền. Không cần API. Bản App không có nút in. Học kỳ đã kết thúc chỉ xem được chế độ Cả học kỳ.
+
+
+### 1.9. Tương tác, chuyển động & trạng thái giao diện
+
+Quy ước chung cho mọi vai trò (mockup dùng khối CSS/JS dùng chung; bản Flutter dùng thành phần Material 3 tương ứng):
+
+| Nhóm | Quy ước | Flutter gợi ý |
+| :--- | :--- | :--- |
+| Trạng thái điều khiển | Hover làm tối nhẹ (~6%), nhấn thu nhỏ 97%, vòng focus 3px khi dùng bàn phím, ô nhập focus viền primary + quầng | `ThemeData` + `InkWell`/`FocusableActionDetector` |
+| Chuyển động | 150–250 ms, easing `cubic-bezier(.2,.7,.2,1)`: drawer trượt từ phải, hộp thoại nổi lên, danh sách gợi ý mở mượt, toast trượt lên, trang vào mờ dần; **tôn trọng `prefers-reduced-motion`** (tắt hết) | `AnimatedSwitcher`, `showGeneralDialog` + transition |
+| Bảng dữ liệu | Hàng tiêu đề cố định khi cuộn, hover tô dòng, số tiền căn phải, bảng cao quá 640px thì cuộn trong khung; cột thẳng hàng giữa tiêu đề và dòng (dùng chung một lưới) | `DataTable`/`PaginatedDataTable` |
+| Ô gõ để tìm | Bấm là hiện đủ danh sách; gõ không dấu vẫn khớp; phần khớp được tô đậm; nút ✕ để bỏ chọn; `↑ ↓ Enter` chọn, `Esc` đóng | `SearchAnchor` |
+| Hộp thoại & lỗi | Mở là đặt con trỏ vào ô đầu; `Esc` đóng; khi lỗi, khung cảnh báo rung nhẹ và ô liên quan được viền đỏ (lỗi theo từng ô vẫn là việc của bản Flutter) | `Form` + `validator` |
+| Tải & lỗi tải | Trang Web có sẵn 3 trạng thái dữ liệu (`ready` / `loading` / `error`) chọn ở bảng Tweaks của mockup: khung xám nhấp nháy khi tải; màn lỗi có nút **Thử lại**, không hiện mã lỗi | `AsyncValue.when` (Riverpod) |
+| Điều hướng | Có đường dẫn (breadcrumb) trên đầu trang Web: `Vai trò › Trang` | `NavigationRail` + `Breadcrumb` |
+| App | Danh sách chọn mở dạng **bảng trượt từ dưới lên** (không dùng dropdown), điểm chạm ≥ 48px, trang vào mờ dần | `showModalBottomSheet` |
+| Màu | Gom màu thương hiệu vào biến (`--primary`, `--navy`, `--accent`…) để sửa một chỗ đổi cả hệ thống | `ColorScheme.fromSeed` |
+
+**Chưa làm trong mockup (để dành cho Flutter):** sắp xếp theo cột ở mọi bảng, kéo-xuống-để-làm-mới và vuốt-ngang-dòng ở App, chế độ tối, lỗi hiện ngay dưới từng ô nhập.
 
 ---
 
@@ -463,7 +483,7 @@ Teacher "My classes". Filter row (semester, status). Class cards: mã lớp, mô
 **Danh sách buổi (GV-06, GV-09):** mới nhất trước; chip `MO` ("Chưa điểm danh") / `DA_DIEM_DANH` ("Đã điểm danh"); buổi hôm nay có nhãn "Hôm nay". Buổi đã qua nhưng chưa điểm danh được nhắc màu vàng — vẫn nằm trong mẫu số. Lớp chưa `DANG_HOC` hoặc `DA_DONG` → chỉ xem.
 
 **Panel điểm danh (GV-07, 08)** — danh sách SV `DA_DANG_KY` của lớp:
-- Mỗi dòng: mã SV · họ tên · *segmented* **Có mặt / Vắng có phép / Vắng không phép** · công tắc **Đi trễ** · ghi chú. Buổi chưa điểm danh: mặc định tất cả **Có mặt** + lối tắt "Tất cả có mặt"; buổi đã điểm danh: hiển thị giá trị đã lưu.
+- Mỗi dòng: mã SV · họ tên · *segmented* 4 nút **Có mặt / Đi trễ / Vắng có phép / Vắng không phép** (*Đi trễ* lưu `CO_MAT` + `di_tre = true`; chọn vắng thì không thể đi trễ) · ghi chú. Buổi chưa điểm danh: mặc định tất cả **Có mặt** + lối tắt "Tất cả có mặt"; buổi đã điểm danh: hiển thị giá trị đã lưu.
 - Cạnh mỗi SV: **"Vắng KP n/tổng (x%)"** (vd 9/42 = 21%) và nhãn "Nguy cơ cấm thi" khi n vượt ngưỡng (chỉ thông tin, không chặn). Số này cộng cả lựa chọn đang sửa trong buổi hiện tại khi chưa lưu.
 - Thanh đếm "Có mặt a · Vắng có phép b · Vắng không phép c · Trễ d". Nút **Lưu** → `PUT /api/attendance/sessions/{id}/records/` (cả lớp; buổi chuyển `MO` → `DA_DIEM_DANH` ở lần lưu thành công đầu tiên).
 - **Sửa điểm danh (GV-08):** mở lại buổi cũ → cùng panel; sửa được **bất kỳ lúc nào khi lớp còn `DANG_HOC`** (không có cửa sổ 24h); lớp `DA_DONG` → chỉ xem.
@@ -481,7 +501,7 @@ Teacher attendance, step-by-step master–detail. Top: a single "Chọn lớp" d
 ```
 **Prompt (App):**
 ```
-Mobile teacher attendance in three levels: (1) list of my classes as cards to pick from, (2) summary card plus pre-generated sessions of the chosen class (no create button), segmented tab "Buổi / Yêu cầu", (3) roster of the chosen session with a card per student, three large segmented buttons, "Đi trễ" switch, "Vắng KP n/tổng" and a sticky bottom "Lưu" bar with counts. Back arrow returns one level. Vietnamese.
+Mobile teacher attendance in three levels: (1) list of my classes as cards to pick from, (2) summary card plus pre-generated sessions of the chosen class (no create button), segmented tab "Buổi / Yêu cầu", (3) roster of the chosen session with a card per student, four large segmented buttons (Có mặt, Đi trễ, Vắng có phép, Vắng không phép), no separate "Đi trễ" switch, "Vắng KP n/tổng" and a sticky bottom "Lưu" bar with counts. Back arrow returns one level. Vietnamese.
 ```
 
 ### 6.4. `/teacher/grades` — Nhập điểm (GV-10)

@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Điểm danh — giáo viên</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:#F5F6FA}
+a{text-decoration:none}
+button,select,input{font-family:inherit}
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1000px;background:#F5F6FA">
+  <nav aria-label="Điều hướng giáo viên" style="flex:1 1 260px;max-width:260px;min-width:220px;background:linear-gradient(180deg,var(--navy) 0%,#26357A 100%);padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)">
+        <div style="flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">ĐK</div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-weight:700;font-size:15px;color:#FFFFFF">Đăng ký môn học</span>
+          <span style="font-size:12px;color:#AEB8E6">Cổng giáo viên</span>
+        </div>
+      </div>
+      <sc-for list="{{navGroups}}" as="grp" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:0 12px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8E9AD6">{{grp.title}}</div>
+          <sc-for list="{{grp.items}}" as="item" hint-placeholder-count="2">
+            <a href="{{item.href}}" style="{{item.style}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+              <span style="flex:1">{{item.label}}</span>
+              <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{false}}">
+                <span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--accent);color:#FFFFFF;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{item.badge}}</span>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.12)">
+      <a href="Web-HoSo.dc.html" aria-label="Hồ sơ cá nhân" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">QM</a>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+        <span style="font-weight:600;font-size:14px;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Trần Minh Quân</span>
+        <span style="font-size:12px;color:#AEB8E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">GV001 · CNTT · Giáo viên</span>
+      </div>
+      <a href="Web-DangNhap.dc.html" aria-label="Đăng xuất" style="flex:0 0 auto;width:44px;height:44px;border-radius:12px;color:#C9D0F2;display:flex;align-items:center;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"></path></svg>
+      </a>
+    </div>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:32px 32px 4px;color:var(--navy);flex-wrap:wrap">
+      <h1 style="margin:0;font-size:28px;font-weight:700">Điểm danh</h1>
+      <div style="display:flex;align-items:center;gap:16px">
+        <a href="Web-ThongBao.dc.html" aria-label="Thông báo, có tin chưa đọc" class="ui-click" style="position:relative;width:44px;height:44px;border-radius:12px;border:0;background:#FFFFFF;color:var(--navy);box-shadow:0 2px 10px rgba(31,42,92,.1);display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0"></path></svg>
+          <span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid #FFFFFF"></span>
+        </a>
+      </div>
+    </header>
+
+    <main style="padding:32px;display:flex;flex-direction:column;gap:24px">
+      <!-- Bước chọn -->
+      <section aria-label="Chọn lớp" style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center" aria-label="Các bước">
+          <sc-for list="{{steps}}" as="st" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="{{st.dot}}">{{st.n}}</span>
+              <span style="{{st.text}}">{{st.label}}</span>
+              <span style="color:#C4C9D4;margin:0 4px">›</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1 1 320px;max-width:520px">
+            <label for="lop" style="font-size:13px;font-weight:600;color:#374151">Lớp học phần</label>
+            <select id="lop" value="{{classId}}" onChange="{{pickClass}}" style="min-height:48px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:15px;background:#FFFFFF;color:#212121">
+              <option value="">— Chọn lớp để bắt đầu —</option>
+              <sc-for list="{{classOptions}}" as="o" hint-placeholder-count="3">
+                <option value="{{o.id}}">{{o.label}}</option>
+              </sc-for>
+            </select>
+          </div>
+          <sc-if value="{{hasClass}}" hint-placeholder-val="{{true}}">
+            <div style="display:flex;align-items:center;gap:8px;min-height:48px;flex-wrap:wrap">
+              <span style="{{cls.chip}}">{{cls.statusLabel}}</span>
+              <span style="font-size:13px;color:#6B7280">{{cls.meta}}</span>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{readonly}}" hint-placeholder-val="{{false}}">
+          <div style="background:#ECEFF1;color:#37474F;border-radius:8px;padding:10px 12px;font-size:13px">Lớp đã đóng — chỉ xem lịch sử điểm danh.</div>
+        </sc-if>
+      </section>
+
+      <!-- Bước 0: chưa chọn lớp -->
+      <sc-if value="{{noClass}}" hint-placeholder-val="{{false}}">
+        <section style="background:#FFFFFF;border:1px dashed #C4C9D4;border-radius:12px;padding:64px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9AA1B2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13"></path></svg>
+          <h2 style="margin:0;font-size:18px;font-weight:600">Chọn lớp để xem các buổi điểm danh</h2>
+          <p style="margin:0;color:#6B7280;font-size:14px;max-width:420px">Danh sách buổi học và danh sách sinh viên chỉ hiển thị sau khi bạn chọn lớp học phần ở trên.</p>
+        </section>
+      </sc-if>
+
+      <!-- Đã chọn lớp -->
+      <sc-if value="{{hasClass}}" hint-placeholder-val="{{true}}">
+        <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+          <!-- Cột trái: buổi / yêu cầu -->
+          <section aria-label="Buổi điểm danh" style="flex:1 1 380px;max-width:480px;min-width:0;background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:4px;border-bottom:1px solid #E3E6EE" role="tablist">
+              <button role="tab" aria-selected="{{tabBuoiSel}}" onClick="{{showBuoi}}" style="{{tabBuoiStyle}}">Các buổi ({{sessionCount}})</button>
+              <button role="tab" aria-selected="{{tabYcSel}}" onClick="{{showYc}}" style="{{tabYcStyle}}">Yêu cầu sửa ({{reqPending}})</button>
+            </div>
+
+            <sc-if value="{{tabBuoi}}" hint-placeholder-val="{{true}}">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <div style="background:#F5F6FF;border:1px solid #C5CAE9;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px">
+                  <div style="font-weight:600;font-size:14px">{{sum.total}} buổi theo lịch của lớp</div>
+                  <div style="font-size:13px;color:#374151;line-height:1.5">Đã đến hạn {{sum.due}} · Đã điểm danh {{sum.done}} · Sắp tới {{sum.future}}</div>
+                </div>
+                <sc-for list="{{sessions}}" as="s" hint-placeholder-count="4">
+                  <button onClick="{{s.pick}}" aria-pressed="{{s.selected}}" style="{{s.style}}">
+                    <span style="display:flex;flex-direction:column;gap:2px;text-align:left">
+                      <span style="font-weight:600;font-size:14px">{{s.title}}</span>
+                      <span style="font-size:13px;color:#6B7280">{{s.meta}}</span>
+                    </span>
+                    <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                      <span style="{{s.chip}}">{{s.statusLabel}}</span>
+                      <span style="font-size:12px;color:#6B7280">{{s.vang}}</span>
+                    </span>
+                  </button>
+                </sc-for>
+                <div style="font-size:12px;color:#6B7280;line-height:1.5;padding:4px 2px">… và {{sum.more}} buổi trước đó</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{tabYc}}" hint-placeholder-val="{{false}}">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{requests}}" as="r" hint-placeholder-count="3">
+                  <div style="border:1px solid #E3E6EE;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start">
+                      <span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">{{r.sv}}</span><span style="font-size:12px;color:#6B7280">{{r.buoi}} · gửi {{r.time}}</span></span>
+                      <span style="{{r.chip}}">{{r.statusLabel}}</span>
+                    </div>
+                    <div style="font-size:13px;color:#374151"><span style="color:#6B7280">Đổi:</span> <strong>{{r.doi}}</strong></div>
+                    <div style="font-size:13px;color:#374151;line-height:1.5"><span style="color:#6B7280">Lý do:</span> {{r.lyDo}}</div>
+                    <sc-if value="{{r.hasFile}}" hint-placeholder-val="{{false}}">
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;border-radius:999px;background:#F1F3F9;color:#374151"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 01-7-7L14 4a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 7"></path></svg>{{r.file}}</span>
+                        <a href="#" style="font-size:13px;font-weight:600;color:var(--primary);min-height:32px;display:inline-flex;align-items:center">Xem minh chứng</a>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{r.noFile}}" hint-placeholder-val="{{false}}"><span style="font-size:12px;color:#6B7280">Không đính kèm minh chứng</span></sc-if>
+                    <sc-if value="{{r.pending}}" hint-placeholder-val="{{true}}">
+                      <div style="display:flex;gap:8px;justify-content:flex-end">
+                        <button onClick="{{r.reject}}" style="min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #C62828;background:#FFFFFF;color:#C62828;font-weight:600;font-size:14px;cursor:pointer">Từ chối</button>
+                        <button onClick="{{r.approve}}" style="min-height:44px;padding:0 16px;border-radius:12px;border:0;background:#2E7D32;color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Duyệt</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{r.decided}}" hint-placeholder-val="{{false}}"><span style="font-size:12px;color:#6B7280">{{r.note}}</span></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </section>
+
+          <!-- Cột phải: danh sách SV -->
+          <section aria-label="Danh sách sinh viên" style="flex:2 1 560px;min-width:0;display:flex;flex-direction:column;gap:0">
+            <sc-if value="{{noSession}}" hint-placeholder-val="{{false}}">
+              <div style="background:#FFFFFF;border:1px dashed #C4C9D4;border-radius:12px;padding:64px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9AA1B2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6"></path></svg>
+                <h2 style="margin:0;font-size:18px;font-weight:600">Chọn một buổi để điểm danh</h2>
+                <p style="margin:0;color:#6B7280;font-size:14px;max-width:380px">Chọn một buổi trong danh sách bên trái để hiện danh sách sinh viên.</p>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{hasSession}}" hint-placeholder-val="{{true}}">
+              <div style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);overflow:hidden">
+                <div style="padding:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid #E3E6EE">
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    <h2 style="margin:0;font-size:16px;font-weight:600">{{session.title}}</h2>
+                    <span style="font-size:13px;color:#6B7280">{{session.meta}} · {{cls.code}}</span>
+                  </div>
+                  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                    <span style="{{session.chip}}">{{session.statusLabel}}</span>
+                    <sc-if value="{{canEdit}}" hint-placeholder-val="{{true}}">
+                      <button onClick="{{allPresent}}" style="min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--primary);background:#FFFFFF;color:var(--primary);font-weight:600;font-size:14px;cursor:pointer">Tất cả có mặt</button>
+                    </sc-if>
+                  </div>
+                </div>
+
+                <div>
+                  <sc-for list="{{students}}" as="p" hint-placeholder-count="8">
+                    <div role="group" aria-label="{{p.aria}}" style="padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;border-bottom:1px solid #EEF0F5;background:{{p.zebra}}">
+                      <div style="flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:2px">
+                        <span style="font-weight:600;font-size:14px">{{p.name}}</span>
+                        <span style="font-size:12px;color:#6B7280">{{p.ma}}</span>
+                      </div>
+                      <div style="flex:0 0 150px;display:flex;flex-direction:column;gap:3px">
+                        <span style="font-size:12px;color:#6B7280">Vắng KP {{p.kp}}/{{sum.total}} ({{p.pct}}%)</span>
+                        <sc-if value="{{p.flag}}" hint-placeholder-val="{{false}}">
+                          <span style="align-self:flex-start;font-size:11px;font-weight:600;color:#C62828;background:#FDECEA;padding:2px 8px;border-radius:999px">Nguy cơ cấm thi</span>
+                        </sc-if>
+                      </div>
+                      <div style="display:flex;border-radius:10px;overflow:hidden;border:1px solid #C4C9D4;flex:0 0 auto">
+                        <button onClick="{{p.setCo}}" aria-pressed="{{p.isCo}}" style="{{p.coStyle}}">Có mặt</button>
+                        <button onClick="{{p.setTre}}" aria-pressed="{{p.isTre}}" style="{{p.treStyle}}">Đi trễ</button>
+                        <button onClick="{{p.setPhep}}" aria-pressed="{{p.isPhep}}" style="{{p.phepStyle}}">Vắng có phép</button>
+                        <button onClick="{{p.setKhong}}" aria-pressed="{{p.isKhong}}" style="{{p.khongStyle}}">Vắng không phép</button>
+                      </div>
+                      <input type="text" placeholder="Ghi chú" aria-label="Ghi chú" style="flex:1 1 140px;min-width:100px;min-height:44px;border-radius:8px;border:1px solid #C4C9D4;padding:0 12px;font-size:13px;box-sizing:border-box">
+                    </div>
+                  </sc-for>
+                  <div style="padding:12px 20px;font-size:13px;color:#6B7280">Hiển thị 8 / {{cls.si}} sinh viên đã đăng ký lớp</div>
+                </div>
+
+                <div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:#FAFAFC;border-top:1px solid #E3E6EE">
+                  <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
+                    <span style="color:#2E7D32;font-weight:600">Có mặt {{counts.co}}</span>
+                    <span style="color:#B26A00;font-weight:600">Đi trễ {{counts.late}}</span>
+                    <span style="color:#8A5A00;font-weight:600">Vắng có phép {{counts.phep}}</span>
+                    <span style="color:#C62828;font-weight:600">Vắng không phép {{counts.khong}}</span>
+                  </div>
+                  <sc-if value="{{canEdit}}" hint-placeholder-val="{{true}}">
+                    <button onClick="{{save}}" style="min-height:48px;padding:0 28px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:15px;cursor:pointer">Lưu điểm danh</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{toast}}" hint-placeholder-val="{{false}}">
+        <div role="status" class="ui-toast" style="position:fixed;right:32px;bottom:32px;background:#1F2937;color:#FFFFFF;padding:14px 20px;border-radius:12px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)">Đã lưu điểm danh cả lớp. Buổi chuyển sang “Đã điểm danh”.</div>
+      </sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startStep":{"editor":"enum","default":"3","options":["1","2","3"],"section":"Trạng thái ban đầu"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const step = (props && props.startStep) || '3';
+    this.state = {
+      classId: step === '1' ? '' : 'c1',
+      sessionId: step === '3' ? 's3' : '',
+      tab: 'buoi',
+      creating: false,
+      marks: {},
+      saved: {}, decided: {},
+      toast: false
+    };
+  }
+
+  renderVals() {
+    const NAVG = (active) => {
+      const base = 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;';
+      const on = base + 'background:var(--primary);color:#FFFFFF;font-weight:600;box-shadow:0 4px 12px rgba(63,81,181,.35);';
+      const off = base + 'color:#C9D0F2;font-weight:500;';
+      const it = (k, label, href, icon, badge) => ({ label, href, icon, style: k === active ? on : off, hasBadge: !!badge, badge: badge || '' });
+      return [
+        { title: 'TỔNG QUAN', items: [it('home', 'Tổng quan', 'Main.dc.html', 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10')] },
+        { title: 'GIẢNG DẠY', items: [
+          it('lop', 'Lớp phụ trách', 'Web-Lop.dc.html', 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13'),
+          it('tkb', 'Thời khóa biểu', 'Web-TKB.dc.html', 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4')] },
+        { title: 'HỌC VỤ', items: [
+          it('dd', 'Điểm danh', 'Web-DiemDanh.dc.html', 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6'),
+          it('nd', 'Nhập điểm', 'Web-NhapDiem.dc.html', 'M4 20h4L19 9l-4-4L4 16v4z')] },
+        { title: 'KHÁC', items: [
+          it('tb', 'Thông báo', 'Web-ThongBao.dc.html', 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0', '2'),
+          it('hs', 'Hồ sơ', 'Web-HoSo.dc.html', 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'),
+          it('out', 'Đăng xuất', 'Web-DangNhap.dc.html', 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9')] }
+      ];
+    };
+    const S = this.state;
+    const CLASSES = [
+      { id: 'c1', code: 'CNTT101-01', name: 'Lập trình hướng đối tượng', hk: 'HK1 2026–2027', status: 'DANG_HOC', si: 42 },
+      { id: 'c2', code: 'CNTT203-02', name: 'Cơ sở dữ liệu', hk: 'HK1 2026–2027', status: 'DANG_HOC', si: 38 },
+      { id: 'c3', code: 'CNTT110-03', name: 'Cấu trúc dữ liệu và giải thuật', hk: 'HK2 2025–2026', status: 'DA_DONG', si: 40 }
+    ];
+    const SESSIONS = {
+      c1: [
+        { id: 's3', title: 'Thứ 7, 10/10/2026', meta: 'Sáng · Tiết 1–3 · Hôm nay', status: 'MO', vang: null },
+        { id: 's2', title: 'Thứ 3, 06/10/2026', meta: 'Sáng · Tiết 1–3', status: 'DA_DIEM_DANH', vang: 2 },
+        { id: 's1', title: 'Thứ 7, 03/10/2026', meta: 'Sáng · Tiết 1–3', status: 'DA_DIEM_DANH', vang: 1 },
+        { id: 's0', title: 'Thứ 3, 29/09/2026', meta: 'Sáng · Tiết 1–3', status: 'DA_DIEM_DANH', vang: 0 }
+      ],
+      c2: [
+        { id: 'k3', title: 'Thứ 7, 10/10/2026', meta: 'Chiều · Tiết 6–8 · Hôm nay', status: 'MO', vang: null },
+        { id: 'k2', title: 'Thứ 4, 07/10/2026', meta: 'Chiều · Tiết 6–8', status: 'DA_DIEM_DANH', vang: 1 },
+        { id: 'k1', title: 'Thứ 7, 03/10/2026', meta: 'Chiều · Tiết 6–8', status: 'DA_DIEM_DANH', vang: 0 }
+      ],
+      c3: [
+        { id: 'z2', title: 'Thứ 6, 12/06/2026', meta: 'Sáng · Tiết 1–3', status: 'DA_DIEM_DANH', vang: 2 },
+        { id: 'z1', title: 'Thứ 6, 05/06/2026', meta: 'Sáng · Tiết 1–3', status: 'DA_DIEM_DANH', vang: 0 }
+      ]
+    };
+    const PRESET = { s2: { st3: 'KHONG', st5: 'PHEP' }, s1: { st3: 'KHONG' }, k2: { st5: 'PHEP' }, z2: { st3: 'KHONG', st6: 'PHEP' } };
+    const STUDENTS = [
+      { id: 'st1', name: 'Nguyễn Văn An', ma: 'SV2026001' },
+      { id: 'st2', name: 'Trần Thị Bình', ma: 'SV2026002' },
+      { id: 'st3', name: 'Lê Hoàng Cường', ma: 'SV2026003' },
+      { id: 'st4', name: 'Phạm Minh Đức', ma: 'SV2026004' },
+      { id: 'st5', name: 'Võ Thị Hà', ma: 'SV2026005' },
+      { id: 'st6', name: 'Đặng Quốc Huy', ma: 'SV2026006' },
+      { id: 'st7', name: 'Bùi Thu Hương', ma: 'SV2026007' },
+      { id: 'st8', name: 'Ngô Thanh Khoa', ma: 'SV2026008' }
+    ];
+    // Số buổi vắng không phép của mỗi SV ở CÁC BUỔI KHÁC buổi đang mở; buổi đang mở được cộng thêm theo lựa chọn hiện tại.
+    const OTHERS = {
+      c1: [0, 1, 8, 0, 3, 0, 5, 2],
+      c2: [0, 0, 3, 1, 0, 2, 8, 1],
+      c3: [0, 1, 3, 0, 2, 0, 0, 4]
+    };
+    // Tổng số buổi sinh sẵn theo lịch × thời gian lớp (mẫu số cố định của tỷ lệ vắng).
+    const SUMS = {
+      c1: { total: 42, due: 16, done: 15, future: 26, initOpen: ['s3'] },
+      c2: { total: 42, due: 16, done: 15, future: 26, initOpen: ['k3'] },
+      c3: { total: 19, due: 19, done: 19, future: 0, initOpen: [] }
+    };
+    const REQUESTS = [
+      { id: 'q1', sv: 'Lê Hoàng Cường · SV2026003', buoi: '06/10/2026 · Sáng', time: '07/10 08:15', doi: 'Vắng không phép → Vắng có phép', lyDo: 'Em nghỉ ốm, có giấy khám bệnh đính kèm.', file: 'giay-kham-benh.pdf' },
+      { id: 'q2', sv: 'Võ Thị Hà · SV2026005', buoi: '03/10/2026 · Sáng', time: '04/10 20:40', doi: 'Vắng có phép → Có mặt – đi trễ', lyDo: 'Em đến muộn nhưng có mặt từ tiết 2.', file: '' },
+      { id: 'q3', sv: 'Phạm Minh Đức · SV2026004', buoi: '29/09/2026 · Sáng', time: '30/09 09:05', doi: 'Vắng không phép → Có mặt', lyDo: 'Giáo viên điểm danh nhầm, em có chụp ảnh buổi học.', file: 'anh-buoi-hoc.jpg' }
+    ];
+    const requests = REQUESTS.map((r) => {
+      const closedCls = S.classId === 'c3';
+      const d = closedCls ? 'auto' : S.decided[r.id];
+      return { ...r, hasFile: !!r.file, noFile: !r.file, pending: !d, decided: !!d,
+        statusLabel: d === 'ok' ? 'Đã duyệt' : (d === 'no' || d === 'auto') ? 'Từ chối' : 'Chờ duyệt',
+        chip: 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;' + (d === 'ok' ? 'background:#E6F4EA;color:#2E7D32' : (d === 'no' || d === 'auto') ? 'background:#FDECEA;color:#C62828' : 'background:#FFF4D6;color:#8A5A00'),
+        note: d === 'ok' ? 'Đã cập nhật điểm danh buổi này theo yêu cầu.' : d === 'auto' ? 'Tự động từ chối — quá hạn, lớp đã đóng.' : 'Giữ nguyên điểm danh, đã thông báo cho sinh viên.',
+        approve: () => this.setState({ decided: { ...S.decided, [r.id]: 'ok' } }),
+        reject: () => this.setState({ decided: { ...S.decided, [r.id]: 'no' } }) };
+    });
+    const reqPending = requests.filter((r) => r.pending).length;
+
+    const chipBase = 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;';
+    const classChip = (st) => (st === 'DANG_HOC' ? chipBase + 'background:#E8EAF6;color:var(--primary)' : chipBase + 'background:#ECEFF1;color:#455A64');
+    const sessChip = (st) => (st === 'DA_DIEM_DANH' ? chipBase + 'background:#E6F4EA;color:#2E7D32' : chipBase + 'background:#FFF4D6;color:#8A5A00');
+    const sessLabel = (st) => (st === 'DA_DIEM_DANH' ? 'Đã điểm danh' : 'Chưa điểm danh');
+
+    const cls = CLASSES.find((c) => c.id === S.classId) || null;
+    const readonly = !!cls && cls.status === 'DA_DONG';
+    const hasClass = !!cls;
+
+    const sessions = (cls ? SESSIONS[cls.id] : []).map((s) => {
+      const st = S.saved[s.id] ? 'DA_DIEM_DANH' : s.status;
+      const selected = S.sessionId === s.id;
+      return {
+        ...s,
+        selected,
+        chip: sessChip(st),
+        statusLabel: sessLabel(st),
+        vang: st === 'DA_DIEM_DANH' && s.vang !== null ? 'Vắng ' + s.vang : '—',
+        style: 'width:100%;box-sizing:border-box;min-height:64px;padding:12px 14px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;font-family:inherit;color:#212121;border:1px solid ' + (selected ? '#3F51B5' : '#E3E6EE') + ';background:' + (selected ? '#E8EAF6' : '#FFFFFF'),
+        pick: () => this.setState({ sessionId: s.id })
+      };
+    });
+    const session = sessions.find((s) => s.selected) || null;
+    const hasSession = hasClass && !!session;
+
+    const marksOf = (sid) => S.marks[sid] || PRESET[sid] || {};
+    const marks = session ? marksOf(session.id) : {};
+    const canEdit = hasSession && !readonly;
+
+    const seg = (on, color, txt) => 'min-height:44px;padding:0 12px;border:0;border-right:1px solid #C4C9D4;font-size:13px;font-weight:600;font-family:inherit;white-space:nowrap;cursor:' + (canEdit ? 'pointer' : 'default') + ';background:' + (on ? color : '#FFFFFF') + ';color:' + (on ? txt : '#374151');
+    const counts = { co: 0, phep: 0, khong: 0, late: 0 };
+    const SUM = cls ? SUMS[cls.id] : null;
+    const limit = SUM ? SUM.total * 0.2 : 0;
+    const students = STUDENTS.map((p, i) => {
+      const v = marks[p.id] || 'CO';
+      const kp = (cls ? OTHERS[cls.id][i] : 0) + (v === 'KHONG' ? 1 : 0);
+      if (v === 'CO') counts.co++; else if (v === 'TRE') counts.late++; else if (v === 'PHEP') counts.phep++; else counts.khong++;
+      const set = (val) => () => {
+        if (!canEdit) return;
+        this.setState({ marks: { ...S.marks, [session.id]: { ...marksOf(session.id), [p.id]: val } } });
+      };
+      return {
+        ...p,
+        aria: 'Điểm danh ' + p.name,
+        zebra: i % 2 ? '#FAFAFC' : '#FFFFFF',
+        kp, pct: SUM ? Math.round((kp / SUM.total) * 100) : 0,
+        flag: SUM ? kp > limit : false,
+        isCo: v === 'CO', isTre: v === 'TRE', isPhep: v === 'PHEP', isKhong: v === 'KHONG',
+        coStyle: seg(v === 'CO', '#2E7D32', '#FFFFFF'),
+        treStyle: seg(v === 'TRE', '#F57C00', '#FFFFFF'),
+        phepStyle: seg(v === 'PHEP', '#F9A825', '#3B2A00'),
+        khongStyle: seg(v === 'KHONG', '#C62828', '#FFFFFF'),
+        setCo: set('CO'), setTre: set('TRE'), setPhep: set('PHEP'), setKhong: set('KHONG'),
+      };
+    });
+
+    const step = !hasClass ? 1 : hasSession ? 3 : 2;
+    const dotOn = 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--primary);color:#FFFFFF;';
+    const dotDone = 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#2E7D32;color:#FFFFFF;';
+    const dotOff = 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#ECEFF1;color:#6B7280;';
+    const steps = ['Chọn lớp', 'Chọn buổi', 'Điểm danh sinh viên'].map((label, i) => {
+      const n = i + 1;
+      const state = n < step ? 'done' : n === step ? 'on' : 'off';
+      return {
+        n: state === 'done' ? '✓' : String(n),
+        label,
+        dot: state === 'done' ? dotDone : state === 'on' ? dotOn : dotOff,
+        text: 'font-size:14px;font-weight:' + (state === 'on' ? '600' : '500') + ';color:' + (state === 'off' ? '#6B7280' : '#212121')
+      };
+    });
+
+    const tabBase = 'min-height:44px;padding:0 14px;border:0;background:transparent;font-family:inherit;font-size:14px;cursor:pointer;margin-bottom:-1px;';
+    const tabOn = tabBase + 'font-weight:600;color:var(--primary);border-bottom:2px solid var(--primary);';
+    const tabOff = tabBase + 'font-weight:500;color:#6B7280;border-bottom:2px solid transparent;';
+
+    return {
+      navGroups: NAVG('dd'),
+      nav: [
+        { label: 'Tổng quan', href: 'Main.dc.html', icon: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10' },
+        { label: 'Lớp phụ trách', href: 'Web-Lop.dc.html', icon: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13' },
+        { label: 'Thời khóa biểu', href: 'Web-TKB.dc.html', icon: 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4' },
+        { label: 'Điểm danh', href: 'Web-DiemDanh.dc.html', active: true, icon: 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6' },
+        { label: 'Nhập điểm', href: 'Web-NhapDiem.dc.html', icon: 'M4 20h4L19 9l-4-4L4 16v4z' },
+        { label: 'Thông báo', href: 'Web-ThongBao.dc.html', icon: 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0' },
+        { label: 'Hồ sơ', href: 'Web-HoSo.dc.html', icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0' }
+      ].map((n) => ({
+        ...n,
+        style: 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;' + (n.active ? 'background:rgba(255,255,255,.14);color:#FFFFFF;font-weight:700;box-shadow:inset 3px 0 0 #FF8A3D;' : 'color:#C9D0F2;font-weight:500;')
+      })),
+      steps,
+      classId: S.classId,
+      classOptions: CLASSES.map((c) => ({ id: c.id, label: c.code + ' · ' + c.name + ' · ' + c.hk })),
+      pickClass: (e) => this.setState({ classId: e.target.value, sessionId: '', tab: 'buoi', creating: false }),
+      hasClass,
+      noClass: !hasClass,
+      readonly,
+      cls: cls ? { ...cls, chip: classChip(cls.status), statusLabel: cls.status === 'DANG_HOC' ? 'Đang học' : 'Đã đóng', meta: cls.name + ' · ' + cls.si + ' sinh viên' } : { chip: '', statusLabel: '', meta: '', code: '', si: 0 },
+      sessions,
+      sessionCount: sessions.length,
+      sum: SUM ? { total: SUM.total, due: SUM.due, done: SUM.done + SUM.initOpen.filter((id) => S.saved[id]).length, future: SUM.future, limit: limit.toFixed(1).replace('.', ','), min: Math.floor(limit) + 1, more: SUM.due - sessions.length } : { total: 0, due: 0, done: 0, future: 0, limit: '0', min: 0, more: 0 },
+      session: session || { title: '', meta: '', chip: '', statusLabel: '' },
+      hasSession,
+      noSession: hasClass && !hasSession,
+      canEdit,
+      canCreate: hasClass && !readonly,
+      creating: S.creating,
+      toggleCreate: () => this.setState({ creating: !S.creating }),
+      createSession: () => this.setState({ creating: false, sessionId: 's3' }),
+      tabBuoi: S.tab === 'buoi', tabYc: S.tab === 'yc',
+      tabBuoiSel: S.tab === 'buoi', tabYcSel: S.tab === 'yc',
+      tabBuoiStyle: S.tab === 'buoi' ? tabOn : tabOff,
+      tabYcStyle: S.tab === 'yc' ? tabOn : tabOff,
+      showBuoi: () => this.setState({ tab: 'buoi' }),
+      showYc: () => this.setState({ tab: 'yc' }),
+      requests, reqPending,
+      students,
+      counts,
+      allPresent: () => {
+        if (!canEdit) return;
+        const m = {};
+        STUDENTS.forEach((p) => { m[p.id] = 'CO'; });
+        this.setState({ marks: { ...S.marks, [session.id]: m } });
+      },
+      save: () => {
+        if (!canEdit) return;
+        this.setState({ saved: { ...S.saved, [session.id]: true }, toast: true });
+        setTimeout(() => this.setState({ toast: false }), 2400);
+      },
+      toast: S.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

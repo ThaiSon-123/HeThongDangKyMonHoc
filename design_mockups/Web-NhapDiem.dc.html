@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Nhập điểm — giáo viên</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:#F5F6FA}
+a{text-decoration:none}
+button,select,input{font-family:inherit}
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1000px;background:#F5F6FA">
+  <nav aria-label="Điều hướng giáo viên" style="flex:1 1 260px;max-width:260px;min-width:220px;background:linear-gradient(180deg,var(--navy) 0%,#26357A 100%);padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)">
+        <div style="flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">ĐK</div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-weight:700;font-size:15px;color:#FFFFFF">Đăng ký môn học</span>
+          <span style="font-size:12px;color:#AEB8E6">Cổng giáo viên</span>
+        </div>
+      </div>
+      <sc-for list="{{navGroups}}" as="grp" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:0 12px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8E9AD6">{{grp.title}}</div>
+          <sc-for list="{{grp.items}}" as="item" hint-placeholder-count="2">
+            <a href="{{item.href}}" style="{{item.style}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+              <span style="flex:1">{{item.label}}</span>
+              <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{false}}">
+                <span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--accent);color:#FFFFFF;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{item.badge}}</span>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.12)">
+      <a href="Web-HoSo.dc.html" aria-label="Hồ sơ cá nhân" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">QM</a>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+        <span style="font-weight:600;font-size:14px;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Trần Minh Quân</span>
+        <span style="font-size:12px;color:#AEB8E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">GV001 · CNTT · Giáo viên</span>
+      </div>
+      <a href="Web-DangNhap.dc.html" aria-label="Đăng xuất" style="flex:0 0 auto;width:44px;height:44px;border-radius:12px;color:#C9D0F2;display:flex;align-items:center;justify-content:center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"></path></svg>
+      </a>
+    </div>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:32px 32px 4px;color:var(--navy);flex-wrap:wrap">
+      <h1 style="margin:0;font-size:28px;font-weight:700">Nhập điểm</h1>
+      <div style="display:flex;align-items:center;gap:16px">
+        <a href="Web-ThongBao.dc.html" aria-label="Thông báo, có tin chưa đọc" class="ui-click" style="position:relative;width:44px;height:44px;border-radius:12px;border:0;background:#FFFFFF;color:var(--navy);box-shadow:0 2px 10px rgba(31,42,92,.1);display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0"></path></svg>
+          <span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid #FFFFFF"></span>
+        </a>
+      </div>
+    </header>
+
+    <main style="padding:32px;display:flex;flex-direction:column;gap:24px">
+      <section aria-label="Chọn lớp" style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end">
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1 1 320px;max-width:520px">
+            <label for="lop" style="font-size:13px;font-weight:600;color:#374151">Lớp học phần</label>
+            <select id="lop" value="{{classId}}" onChange="{{pickClass}}" style="min-height:48px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:15px;background:#FFFFFF;color:#212121">
+              <option value="">— Chọn lớp để nhập điểm —</option>
+              <sc-for list="{{classOptions}}" as="o" hint-placeholder-count="4">
+                <option value="{{o.id}}">{{o.label}}</option>
+              </sc-for>
+            </select>
+          </div>
+          <sc-if value="{{hasClass}}" hint-placeholder-val="{{true}}">
+            <div style="display:flex;align-items:center;gap:8px;min-height:48px;flex-wrap:wrap">
+              <span style="{{cls.gradeChip}}">{{cls.gradeLabel}}</span>
+              <span style="{{cls.deadlineChip}}">{{cls.deadlineLabel}}</span>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{overdue}}" hint-placeholder-val="{{false}}">
+          <div role="alert" style="background:#FDECEA;color:#8C1D18;border:1px solid #F3B8B3;border-radius:8px;padding:10px 12px;font-size:13px">Đã quá hạn nhập điểm. Liên hệ Phòng đào tạo để gia hạn hoặc nhập hộ. Bạn chỉ xem được.</div>
+        </sc-if>
+        <sc-if value="{{approved}}" hint-placeholder-val="{{false}}">
+          <div style="background:#ECEFF1;color:#37474F;border-radius:8px;padding:10px 12px;font-size:13px">Điểm đã được Phòng đào tạo duyệt (KHOA) — không thể sửa.</div>
+        </sc-if>
+        <sc-if value="{{hasClass}}" hint-placeholder-val="{{true}}">
+          <div style="font-size:12px;color:#6B7280">Điểm đã khóa vẫn chưa hiển thị cho sinh viên cho tới khi Phòng đào tạo duyệt.</div>
+        </sc-if>
+      </section>
+
+      <sc-if value="{{noClass}}" hint-placeholder-val="{{false}}">
+        <section style="background:#FFFFFF;border:1px dashed #C4C9D4;border-radius:12px;padding:64px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9AA1B2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"></path></svg>
+          <h2 style="margin:0;font-size:18px;font-weight:600">Chọn lớp để nhập điểm</h2>
+          <p style="margin:0;color:#6B7280;font-size:14px;max-width:420px">Bảng điểm cả lớp chỉ hiển thị sau khi bạn chọn lớp học phần ở trên.</p>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{hasClass}}" hint-placeholder-val="{{true}}">
+        <section aria-label="Bảng điểm" style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);overflow:hidden">
+          <div class="ui-tscroll" style="overflow-x:auto">
+            <div style="min-width:860px">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;background:#FAFAFA;border-bottom:1px solid #E3E6EE;font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.03em">
+                <span style="flex:0 0 100px">Mã SV</span>
+                <span style="flex:1 1 180px">Họ tên</span>
+                <span style="flex:0 0 76px;text-align:center">QT (10%)</span>
+                <span style="flex:0 0 76px;text-align:center">GK (40%)</span>
+                <span style="flex:0 0 76px;text-align:center">CK (50%)</span>
+                <span style="flex:0 0 90px;text-align:center">Tổng kết</span>
+                <span style="flex:0 0 56px;text-align:center">Chữ</span>
+                <span style="flex:1 1 150px">Ghi chú</span>
+              </div>
+              <sc-for list="{{rows}}" as="g" hint-placeholder-count="8">
+                <div style="display:flex;align-items:center;gap:12px;padding:8px 20px;border-bottom:1px solid #EEF0F5;background:{{g.zebra}}">
+                  <span style="flex:0 0 100px;font-size:13px;color:#6B7280">{{g.ma}}</span>
+                  <span style="flex:1 1 180px;font-size:14px;font-weight:600">{{g.name}}</span>
+                  <input type="text" inputmode="decimal" aria-label="Điểm quá trình {{g.name}}" value="{{g.qt}}" onChange="{{g.setQt}}" disabled="{{locked}}" style="{{g.qtStyle}}">
+                  <input type="text" inputmode="decimal" aria-label="Điểm giữa kỳ {{g.name}}" value="{{g.gk}}" onChange="{{g.setGk}}" disabled="{{locked}}" style="{{g.gkStyle}}">
+                  <input type="text" inputmode="decimal" aria-label="Điểm cuối kỳ {{g.name}}" value="{{g.ck}}" onChange="{{g.setCk}}" disabled="{{locked}}" style="{{g.ckStyle}}">
+                  <span style="flex:0 0 90px;text-align:center;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums">{{g.tk}}</span>
+                  <span style="flex:0 0 56px;text-align:center"><span style="{{g.chipStyle}}">{{g.letter}}</span></span>
+                  <span style="flex:1 1 150px;font-size:12px;color:#B26A00">{{g.note}}</span>
+                </div>
+              </sc-for>
+              <div style="padding:12px 20px;font-size:13px;color:#6B7280">Hiển thị 8 / {{cls.si}} sinh viên · Ô trống = chưa nhập (khác với điểm 0)</div>
+            </div>
+          </div>
+
+          <div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;background:#FAFAFC;border-top:1px solid #E3E6EE">
+            <div style="font-size:13px;color:#374151">{{missingCk}} sinh viên chưa có điểm cuối kỳ — khi khóa sẽ tính CK = 0.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button onClick="{{noop}}" style="min-height:48px;padding:0 20px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Xuất Excel</button>
+              <sc-if value="{{canEdit}}" hint-placeholder-val="{{true}}">
+                <button onClick="{{saveDraft}}" style="min-height:48px;padding:0 20px;border-radius:12px;border:1px solid var(--primary);background:#FFFFFF;color:var(--primary);font-weight:600;font-size:14px;cursor:pointer">Lưu nháp</button>
+                <button onClick="{{askLock}}" style="min-height:48px;padding:0 24px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Khóa điểm cả lớp</button>
+              </sc-if>
+              <sc-if value="{{canUnlock}}" hint-placeholder-val="{{false}}">
+                <button onClick="{{unlock}}" style="min-height:48px;padding:0 24px;border-radius:12px;border:1px solid #B26A00;background:#FFFFFF;color:#8A5A00;font-weight:600;font-size:14px;cursor:pointer">Mở khóa để sửa</button>
+              </sc-if>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{confirm}}" hint-placeholder-val="{{false}}">
+        <div role="dialog" aria-label="Xác nhận khóa điểm" class="ui-overlay" style="position:fixed;inset:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:16px">
+          <div style="background:#FFFFFF;border-radius:16px;padding:24px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:12px;box-shadow:0 16px 40px rgba(0,0,0,.25)">
+            <h2 style="margin:0;font-size:18px;font-weight:600">Khóa điểm cả lớp?</h2>
+            <p style="margin:0;font-size:14px;color:#374151;line-height:1.5">{{missingCk}} sinh viên chưa có điểm cuối kỳ sẽ được tính CK = 0. Sau khi khóa, bạn chỉ mở khóa được khi lớp còn đang học và còn trong hạn nhập điểm.</p>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+              <button onClick="{{cancelLock}}" style="min-height:48px;padding:0 20px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Hủy</button>
+              <button onClick="{{doLock}}" style="min-height:48px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Khóa điểm</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{toast}}" hint-placeholder-val="{{false}}">
+        <div role="status" class="ui-toast" style="position:fixed;right:32px;bottom:32px;background:#1F2937;color:#FFFFFF;padding:14px 20px;border-radius:12px;font-size:14px">{{toastText}}</div>
+      </sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startClass":{"editor":"enum","default":"c1","options":["","c1","c2","c3","c4","c5"],"section":"Trạng thái ban đầu"},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const mk = (a) => a.map((r, i) => ({ id: 'st' + (i + 1), qt: r[0], gk: r[1], ck: r[2] }));
+    this.state = {
+      classId: props && props.startClass !== undefined ? props.startClass : 'c1',
+      confirm: false,
+      toast: false,
+      toastText: '',
+      status: { c1: 'NHAP_TAM', c2: 'CHINH_THUC', c3: 'KHOA', c4: 'NHAP_TAM', c5: 'NHAP_TAM' },
+      grades: {
+        c1: mk([['9', '8.5', '9'], ['8', '7.5', '8'], ['6', '5', '5.5'], ['9.5', '9', ''], ['7', '', '6.5'], ['8', '8', '7.5'], ['5', '4.5', ''], ['9', '9.5', '9']]),
+        c2: mk([['8', '8', '8.5'], ['7', '6.5', '7'], ['9', '9', '9.5'], ['6', '6', '6'], ['8.5', '8', '8'], ['7', '7.5', '7'], ['5', '5', '4.5'], ['9', '8.5', '9']]),
+        c3: mk([['9', '9', '9'], ['7', '7', '7.5'], ['6', '5.5', '6'], ['8', '8', '8'], ['7', '6', '6.5'], ['9', '8.5', '9'], ['4', '3.5', '3'], ['8', '8.5', '8']]),
+        c4: mk([['8', '7', '7.5'], ['7', '6.5', '6'], ['9', '9', '8.5'], ['6', '5', ''], ['8', '8', '7'], ['7', '7', '7'], ['5', '', ''], ['9', '8', '9']]),
+        c5: mk([['8', '7', '7.5'], ['7', '6.5', '6'], ['9', '9', '8.5'], ['6', '5', '5'], ['8', '8', '7'], ['7', '7', ''], ['5', '4', '4.5'], ['9', '8', '9']])
+      }
+    };
+  }
+
+  renderVals() {
+    const NAVG = (active) => {
+      const base = 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;';
+      const on = base + 'background:var(--primary);color:#FFFFFF;font-weight:600;box-shadow:0 4px 12px rgba(63,81,181,.35);';
+      const off = base + 'color:#C9D0F2;font-weight:500;';
+      const it = (k, label, href, icon, badge) => ({ label, href, icon, style: k === active ? on : off, hasBadge: !!badge, badge: badge || '' });
+      return [
+        { title: 'TỔNG QUAN', items: [it('home', 'Tổng quan', 'Main.dc.html', 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10')] },
+        { title: 'GIẢNG DẠY', items: [
+          it('lop', 'Lớp phụ trách', 'Web-Lop.dc.html', 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13'),
+          it('tkb', 'Thời khóa biểu', 'Web-TKB.dc.html', 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4')] },
+        { title: 'HỌC VỤ', items: [
+          it('dd', 'Điểm danh', 'Web-DiemDanh.dc.html', 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6'),
+          it('nd', 'Nhập điểm', 'Web-NhapDiem.dc.html', 'M4 20h4L19 9l-4-4L4 16v4z')] },
+        { title: 'KHÁC', items: [
+          it('tb', 'Thông báo', 'Web-ThongBao.dc.html', 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0', '2'),
+          it('hs', 'Hồ sơ', 'Web-HoSo.dc.html', 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'),
+          it('out', 'Đăng xuất', 'Web-DangNhap.dc.html', 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9')] }
+      ];
+    };
+    const S = this.state;
+    const CLASSES = [
+      { id: 'c1', code: 'CNTT101-01', name: 'Lập trình hướng đối tượng', hk: 'HK1 2026–2027', cs: 'DANG_HOC', si: 42, days: 105 },
+      { id: 'c2', code: 'CNTT203-02', name: 'Cơ sở dữ liệu', hk: 'HK1 2026–2027', cs: 'DANG_HOC', si: 38, days: 105 },
+      { id: 'c3', code: 'CNTT110-03', name: 'Cấu trúc dữ liệu và giải thuật', hk: 'HK2 2025–2026', cs: 'DA_DONG', si: 40, days: null },
+      { id: 'c4', code: 'CNTT305-01', name: 'Mạng máy tính', hk: 'HK1 2026–2027', cs: 'DANG_HOC', si: 36, days: 3 },
+      { id: 'c5', code: 'CNTT320-01', name: 'Kỹ thuật phần mềm', hk: 'HK1 2026–2027', cs: 'DANG_HOC', si: 34, days: -1 }
+    ];
+    const NAMES = [['SV2026001', 'Nguyễn Văn An'], ['SV2026002', 'Trần Thị Bình'], ['SV2026003', 'Lê Hoàng Cường'], ['SV2026004', 'Phạm Minh Đức'], ['SV2026005', 'Võ Thị Hà'], ['SV2026006', 'Đặng Quốc Huy'], ['SV2026007', 'Bùi Thu Hương'], ['SV2026008', 'Ngô Thanh Khoa']];
+
+    const cls = CLASSES.find((c) => c.id === S.classId) || null;
+    const hasClass = !!cls;
+    const status = cls ? S.status[cls.id] : '';
+    const overdue = !!cls && cls.days !== null && cls.days < 0;
+    const approved = status === 'KHOA';
+    const closed = !!cls && cls.cs === 'DA_DONG';
+    const locked = !hasClass || overdue || approved || closed || status === 'CHINH_THUC';
+    const canEdit = hasClass && !overdue && !approved && !closed && status === 'NHAP_TAM';
+    const canUnlock = hasClass && !overdue && !approved && !closed && status === 'CHINH_THUC';
+
+    const num = (v) => (v === '' || v === undefined ? null : Number(String(v).replace(',', '.')));
+    const bad = (v) => v !== '' && (Number.isNaN(num(v)) || num(v) < 0 || num(v) > 10);
+    const calc = (g) => {
+      const q = num(g.qt), k = num(g.gk), c = num(g.ck);
+      if (q === null || Number.isNaN(q) || bad(g.qt) || bad(g.gk) || bad(g.ck)) return null;
+      const ck = c === null ? 0 : c;
+      const t = k === null ? q * 0.2 + ck * 0.8 : q * 0.1 + k * 0.4 + ck * 0.5;
+      return Math.round(t * 100) / 100;
+    };
+    const letter = (t) => (t === null ? '—' : t >= 8.5 ? 'A' : t >= 7 ? 'B' : t >= 5.5 ? 'C' : t >= 4 ? 'D' : 'F');
+    const chip = (l) => {
+      const base = 'display:inline-block;min-width:28px;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;';
+      if (l === 'A' || l === 'B') return base + 'background:#E6F4EA;color:#2E7D32';
+      if (l === 'C' || l === 'D') return base + 'background:#FFF4D6;color:#8A5A00';
+      if (l === 'F') return base + 'background:#FDECEA;color:#C62828';
+      return base + 'color:#6B7280';
+    };
+    const inp = (v, dis) => 'flex:0 0 76px;width:76px;box-sizing:border-box;min-height:40px;text-align:center;border-radius:8px;font-size:14px;font-variant-numeric:tabular-nums;border:1px solid ' + (bad(v) ? '#C62828' : dis ? '#E3E6EE' : '#9AA1B2') + ';background:' + (dis ? '#F5F6FA' : '#FFFFFF') + ';color:#212121';
+
+    const list = cls ? S.grades[cls.id] : [];
+    let missingCk = 0;
+    const rows = list.map((g, i) => {
+      const t = calc(g);
+      const l = letter(t);
+      if (g.ck === '') missingCk++;
+      const set = (field) => (e) => {
+        if (locked) return;
+        const next = list.map((x) => (x.id === g.id ? { ...x, [field]: e.target.value } : x));
+        this.setState({ grades: { ...S.grades, [cls.id]: next } });
+      };
+      return {
+        ma: NAMES[i][0], name: NAMES[i][1],
+        zebra: i % 2 ? '#FAFAFC' : '#FFFFFF',
+        qt: g.qt, gk: g.gk, ck: g.ck,
+        qtStyle: inp(g.qt, locked), gkStyle: inp(g.gk, locked), ckStyle: inp(g.ck, locked),
+        setQt: set('qt'), setGk: set('gk'), setCk: set('ck'),
+        tk: t === null ? '—' : t.toFixed(2),
+        letter: l, chipStyle: chip(l),
+        note: bad(g.qt) || bad(g.gk) || bad(g.ck) ? 'Điểm phải từ 0 đến 10' : g.ck === '' ? 'CK = 0 (chưa nhập)' : g.gk === '' ? 'Thiếu GK → tính 20/80' : ''
+      };
+    });
+
+    const toast = (text) => {
+      this.setState({ toast: true, toastText: text });
+      setTimeout(() => this.setState({ toast: false }), 2400);
+    };
+    const gradeChip = (st) => {
+      const b = 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;';
+      return st === 'KHOA' ? b + 'background:#E6F4EA;color:#2E7D32' : st === 'CHINH_THUC' ? b + 'background:#E8EAF6;color:var(--primary)' : b + 'background:#FFF4D6;color:#8A5A00';
+    };
+    const d = cls ? cls.days : null;
+    const deadlineLabel = !cls ? '' : d === null ? 'Đã duyệt' : d < 0 ? 'Quá hạn ' + Math.abs(d) + ' ngày' : 'Còn ' + d + ' ngày để nhập điểm';
+    const deadlineColor = d !== null && d < 0 ? 'background:#FDECEA;color:#C62828' : d !== null && d <= 7 ? 'background:#FFF4D6;color:#8A5A00' : 'background:#ECEFF1;color:#455A64';
+
+    return {
+      navGroups: NAVG('nd'),
+      nav: [
+        { label: 'Tổng quan', href: 'Main.dc.html', icon: 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10' },
+        { label: 'Lớp phụ trách', href: 'Web-Lop.dc.html', icon: 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13' },
+        { label: 'Thời khóa biểu', href: 'Web-TKB.dc.html', icon: 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4' },
+        { label: 'Điểm danh', href: 'Web-DiemDanh.dc.html', icon: 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6' },
+        { label: 'Nhập điểm', href: 'Web-NhapDiem.dc.html', active: true, icon: 'M4 20h4L19 9l-4-4L4 16v4z' },
+        { label: 'Thông báo', href: 'Web-ThongBao.dc.html', icon: 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0' },
+        { label: 'Hồ sơ', href: 'Web-HoSo.dc.html', icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0' }
+      ].map((n) => ({
+        ...n,
+        style: 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;' + (n.active ? 'background:rgba(255,255,255,.14);color:#FFFFFF;font-weight:700;box-shadow:inset 3px 0 0 #FF8A3D;' : 'color:#C9D0F2;font-weight:500;')
+      })),
+      classId: S.classId,
+      classOptions: CLASSES.map((c) => ({ id: c.id, label: c.code + ' · ' + c.name + ' · ' + c.hk })),
+      pickClass: (e) => this.setState({ classId: e.target.value, confirm: false }),
+      hasClass, noClass: !hasClass,
+      cls: cls ? { si: cls.si, gradeChip: gradeChip(status), gradeLabel: status === 'KHOA' ? 'Đã duyệt' : status === 'CHINH_THUC' ? 'Đã khóa' : 'Nháp', deadlineChip: 'font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;' + deadlineColor, deadlineLabel } : { si: 0, gradeChip: '', gradeLabel: '', deadlineChip: '', deadlineLabel: '' },
+      overdue, approved, locked, canEdit, canUnlock,
+      rows, missingCk,
+      noop: () => {},
+      saveDraft: () => toast('Đã lưu nháp cả lớp.'),
+      askLock: () => this.setState({ confirm: true }),
+      cancelLock: () => this.setState({ confirm: false }),
+      doLock: () => {
+        this.setState({ confirm: false, status: { ...S.status, [cls.id]: 'CHINH_THUC' } });
+        toast('Đã khóa điểm cả lớp.');
+      },
+      unlock: () => {
+        this.setState({ status: { ...S.status, [cls.id]: 'NHAP_TAM' } });
+        toast('Đã mở khóa, ghi vào nhật ký hệ thống.');
+      },
+      confirm: S.confirm, toast: S.toast, toastText: S.toastText
+    };
+  }
+}
+</script>
+</body>
+</html>

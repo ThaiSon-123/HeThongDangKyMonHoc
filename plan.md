@@ -1,6 +1,6 @@
 # KẾ HOẠCH TRIỂN KHAI & ĐẶC TẢ — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-**Phiên bản:** 3.8 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
+**Phiên bản:** 3.9 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
 
 > **Nền tảng theo vai trò:** **SV + GV = Flutter Web + Flutter App (Android/iOS)**;
 > **Admin + PĐT + KT = chỉ Flutter Web**. Một codebase Flutter; hai entrypoint (mục 10.2).
@@ -263,7 +263,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 
 | Mã | Quy tắc |
 | :--- | :--- |
-| BR-19 | Trạng thái: `CO_MAT`, `VANG_CO_PHEP`, `VANG_KHONG_PHEP`; `di_tre` là cờ riêng. |
+| BR-19 | Trạng thái: `CO_MAT`, `VANG_CO_PHEP`, `VANG_KHONG_PHEP`; `di_tre` là cờ riêng và **chỉ hợp lệ khi `CO_MAT`** — nếu trạng thái là vắng thì server tự đặt `di_tre = false`. Giao diện cho chọn một trong 4 nút *Có mặt · Đi trễ · Vắng có phép · Vắng không phép* (*Đi trễ* = `CO_MAT` + `di_tre`). |
 | BR-20 | **Buổi điểm danh sinh sẵn & tỷ lệ vắng.** (a) Khi lớp chuyển `MO` (và mỗi lần PĐT sửa lịch/ngày của lớp `MO`/`DANG_HOC`) hệ thống sinh `AttendanceSession` `MO` cho **mọi ngày** trong `[ngay_bat_dau, ngay_ket_thuc]` của lớp (NULL → theo học kỳ) có `thu` trùng một `Schedule` (mỗi ngày × lịch một buổi). Sửa lịch chỉ sinh/xóa các buổi **tương lai chưa điểm danh**; buổi đã điểm danh giữ nguyên. (b) `tong_so_buoi` = số buổi sinh ra — **cố định cả khóa**, là mẫu số (kể cả buổi chưa tới ngày). Ví dụ: lớp học từ 01/10 đến 05/11, chỉ học thứ 5 → 01, 08, 15, 22, 29/10 và 05/11 = **6 buổi**. (c) **Tỷ lệ vắng** = số `VANG_KHONG_PHEP` của SV / `tong_so_buoi`; `VANG_CO_PHEP` không tính. Khi `> SystemConfig.max_absent_pct` (mặc định 20%) hệ thống chỉ **hiển thị cờ “nguy cơ cấm thi”** cho GV, PĐT, SV (ví dụ 6 buổi: 20% = 1,2 ⇒ vắng không phép **từ 2 buổi** bị cờ). Không tự chặn, không tự sinh điểm. (d) Chỉ điểm danh được buổi có `ngay_hoc` ≤ hôm nay (buổi tương lai → `TRANG_THAI_KHONG_HOP_LE`). |
 | BR-24 | *(đã gỡ ở v3.0 — cấm thi tự động; xem mục 0).* |
 
@@ -443,7 +443,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
-| GET/POST/PATCH | `/api/users/` | Tài khoản (ADM-02). |
+| GET/POST/PATCH | `/api/users/` | Tài khoản (ADM-02). Mỗi bản ghi kèm `has_profile` (`null` = vai trò không cần hồ sơ) và `profile` (tóm tắt hồ sơ SV/GV) để Admin biết tài khoản nào còn thiếu hồ sơ. Lọc `?role=&is_locked=&search=`. |
 | PATCH | `/api/users/{id}/lock/` | Body `{is_locked}`. Không tự khóa chính mình (`409`); không tự đổi vai trò của mình. |
 | POST | `/api/users/{id}/reset-password/` | Admin đặt mật khẩu mới (body `{new_password}`, áp chính sách mật khẩu) → `204`, thu hồi refresh cũ. |
 | GET | `/api/admin/permissions/` | Ma trận quyền (**chỉ đọc**, ADM-04). |
@@ -514,7 +514,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Thông số | Giá trị |
 | :--- | :--- |
 | Phân trang | 25 mặc định, tối đa 50 (`page`, `page_size`). |
-| Rate limit | Login **10 lần/phút/IP** (không khóa theo tài khoản — tránh bị khóa hộ); quên mật khẩu 3/15 phút/email; đăng ký môn 30/phút/user; ghi dữ liệu chung 120/phút/user. |
+| Rate limit | Login **10 lần/phút/IP** (không khóa theo tài khoản — tránh bị khóa hộ; IP lấy theo `NUM_PROXIES`, xem bảng biến môi trường); quên mật khẩu 3/15 phút/email; đăng ký môn 30/phút/user; ghi dữ liệu chung 120/phút/user. |
 | JWT | Access 60 phút, refresh 7 ngày, rotate + blacklist. Trên Web token nằm trong storage của trình duyệt (chấp nhận rủi ro XSS cho đồ án). |
 | `?hoc_ky=` mặc định | Học kỳ chứa ngày hiện tại → học kỳ `MO` gần nhất → `400`. |
 | Lọc / sắp xếp | `django-filter`: mỗi ViewSet khai báo `filterset_fields`, `search_fields`, `ordering_fields` tường minh (mặc định `-id`). |
@@ -819,7 +819,7 @@ Repo + CI; Docker Compose (Django + PostgreSQL + Redis + Celery); skeleton Djang
 ```
 docker-compose up -d:  web (Gunicorn :8000) · db (PostgreSQL 16) · redis · celery (worker + beat) · nginx (:80/:443)
 ```
-**Checklist production:** `DEBUG=False`, secret từ env · HTTPS (nginx + certbot) · `pg_dump` trước mỗi migrate · backup daily · log tập trung · `/api/health/` + monitoring · `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE=False`.
+**Checklist production:** `DEBUG=False`, secret từ env · tạo Admin đầu tiên bằng `python manage.py createsuperuser` (tự gán vai trò `ADMIN`) · HTTPS (nginx + certbot) · `pg_dump` trước mỗi migrate · backup daily · log tập trung · `/api/health/` + monitoring · `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE=False`.
 
 | Biến | Mặc định | Ghi chú |
 | :--- | :--- | :--- |
@@ -831,6 +831,7 @@ docker-compose up -d:  web (Gunicorn :8000) · db (PostgreSQL 16) · redis · ce
 | `DB_NAME`/`DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT` | `hpsv`/`postgres`/—/`db`/`5432` | |
 | `REDIS_URL` · `CELERY_BROKER_URL` · `CELERY_RESULT_BACKEND` | `redis://redis:6379/0·1·2` | |
 | `JWT_ACCESS_LIFETIME_MIN` · `JWT_REFRESH_LIFETIME_DAYS` | `60` · `7` | |
+| `NUM_PROXIES` | `0` (dev) · `1` (prod, sau nginx) | Số reverse proxy tin cậy. `0` = bỏ qua `X-Forwarded-For` (không lách rate limit bằng header giả). Prod **không publish cổng `web`**, chỉ nginx. |
 | `EMAIL_HOST`/`PORT`/`HOST_USER`/`HOST_PASSWORD` | — | prod gửi mail reset; dev log console |
 | `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE` | `True` (dev) | **phải `False` ở prod** |
 | `BACKUP_DIR` | `/backups` | volume cho `pg_dump` |
@@ -915,3 +916,4 @@ Pha 3 làm theo cặp để không trượt nếu một người nghỉ.
 | **v3.6** (2026-10-10) | BR-04(d): mỗi môn chỉ đăng ký **một lớp** trong một học kỳ, vi phạm → `409 DA_DANG_KY_MON`. Bộ lọc *Theo CTĐT* và *Môn chưa học* ở SV-04/SV-06 dùng **kết hợp** được. |
 | **v3.7** (2026-10-10) | **Trần tín chỉ do PĐT cấu hình theo từng học kỳ** (đặt trên `Semester`, thay cho `SystemConfig`; Admin không còn cấu hình mục này) — đảo lại quyết định gỡ ở v3.0. `Course` thêm `khoa_bo_mon`; bộ lọc liên động ở màn PĐT: ngành → môn, môn → giáo viên cùng khoa. Học kỳ phụ gọi là "Học kỳ 3". |
 | **v3.8** (2026-10-10) | Thêm thực thể **Faculty (khoa/viện)** do **PĐT** quản lý (route `/pdt/faculties`, API `/api/faculties/`): `Major`, `TeacherProfile`, `Course` trỏ tới Faculty qua FK `khoa` (thay cho chuỗi `khoa_bo_mon`); ngừng khoa/viện chỉ khi không còn ngành/giáo viên hoạt động. Đổi tên hiển thị "khoa / bộ môn" → "khoa / viện". 25 → 26 thực thể. |
+| **v3.9** (2026-10-11) | Điểm danh: "Đi trễ" là lựa chọn thứ hai trong nhóm 4 nút (không còn công tắc riêng), vì đi trễ nghĩa là có mặt; BR-19 ghi rõ `di_tre` chỉ hợp lệ khi `CO_MAT`. |

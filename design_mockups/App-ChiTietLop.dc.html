@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Chi tiết lớp (app giáo viên)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:#F5F6FA}
+a{text-decoration:none}
+button{font-family:inherit}
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div class="ui-approot" style="position:relative;width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);overflow:hidden">
+  <header style="flex:0 0 auto;position:relative;overflow:hidden;background:linear-gradient(160deg,var(--navy) 0%,var(--primary-dark) 100%);color:#FFFFFF;border-radius:0 0 24px 24px;padding:14px 16px 18px 4px;display:flex;align-items:center;gap:4px"><span aria-hidden="true" style="position:absolute;right:-50px;top:-70px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.07)"></span><a href="App-Lop.dc.html" aria-label="Quay lại" style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#FFFFFF;flex:0 0 auto"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a><div style="position:relative;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lập trình hướng đối tượng</span><span style="font-size:12px;opacity:.88">CNTT101-01 · Đang học</span></div></header>
+
+  <div style="flex:1 1 auto;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px">
+    <div role="tablist" style="display:flex;background:#E8EAF6;border-radius:12px;padding:4px">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+        <button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{tInfo}}" hint-placeholder-val="{{true}}">
+      <div style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:16px;display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{info}}" as="r" hint-placeholder-count="7">
+          <div style="display:flex;justify-content:space-between;gap:12px;font-size:14px;border-bottom:1px solid #EEF0F5;padding-bottom:10px">
+            <span style="color:#6B7280">{{r.k}}</span><span style="font-weight:600;text-align:right;color:{{r.color}}">{{r.v}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:10px">
+        <a href="App-DanhSachBuoi.dc.html" class="ui-click" style="flex:1;min-height:52px;border-radius:12px;background:var(--primary);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Điểm danh</a>
+        <a href="App-NhapDiem.dc.html" class="ui-click" style="flex:1;min-height:52px;border-radius:12px;border:1px solid var(--primary);color:var(--primary);background:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px">Nhập điểm</a>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{tLich}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{lich}}" as="l" hint-placeholder-count="2">
+          <div style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <span style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:15px">{{l.thu}}</span><span style="font-size:13px;color:#6B7280">{{l.buoi}} · Tiết {{l.tiet}}</span></span>
+            <span style="font-size:13px;font-weight:600;color:#374151">{{l.phong}}</span>
+          </div>
+        </sc-for>
+        <div style="font-size:12px;color:#6B7280;line-height:1.5">Lịch lặp lại hằng tuần từ 17/08/2026 đến 09/01/2027 (theo học kỳ) — 42 buổi.</div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{tSv}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="font-size:13px;color:#6B7280">42/45 sinh viên đã đăng ký</span>
+          <button style="min-height:48px;padding:0 16px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;font-weight:600;font-size:14px">Xuất Excel</button>
+        </div>
+        <sc-for list="{{students}}" as="s" hint-placeholder-count="8">
+          <div style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:12px 14px;display:flex;flex-direction:column;gap:2px">
+            <span style="font-weight:600;font-size:15px">{{s.name}}</span>
+            <span style="font-size:12px;color:#6B7280">{{s.ma}} · Công nghệ thông tin</span>
+          </div>
+        </sc-for>
+        <div style="font-size:12px;color:#6B7280;text-align:center">Hiển thị 8 / 42 sinh viên</div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { tab: 'info' }; }
+  renderVals() {
+    const S = this.state;
+    const tb = 'flex:1;min-height:44px;border:0;border-radius:10px;font-size:14px;';
+    const tabs = [['info', 'Thông tin'], ['lich', 'Lịch học'], ['sv', 'Sinh viên']].map(([id, label]) => ({
+      label, on: S.tab === id, pick: () => this.setState({ tab: id }),
+      style: tb + (S.tab === id ? 'background:#FFFFFF;color:var(--primary);font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.12)' : 'background:transparent;color:#374151;font-weight:500')
+    }));
+    const NAMES = [['SV2026001', 'Nguyễn Văn An'], ['SV2026002', 'Trần Thị Bình'], ['SV2026003', 'Lê Hoàng Cường'], ['SV2026004', 'Phạm Minh Đức'], ['SV2026005', 'Võ Thị Hà'], ['SV2026006', 'Đặng Quốc Huy'], ['SV2026007', 'Bùi Thu Hương'], ['SV2026008', 'Ngô Thanh Khoa']];
+    return {
+      tabs, tInfo: S.tab === 'info', tLich: S.tab === 'lich', tSv: S.tab === 'sv',
+      info: [
+        { k: 'Số tín chỉ', v: '3 (2 LT + 1 TH)', color: '#212121' },
+        { k: 'Học kỳ', v: 'HK1 2026–2027', color: '#212121' },
+        { k: 'Sĩ số', v: '42/45', color: '#212121' },
+        { k: 'Ngày bắt đầu', v: '17/08/2026', color: '#212121' },
+        { k: 'Ngày kết thúc', v: '09/01/2027', color: '#212121' },
+        { k: 'Hạn nhập điểm', v: '23/01/2027 · còn 105 ngày', color: '#6B7280' },
+        { k: 'Tổng số buổi', v: '42 buổi theo lịch', color: '#212121' }
+      ],
+      lich: [
+        { thu: 'Thứ 3', buoi: 'Sáng', tiet: '1–3', phong: 'P.A101' },
+        { thu: 'Thứ 7', buoi: 'Sáng', tiet: '1–3', phong: 'P.A101' }
+      ],
+      students: NAMES.map((n) => ({ ma: n[0], name: n[1] }))
+    };
+  }
+}
+</script>
+</body>
+</html>
