@@ -88,6 +88,7 @@ class StudentProfileSerializer(_ProfileBase):
 class TeacherProfileSerializer(_ProfileBase):
     ROLE = Role.GIAO_VIEN
     CODE_FIELD = "ma_gv"
+    khoa_ten = serializers.CharField(source="khoa.ten_khoa", read_only=True)
     sdt = serializers.CharField(required=False, allow_blank=True, validators=[SDT_VALIDATOR])
 
     class Meta:
@@ -98,7 +99,8 @@ class TeacherProfileSerializer(_ProfileBase):
             "username",
             "ma_gv",
             "ho_ten",
-            "khoa_bo_mon",
+            "khoa",
+            "khoa_ten",
             "hoc_vi",
             "email",
             "sdt",
@@ -117,6 +119,6 @@ class MeSerializer(UserBriefSerializer):
     gpa = serializers.CharField(required=False, allow_null=True)
     tin_chi_tich_luy = serializers.IntegerField(required=False)
     xep_loai = serializers.CharField(required=False, allow_null=True)
-    khoa_bo_mon = serializers.CharField(required=False)
+    khoa = serializers.CharField(required=False)
     hoc_vi = serializers.CharField(required=False)
     sdt = serializers.CharField(required=False)

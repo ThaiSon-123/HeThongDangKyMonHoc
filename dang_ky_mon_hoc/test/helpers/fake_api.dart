@@ -95,7 +95,7 @@ Map<String, dynamic> teacherProfile() => {
   ...userJson('GIAO_VIEN', name: 'Trần Minh Quân', username: 'gv001'),
   'ma_gv': 'GV001',
   'ho_ten': 'Trần Minh Quân',
-  'khoa_bo_mon': 'Công nghệ thông tin',
+  'khoa': 'Công nghệ thông tin',
   'hoc_vi': 'Thạc sĩ',
   'sdt': '0911222333',
 };

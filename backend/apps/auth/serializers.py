@@ -109,7 +109,7 @@ class UserSerializer(serializers.ModelSerializer):
         return {
             "ma_gv": p.ma_gv,
             "ho_ten": p.ho_ten,
-            "khoa_bo_mon": p.khoa_bo_mon,
+            "khoa": p.khoa.ten_khoa,
             "hoc_vi": p.hoc_vi,
         }
 

@@ -16,10 +16,29 @@ class TrangThaiMon(models.TextChoices):
     NGUNG_SU_DUNG = "NGUNG_SU_DUNG", "Ngừng sử dụng"
 
 
+class Faculty(models.Model):
+    """Khoa/viện — PĐT quản lý; không xóa, chỉ ngừng (plan.md mục 5)."""
+
+    ma_khoa = models.CharField(max_length=20, unique=True)
+    ten_khoa = models.CharField(max_length=200)
+    trang_thai = models.CharField(
+        max_length=20, choices=TrangThaiDung.choices, default=TrangThaiDung.HOAT_DONG
+    )
+
+    class Meta:
+        verbose_name = "Khoa/viện"
+        verbose_name_plural = "Khoa/viện"
+        ordering = ["ma_khoa"]
+
+    def __str__(self):
+        return f"{self.ma_khoa} — {self.ten_khoa}"
+
+
 class Major(models.Model):
     ma_nganh = models.CharField(max_length=20, unique=True)
     ten_nganh = models.CharField(max_length=200)
     thoi_gian_dao_tao = models.PositiveSmallIntegerField(default=4)
+    khoa = models.ForeignKey(Faculty, on_delete=models.PROTECT, related_name="nganh")
     trang_thai = models.CharField(
         max_length=20, choices=TrangThaiDung.choices, default=TrangThaiDung.HOAT_DONG
     )
@@ -85,6 +104,7 @@ class Course(models.Model):
         choices=[("DIEM", "Điểm"), ("DAT_KHONG_DAT", "Đạt/Không đạt")],
         default="DIEM",
     )
+    khoa = models.ForeignKey(Faculty, on_delete=models.PROTECT, related_name="mon_hoc")
     trang_thai = models.CharField(
         max_length=20, choices=TrangThaiMon.choices, default=TrangThaiMon.HOAT_DONG
     )
@@ -159,6 +179,10 @@ class Semester(models.Model):
     ngay_ket_thuc = models.DateField()
     cua_so_dk_bat_dau = models.DateTimeField()
     cua_so_dk_ket_thuc = models.DateTimeField()
+    # Trần tín chỉ theo học kỳ, PĐT cấu hình (BR-07).
+    tin_chi_toi_thieu = models.PositiveSmallIntegerField(default=12)
+    tin_chi_toi_da = models.PositiveSmallIntegerField(default=24)
+    tin_chi_toi_da_canh_bao = models.PositiveSmallIntegerField(default=14)
     trang_thai = models.CharField(
         max_length=10, choices=TrangThaiHocKy.choices, default=TrangThaiHocKy.MO
     )
@@ -167,6 +191,17 @@ class Semester(models.Model):
         verbose_name = "Học kỳ"
         verbose_name_plural = "Học kỳ"
         ordering = ["-ngay_bat_dau"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(tin_chi_toi_thieu__gte=1)
+                & models.Q(tin_chi_toi_thieu__lte=models.F("tin_chi_toi_da")),
+                name="ck_hk_tin_chi_toi_thieu_hop_le",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(tin_chi_toi_da_canh_bao__lte=models.F("tin_chi_toi_da")),
+                name="ck_hk_tin_chi_canh_bao_khong_vuot_toi_da",
+            ),
+        ]
 
     def __str__(self):
         return self.ten_hk

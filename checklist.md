@@ -33,7 +33,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Skeleton Django: 10 app, settings base/dev/prod, `.env.example`
 - [x] `core/`: envelope lỗi + mã lỗi (mục 8.4), phân trang, quyền theo role, `AuditLogMixin`, middleware `Idempotency-Key`
 - [x] Models + migration cho 25 thực thể đầu
-- [ ] Thêm `Faculty` (khoa/viện) + FK `khoa` cho `Major`/`TeacherProfile`/`Course`; migrate `TeacherProfile.khoa_bo_mon` (chuỗi) → FK; `seed_demo` tạo khoa/viện
+- [x] Thêm `Faculty` (khoa/viện) + FK `khoa` cho `Major`/`TeacherProfile`/`Course`; migrate `TeacherProfile.khoa_bo_mon` (chuỗi) → FK; `seed_demo` tạo khoa/viện (migration đã tạo lại từ đầu)
 - [x] Swagger `/api/docs/`; Celery beat 4 job (stub trừ `flush_expired_tokens`)
 - [x] `seed_demo` (idempotent): tài khoản, 2 ngành × 8 môn, 2 học kỳ, 6 lớp, bảng giá, điểm, điểm danh, lịch có thứ 7 + Chủ nhật
 - [x] Flutter skeleton: Riverpod + GoRouter + Dio, theme Material 3, login/forgot-password, route theo vai trò
@@ -85,7 +85,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [ ] Schedule: BR-08 (`thu` 2..8, Chủ nhật = 8) · BR-09 · phòng/GV không giao tiết cùng `thu`
 - [ ] Job `classes_transition_daily` (mục 6, 7.8)
 - [ ] `AuditLogMixin` áp cho các ViewSet ghi của pha này
-- [ ] `Semester` thêm `tin_chi_toi_thieu`/`tin_chi_toi_da`/`tin_chi_toi_da_canh_bao` (mặc định 12/24/14, PĐT sửa; bỏ 3 khóa tương ứng khỏi `SystemConfig` và `seed_demo`); `Course.khoa_bo_mon`; lọc `?khoa=` `?nganh=`
+- [ ] _(model + seed đã đồng bộ ở Pha 1; còn API/validate)_ `Semester` thêm `tin_chi_toi_thieu`/`tin_chi_toi_da`/`tin_chi_toi_da_canh_bao` (mặc định 12/24/14, PĐT sửa; bỏ 3 khóa tương ứng khỏi `SystemConfig` và `seed_demo`); `Course.khoa_bo_mon`; lọc `?khoa=` `?nganh=`
 - [ ] Flutter (Web): PĐT quản lý ngành / CTĐT / môn / học kỳ (kèm giới hạn tín chỉ) / lớp / lịch; ô chọn có gợi ý và lọc liên động (ngành → môn → giáo viên cùng khoa)
 - [ ] **Milestone:** PĐT tạo đủ dữ liệu cho 1 học kỳ
 
@@ -106,7 +106,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [ ] **Sinh sẵn `AttendanceSession`** khi lớp `MO` / khi PĐT sửa lịch-ngày lớp (chỉ sinh/xóa buổi tương lai chưa điểm danh) — BR-20; **không có** `POST /attendance/sessions/`
 - [ ] `GET …/sessions/?lop_hoc_phan=` (kèm `tong_so_buoi`) · `GET/PUT …/sessions/{id}/records/` (lưu cả lớp; chỉ buổi `ngay_hoc` ≤ hôm nay; lần lưu đầu → `DA_DIEM_DANH`) — BR-19/20
 - [ ] Tỷ lệ vắng = `VANG_KHONG_PHEP` / **tổng số buổi theo lịch** (cố định cả khóa; vắng có phép không tính) + cờ cảnh báo (`max_absent_pct`); `/attendance/my/` trả `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep`; **không** chặn nhập điểm
-- [ ] `AttendanceRequest`: SV gửi (trạng thái mong muốn + `di_tre_mong_muon`, lý do bắt buộc, `minh_chung` tùy chọn ≤ 5 MB, `multipart`) · **chỉ GV (lớp mình)** xem minh chứng và duyệt → ghi lại `Attendance` (PĐT không duyệt); chỉ gửi/duyệt khi lớp `DANG_HOC`; đóng lớp ⇒ yêu cầu chờ tự `TU_CHOI` (`ghi_chu` quá hạn)
+- [ ] _(model + ràng buộc 1 yêu cầu chờ duyệt/buổi đã xong; còn API)_ `AttendanceRequest`: SV gửi (trạng thái mong muốn + `di_tre_mong_muon`, lý do bắt buộc, `minh_chung` tùy chọn ≤ 5 MB, `multipart`) · **chỉ GV (lớp mình)** xem minh chứng và duyệt → ghi lại `Attendance` (PĐT không duyệt); chỉ gửi/duyệt khi lớp `DANG_HOC`; đóng lớp ⇒ yêu cầu chờ tự `TU_CHOI` (`ghi_chu` quá hạn)
 - [ ] `/attendance/my/` · `/attendance/sessions/?lop_hoc_phan=` (danh sách buổi sinh sẵn)
 - [ ] Flutter: GV điểm danh cả lớp; SV xem + xin sửa (chọn trạng thái mong muốn, lý do bắt buộc, minh chứng tùy chọn); **chỉ GV (lớp mình)** xem minh chứng và duyệt
 - [ ] Flutter: GV xem thời khóa biểu theo tuần (`/teacher/schedule`, dùng `/timetable/my/`); bản Web có nút **In** (`window.print()`, A4 ngang)
@@ -134,7 +134,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [ ] `GET /tuition/` · `/tuition/debts/` · `/tuition/my/` · biên lai
 - [ ] Job `tuition_overdue_notify`
 - [ ] Flutter: KT cấu hình + thu/hoàn; SV xem học phí và **thanh toán bằng chuyển khoản QR** (`/student/tuition/pay`: chọn toàn bộ/một phần ≤ `con_no`, QR sinh ở client từ `tuition/my.thanh_toan`, sao chép thông tin); KT đối soát theo nội dung `HOCPHI <ma_sv> <hoc_ky>`
-- [ ] `SystemConfig` thêm `ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan` + `tuition/my` trả `thanh_toan{…}`
+- [ ] _(khóa đã có trong `seed_demo`; còn `tuition/my`)_ `SystemConfig` thêm `ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan` + `tuition/my` trả `thanh_toan{…}`
 - [ ] **Milestone:** tính đúng, thu/hoàn đúng; hủy môn đã thu dư → `can_hoan > 0`
 
 ## 8. PHA 7 — THÔNG BÁO & AUDIT (1 tuần)
@@ -207,7 +207,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | 23 | `NotificationRead` | notifications | 7 | [x] |
 | 24 | `AuditLog` | audit | 7 | [x] |
 | 25 | `SystemConfig` | config | 10 | [x] |
-| 26 | `Faculty` | training | 2 | [ ] |
+| 26 | `Faculty` | training | 2 | [x] |
 
 ## 12. QUY TẮC NGHIỆP VỤ — tick khi có code + test
 

@@ -52,12 +52,12 @@ def test_sinh_vien_chua_co_diem_gpa_null_va_khong_xep_loai(login_as):
 
 
 def test_giao_vien_xem_ho_so(login_as):
-    tp = TeacherProfileFactory(khoa_bo_mon="CNTT", hoc_vi="ThS")
+    tp = TeacherProfileFactory(khoa__ten_khoa="CNTT", hoc_vi="ThS")
 
     d = login_as(tp.user).get(URL).data
 
     assert d["role"] == Role.GIAO_VIEN
-    assert (d["ma_gv"], d["khoa_bo_mon"], d["hoc_vi"]) == (tp.ma_gv, "CNTT", "ThS")
+    assert (d["ma_gv"], d["khoa"], d["hoc_vi"]) == (tp.ma_gv, "CNTT", "ThS")
 
 
 @pytest.mark.parametrize("role", [Role.ADMIN, Role.PHONG_DAO_TAO, Role.KE_TOAN])

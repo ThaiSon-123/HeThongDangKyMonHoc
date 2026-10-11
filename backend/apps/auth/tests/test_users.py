@@ -163,7 +163,7 @@ def test_danh_sach_cho_biet_tai_khoan_nao_con_thieu_ho_so(admin_api):
     co_hs = StudentProfileFactory(
         user__username="sv_co", ho_ten="Trần Hoàng Nam", khoa_nhap_hoc="K23"
     )
-    gv = TeacherProfileFactory(user__username="gv_co", khoa_bo_mon="CNTT", hoc_vi="ThS")
+    gv = TeacherProfileFactory(user__username="gv_co", khoa__ten_khoa="CNTT", hoc_vi="ThS")
     UserFactory(role=Role.SINH_VIEN, username="sv_chua", first_name="")
     UserFactory(role=Role.KE_TOAN, username="kt_1")
 
@@ -177,7 +177,7 @@ def test_danh_sach_cho_biet_tai_khoan_nao_con_thieu_ho_so(admin_api):
     assert rows["gv_co"]["profile"] == {
         "ma_gv": gv.ma_gv,
         "ho_ten": gv.ho_ten,
-        "khoa_bo_mon": "CNTT",
+        "khoa": "CNTT",
         "hoc_vi": "ThS",
     }
     assert rows["kt_1"]["has_profile"] is None  # vai trò không cần hồ sơ

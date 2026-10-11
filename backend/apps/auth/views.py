@@ -102,7 +102,9 @@ class UserViewSet(AuditLogMixin):
     """Quản lý tài khoản (ADM-02) — chỉ Admin; không xóa, không PUT."""
 
     audit_model = "User"
-    queryset = User.objects.select_related("sinh_vien__nganh", "sinh_vien__ctdt", "giang_vien")
+    queryset = User.objects.select_related(
+        "sinh_vien__nganh", "sinh_vien__ctdt", "giang_vien__khoa"
+    )
     permission_classes = [IsAuthenticated, IsAdmin]
     http_method_names = ["get", "post", "patch", "head", "options"]
     filterset_fields = ["role", "is_locked", "is_active"]

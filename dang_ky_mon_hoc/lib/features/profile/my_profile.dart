@@ -85,7 +85,7 @@ class MyProfile {
       gpa: json['gpa'] as String?,
       tinChiTichLuy: (json['tin_chi_tich_luy'] as num?)?.toInt(),
       xepLoai: json['xep_loai'] as String?,
-      khoaBoMon: json['khoa_bo_mon'] as String?,
+      khoaBoMon: json['khoa'] as String?,
       hocVi: json['hoc_vi'] as String?,
     );
   }

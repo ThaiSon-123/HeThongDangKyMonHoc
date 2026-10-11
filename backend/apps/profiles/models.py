@@ -39,7 +39,7 @@ class TeacherProfile(models.Model):
     )
     ma_gv = models.CharField(max_length=20, unique=True)
     ho_ten = models.CharField(max_length=150)
-    khoa_bo_mon = models.CharField(max_length=100, blank=True)
+    khoa = models.ForeignKey("training.Faculty", on_delete=models.PROTECT, related_name="giao_vien")
     hoc_vi = models.CharField(max_length=100, blank=True)
     email = models.EmailField(blank=True)
     sdt = models.CharField(max_length=15, blank=True)

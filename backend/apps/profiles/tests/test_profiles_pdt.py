@@ -8,6 +8,7 @@ from apps.profiles.models import StudentProfile
 from apps.training.models import TrangThaiDung
 from core.factories import (
     CurriculumFactory,
+    FacultyFactory,
     MajorFactory,
     StudentProfileFactory,
     TeacherProfileFactory,
@@ -170,15 +171,34 @@ def test_khong_co_xoa_va_put(pdt_api):
 def test_tao_va_sua_ho_so_giao_vien(pdt_api):
     user = UserFactory(role=Role.GIAO_VIEN)
 
+    khoa_a, khoa_b = FacultyFactory(), FacultyFactory(ten_khoa="Khoa CNTT")
     tao = pdt_api.post(
-        GV, {"user": user.id, "ma_gv": "GV001", "ho_ten": "Đặng Văn Khoa", "hoc_vi": "TS"}
+        GV,
+        {
+            "user": user.id,
+            "ma_gv": "GV001",
+            "ho_ten": "Đặng Văn Khoa",
+            "hoc_vi": "TS",
+            "khoa": khoa_a.id,
+        },
     )
-    sua = pdt_api.patch(f"{GV}{tao.data['id']}/", {"khoa_bo_mon": "CNTT"})
+    sua = pdt_api.patch(f"{GV}{tao.data['id']}/", {"khoa": khoa_b.id})
     sai_role = pdt_api.post(
-        GV, {"user": UserFactory(role=Role.SINH_VIEN).id, "ma_gv": "GV002", "ho_ten": "X"}
+        GV,
+        {
+            "user": UserFactory(role=Role.SINH_VIEN).id,
+            "ma_gv": "GV002",
+            "ho_ten": "X",
+            "khoa": khoa_a.id,
+        },
     )
 
-    assert tao.status_code == 201 and sua.status_code == 200 and sua.data["khoa_bo_mon"] == "CNTT"
+    assert (
+        tao.status_code == 201
+        and sua.status_code == 200
+        and sua.data["khoa"] == khoa_b.id
+        and sua.data["khoa_ten"] == "Khoa CNTT"
+    )
     assert sai_role.status_code == 400 and "user" in sai_role.data
 
 
@@ -186,3 +206,12 @@ def test_danh_sach_giao_vien(pdt_api):
     TeacherProfileFactory(ma_gv="GV001")
 
     assert pdt_api.get(GV, {"search": "GV001"}).data["count"] == 1
+
+
+def test_loc_giao_vien_theo_khoa(pdt_api):
+    gv = TeacherProfileFactory()
+    TeacherProfileFactory()
+
+    res = pdt_api.get(GV, {"khoa": gv.khoa_id})
+
+    assert [r["id"] for r in res.data["results"]] == [gv.id]

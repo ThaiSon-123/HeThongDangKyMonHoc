@@ -32,7 +32,7 @@ def get_profile(user):
     if user.role == Role.SINH_VIEN:
         return StudentProfile.objects.select_related("nganh", "ctdt").filter(user=user).first()
     if user.role == Role.GIAO_VIEN:
-        return TeacherProfile.objects.filter(user=user).first()
+        return TeacherProfile.objects.select_related("khoa").filter(user=user).first()
     return None
 
 
@@ -67,7 +67,7 @@ def profile_payload(user):
         data.update(
             ma_gv=profile.ma_gv,
             ho_ten=profile.ho_ten,
-            khoa_bo_mon=profile.khoa_bo_mon,
+            khoa=profile.khoa.ten_khoa,
             hoc_vi=profile.hoc_vi,
             sdt=profile.sdt,
         )

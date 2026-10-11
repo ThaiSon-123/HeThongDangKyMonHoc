@@ -49,8 +49,8 @@ class StudentProfileViewSet(_ProfileViewSet):
 
 class TeacherProfileViewSet(_ProfileViewSet):
     audit_model = "TeacherProfile"
-    queryset = TeacherProfile.objects.select_related("user")
+    queryset = TeacherProfile.objects.select_related("user", "khoa")
     serializer_class = TeacherProfileSerializer
-    filterset_fields = ["khoa_bo_mon"]
+    filterset_fields = ["khoa"]
     search_fields = ["ma_gv", "ho_ten", "user__username"]
     ordering_fields = ["id", "ma_gv", "ho_ten"]

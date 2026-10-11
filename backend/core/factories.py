@@ -4,7 +4,7 @@ import factory
 
 from apps.auth.models import Role, User
 from apps.profiles.models import StudentProfile, TeacherProfile
-from apps.training.models import Curriculum, Major
+from apps.training.models import Curriculum, Faculty, Major
 
 MAT_KHAU = "Matkhau123"
 
@@ -26,9 +26,19 @@ class UserFactory(factory.django.DjangoModelFactory):
             self.save(update_fields=["password"])
 
 
+class FacultyFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Faculty
+
+    ma_khoa = factory.Sequence(lambda n: f"KH{n}")
+    ten_khoa = factory.Sequence(lambda n: f"Khoa {n}")
+
+
 class MajorFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Major
+
+    khoa = factory.SubFactory(FacultyFactory)
 
     ma_nganh = factory.Sequence(lambda n: f"NG{n}")
     ten_nganh = factory.Sequence(lambda n: f"Ngành {n}")
@@ -63,4 +73,5 @@ class TeacherProfileFactory(factory.django.DjangoModelFactory):
     user = factory.SubFactory(UserFactory, role=Role.GIAO_VIEN)
     ma_gv = factory.Sequence(lambda n: f"GV{n:05d}")
     ho_ten = factory.Sequence(lambda n: f"Giảng viên {n}")
+    khoa = factory.SubFactory(FacultyFactory)
     email = factory.LazyAttribute(lambda o: o.user.email)

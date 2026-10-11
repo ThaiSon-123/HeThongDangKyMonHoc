@@ -28,6 +28,7 @@ from apps.training.models import (
     Course,
     Curriculum,
     CurriculumCourse,
+    Faculty,
     KhoiKienThuc,
     LoaiMon,
     Major,
@@ -53,6 +54,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             dao_tao = self._seed_dao_tao()
             users = self._seed_users(
+                dao_tao["khoa_cntt"],
                 dao_tao["nganh_cntt"],
                 dao_tao["nganh_ktpm"],
                 dao_tao["ctdt_cntt"],
@@ -76,7 +78,7 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------------ tài khoản
 
-    def _seed_users(self, nganh_cntt, nganh_ktpm, ctdt_cntt, ctdt_ktpm):
+    def _seed_users(self, khoa_cntt, nganh_cntt, nganh_ktpm, ctdt_cntt, ctdt_ktpm):
         User = get_user_model()
 
         def tao(username, role, ho_ten):
@@ -108,7 +110,7 @@ class Command(BaseCommand):
                 defaults={
                     "ma_gv": f"GV{i:05d}",
                     "ho_ten": ten,
-                    "khoa_bo_mon": "Khoa Công nghệ thông tin",
+                    "khoa": khoa_cntt,
                     "hoc_vi": "ThS",
                     "email": f"gv{i}@university.edu.vn",
                 },
@@ -150,11 +152,17 @@ class Command(BaseCommand):
     # ------------------------------------------------------- đào tạo (1.5.2)
 
     def _seed_dao_tao(self):
+        khoa_cntt = Faculty.objects.update_or_create(
+            ma_khoa="CNTT", defaults={"ten_khoa": "Khoa Công nghệ thông tin"}
+        )[0]
+        khoa_kt = Faculty.objects.update_or_create(
+            ma_khoa="KT", defaults={"ten_khoa": "Khoa Kinh tế"}
+        )[0]
         nganh_cntt = Major.objects.update_or_create(
-            ma_nganh="CNTT", defaults={"ten_nganh": "Công nghệ thông tin"}
+            ma_nganh="CNTT", defaults={"ten_nganh": "Công nghệ thông tin", "khoa": khoa_cntt}
         )[0]
         nganh_ktpm = Major.objects.update_or_create(
-            ma_nganh="KTPM", defaults={"ten_nganh": "Kỹ thuật phần mềm"}
+            ma_nganh="KTPM", defaults={"ten_nganh": "Kỹ thuật phần mềm", "khoa": khoa_cntt}
         )[0]
 
         ctdt_cntt = Curriculum.objects.update_or_create(
@@ -201,6 +209,7 @@ class Command(BaseCommand):
                     "so_tiet_ly_thuyet": tiet_lt,
                     "so_tiet_thuc_hanh": tiet_th,
                     "loai_danh_gia": "DAT_KHONG_DAT" if ma_mon == "IT4020" else "DIEM",
+                    "khoa": khoa_kt if ma_mon == "IT4020" else khoa_cntt,
                     "trang_thai": TrangThaiMon.HOAT_DONG,
                 },
             )[0]
@@ -238,6 +247,7 @@ class Command(BaseCommand):
 
         return {
             "mons": mons,
+            "khoa_cntt": khoa_cntt,
             "nganh_cntt": nganh_cntt,
             "nganh_ktpm": nganh_ktpm,
             "ctdt_cntt": ctdt_cntt,
@@ -497,12 +507,12 @@ class Command(BaseCommand):
 
     def _seed_cau_hinh(self, hk_mo):
         configs = [
-            ("tin_chi_toi_thieu", "12", "Số tín chỉ đăng ký tối thiểu"),
-            ("tin_chi_toi_da", "24", "Số tín chỉ đăng ký tối đa"),
-            ("tin_chi_toi_da_canh_bao", "14", "Trần tín chỉ cho SV diện cảnh báo học vụ"),
             ("max_absent_pct", "20", "% vắng không phép vượt ngưỡng thì hiện cờ cảnh báo"),
             ("so_ngay_cho_phep_nhap_diem", "14", "Hạn nhập điểm sau khi lớp kết thúc (ngày)"),
             ("backup_retention_days", "14", "Số ngày giữ file backup"),
+            ("ck_ngan_hang", "Vietcombank", "Ngân hàng nhận chuyển khoản học phí"),
+            ("ck_so_tai_khoan", "0123456789", "Số tài khoản nhận học phí"),
+            ("ck_chu_tai_khoan", "TRUONG DAI HOC DEMO", "Chủ tài khoản nhận học phí"),
         ]
         for khoa, gia_tri, mo_ta in configs:
             SystemConfig.objects.update_or_create(

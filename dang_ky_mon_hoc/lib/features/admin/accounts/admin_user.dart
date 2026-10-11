@@ -60,7 +60,7 @@ class AdminUser {
           ]
         : [
             ('Mã giáo viên', v('ma_gv')),
-            ('Khoa / viện', v('khoa_bo_mon')),
+            ('Khoa / viện', v('khoa')),
             ('Học vị', v('hoc_vi')),
           ];
   }
