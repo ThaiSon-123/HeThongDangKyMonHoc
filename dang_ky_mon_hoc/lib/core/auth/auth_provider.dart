@@ -2,14 +2,23 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
+import '../api/api_failure.dart';
 import 'auth_user.dart';
 import 'token_storage.dart';
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+final apiClientProvider = Provider<ApiClient>(
+  (ref) => ApiClient(
+    onSessionExpired: () =>
+        ref.read(authControllerProvider.notifier).sessionExpired(),
+  ),
+);
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) => TokenStorage());
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
+
+/// Lý do đăng nhập thất bại — màn hình tự chọn banner/câu chữ (không lộ mã kỹ thuật).
+enum LoginError { invalid, locked, rateLimited, network, other }
 
 class AuthState {
   const AuthState({this.status = AuthStatus.unknown, this.user});
@@ -39,7 +48,7 @@ class AuthController extends Notifier<AuthState> {
       return;
     }
     try {
-      final res = await _dio.get('/auth/me/');
+      final res = await _dio.get('/profiles/me/');
       state = AuthState(
         status: AuthStatus.authenticated,
         user: AuthUser.fromJson(Map<String, dynamic>.from(res.data as Map)),
@@ -50,16 +59,14 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  /// POST /auth/login/ → {access, refresh, user}.
-  Future<String?> login(String username, String password) async {
+  /// POST /auth/login/ → {access, refresh, user}. Trả `null` nếu thành công, ngược lại là lý do
+  /// thất bại (sai tên đăng nhập và sai mật khẩu cùng là [LoginError.invalid] — plan.md mục 8.4).
+  Future<LoginError?> login(String username, String password) async {
     try {
       final res = await _dio.post(
         '/auth/login/',
         data: {'username': username, 'password': password},
       );
-      if (res.statusCode != 200) {
-        return 'Sai tên đăng nhập hoặc mật khẩu';
-      }
       final data = res.data as Map;
       await _tokens.save(
         accessToken: data['access'] as String?,
@@ -70,13 +77,33 @@ class AuthController extends Notifier<AuthState> {
         user: AuthUser.fromJson(Map<String, dynamic>.from(data['user'] as Map)),
       );
       return null;
-    } on DioException {
-      return 'Không thể kết nối máy chủ';
+    } on DioException catch (e) {
+      final f = ApiFailure.from(e);
+      if (f.isNetwork) return LoginError.network;
+      if (f.isLocked) return LoginError.locked;
+      if (f.isRateLimited) return LoginError.rateLimited;
+      return f.status == 401 ? LoginError.invalid : LoginError.other;
+    } on FormatException {
+      return LoginError.other; // role lạ từ server
     }
   }
 
+  /// Đăng xuất: thu hồi refresh token ở server (best effort) rồi xóa token cục bộ.
   Future<void> logout() async {
+    final refresh = await _tokens.readRefreshToken();
+    if (refresh != null) {
+      try {
+        await _dio.post('/auth/logout/', data: {'refresh': refresh});
+      } on DioException {
+        // Offline / token đã hết hạn: vẫn đăng xuất cục bộ.
+      }
+    }
     await _tokens.clear();
+    state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
+  /// Refresh bị từ chối (hết hạn / thu hồi / tài khoản bị khóa) → về màn đăng nhập.
+  void sessionExpired() {
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 }

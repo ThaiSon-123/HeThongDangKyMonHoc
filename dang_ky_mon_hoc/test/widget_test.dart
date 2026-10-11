@@ -44,4 +44,33 @@ void main() {
       }
     }
   });
+
+  test('mọi mục menu và tab dưới trỏ tới route có thật của đúng vai trò', () {
+    for (final r in [
+      adminRoutes,
+      pdtRoutes,
+      studentRoutes,
+      teacherRoutes,
+      accountantRoutes,
+    ]) {
+      final paths = r.routes.map((e) => e.path).toSet();
+      final nav = [for (final g in r.groups) ...g.items, ...r.bottomTabs];
+      for (final item in nav) {
+        expect(
+          paths,
+          contains(item.path),
+          reason: '${r.role.name}: ${item.label}',
+        );
+      }
+      expect(
+        r.bottomTabs.length,
+        anyOf(0, 5),
+        reason: 'thanh dưới có đúng 5 mục',
+      );
+    }
+    // Chỉ SV/GV có thanh dưới (App); 3 vai trò Web-only dùng AppBar + Drawer.
+    expect(studentRoutes.bottomTabs, isNotEmpty);
+    expect(teacherRoutes.bottomTabs, isNotEmpty);
+    expect(adminRoutes.bottomTabs, isEmpty);
+  });
 }

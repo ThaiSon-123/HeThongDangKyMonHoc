@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/forgot_password_screen.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/auth/web_only_screen.dart';
+import '../../shared/shell/role_shell.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 import '../auth/auth_provider.dart';
 import '../auth/auth_user.dart';
@@ -16,7 +18,8 @@ const _publicRoutes = {'/login', '/forgot-password'};
 const _webOnlyPath = '/web-only';
 
 /// Dựng router từ danh sách route theo vai trò (mục 10.2–10.3 plan.md).
-/// Web truyền đủ 5 vai trò, App chỉ truyền SV + GV.
+/// Web truyền đủ 5 vai trò, App chỉ truyền SV + GV. Mỗi vai trò nằm trong một [ShellRoute]
+/// để giữ khung điều hướng khi chuyển trang.
 Provider<GoRouter> createRouterProvider(List<RoleRoutes> roleRoutes) {
   final pathsByRole = {
     for (final r in roleRoutes) r.role: {for (final d in r.routes) d.path},
@@ -35,7 +38,7 @@ Provider<GoRouter> createRouterProvider(List<RoleRoutes> roleRoutes) {
         final auth = ref.read(authControllerProvider);
         final path = state.uri.path;
 
-        // Đang khôi phục phiên → đứng yên (màn hình giữ chỗ).
+        // Đang khôi phục phiên → đứng yên.
         if (auth.status == AuthStatus.unknown) return null;
 
         if (!auth.isAuthenticated) {
@@ -61,15 +64,23 @@ Provider<GoRouter> createRouterProvider(List<RoleRoutes> roleRoutes) {
         ),
         GoRoute(
           path: _webOnlyPath,
-          builder: (context, state) =>
-              const PlaceholderScreen(title: 'Chỉ khả dụng trên trình duyệt'),
+          builder: (context, state) => const WebOnlyScreen(),
         ),
         for (final r in roleRoutes)
-          for (final d in r.routes)
-            GoRoute(
-              path: d.path,
-              builder: (context, state) => PlaceholderScreen(title: d.title),
-            ),
+          ShellRoute(
+            builder: (context, state, child) =>
+                RoleShell(config: r, path: state.uri.path, child: child),
+            routes: [
+              for (final d in r.routes)
+                GoRoute(
+                  path: d.path,
+                  pageBuilder: (context, state) => NoTransitionPage(
+                    key: state.pageKey,
+                    child: d.builder?.call() ?? PlaceholderBody(title: d.title),
+                  ),
+                ),
+            ],
+          ),
       ],
     );
   });
