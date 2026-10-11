@@ -22,7 +22,7 @@ ignore_missing_imports = true
 django_settings_module = "config.settings.dev"
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "config.settings.dev"
+DJANGO_SETTINGS_MODULE = "config.settings.test"
 pythonpath = "."
 python_files = ["tests.py", "test_*.py"]
 addopts = "-q"

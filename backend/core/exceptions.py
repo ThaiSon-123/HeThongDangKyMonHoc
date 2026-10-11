@@ -86,10 +86,21 @@ def api_exception_handler(exc, context):
     """Bọc lỗi nghiệp vụ vào envelope; giữ nguyên lỗi DRF khác."""
     # Import trong hàm: rest_framework.views → schemas → settings.AUTHENTICATION_CLASSES
     # → apps.auth.authentication → core.exceptions = vòng lặp nếu import ở top-level.
+    from rest_framework.exceptions import Throttled
+    from rest_framework.response import Response
     from rest_framework.views import exception_handler as drf_exception_handler
 
     if isinstance(exc, BusinessError):
-        from rest_framework.response import Response
-
         return Response(exc.to_envelope(), status=exc.status_code)
+    if isinstance(exc, Throttled):
+        error = BusinessError(
+            Codes.QUA_NHIEU_YEU_CAU,
+            "Bạn thao tác quá nhanh, vui lòng thử lại sau.",
+            {"retry_after": exc.wait} if exc.wait else None,
+            status_code=429,
+        )
+        response = Response(error.to_envelope(), status=429)
+        if exc.wait:
+            response["Retry-After"] = str(int(exc.wait))
+        return response
     return drf_exception_handler(exc, context)

@@ -85,6 +85,7 @@ class Command(BaseCommand):
                 defaults={
                     "role": role,
                     "first_name": ho_ten,
+                    "email": f"{username}@university.edu.vn",  # để demo quên mật khẩu
                     "is_locked": False,
                     "is_active": True,
                 },

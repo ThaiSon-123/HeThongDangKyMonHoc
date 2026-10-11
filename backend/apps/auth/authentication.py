@@ -9,7 +9,5 @@ class LockedAwareJWTAuthentication(JWTAuthentication):
     def get_user(self, validated_token):
         user = super().get_user(validated_token)
         if getattr(user, "is_locked", False):
-            raise business_error(
-                Codes.TAI_KHOAN_BI_KHOA, "Tài khoản đang bị khóa.", status_code=403
-            )
+            raise business_error(Codes.TAI_KHOAN_BI_KHOA, "Tài khoản đang bị khóa.")
         return user

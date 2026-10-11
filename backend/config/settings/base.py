@@ -112,7 +112,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    # Chính sách của plan: ≥ 8 ký tự (validator trên) + có cả chữ lẫn số.
+    {"NAME": "apps.auth.validators.LetterAndDigitValidator"},
 ]
+# Token đặt lại mật khẩu sống 30 phút (plan mục 8.1); dùng 1 lần vì hash gồm mật khẩu hiện tại.
+PASSWORD_RESET_TIMEOUT = 30 * 60
 
 # --- I18N / TZ ---
 LANGUAGE_CODE = "vi"
@@ -140,10 +144,19 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 25,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
+    # Số reverse proxy tin cậy phía trước app (nginx = 1). 0 = gọi thẳng, bỏ qua X-Forwarded-For
+    # → rate limit theo IP không lách được bằng cách tự đặt header. Prod: xem settings/prod.py.
+    "NUM_PROXIES": env_int("NUM_PROXIES", 0),
+    # Mỗi ViewSet vẫn phải khai báo filterset_fields / search_fields / ordering_fields tường minh.
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ),
     "DEFAULT_THROTTLE_CLASSES": ("rest_framework.throttling.ScopedRateThrottle",),
     "DEFAULT_THROTTLE_RATES": {
         "login": env("RATE_LOGIN", "10/min"),
-        "forgot_password": "3/15min",
+        # forgot_password: 3 lần/15 phút/email — DRF không parse được "15min", xem apps/auth/throttles.py
         "registration": "30/min",
         "write": "120/min",
     },
@@ -174,6 +187,14 @@ CELERY_BROKER_URL = env("CELERY_BROKER_URL", "redis://redis:6379/1")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", "redis://redis:6379/2")
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+# --- Cache dùng chung (rate limit đếm theo cả gunicorn worker, không theo từng process) ---
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_URL,
+    }
+}
 
 # --- Email ---
 EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")

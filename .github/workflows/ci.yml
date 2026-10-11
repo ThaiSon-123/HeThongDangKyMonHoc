@@ -35,6 +35,26 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # Test khóa dòng / UNIQUE functional index phải chạy trên PostgreSQL thật (plan mục 13).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: hpsv
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      TEST_DB: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: hpsv
+      DB_USER: postgres
+      DB_PASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -49,9 +69,8 @@ jobs:
         run: black --check .
       - name: mypy
         run: mypy .
-      # exit 5 = không có test nào được collect (Pha 0 chưa có test) — không phải lỗi.
       - name: pytest
-        run: pytest -q || [ $? -eq 5 ]
+        run: pytest -q
 
   flutter:
     needs: changes

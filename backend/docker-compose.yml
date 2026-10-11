@@ -62,6 +62,9 @@ services:
       POSTGRES_DB: ${DB_NAME:-hpsv}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Thiếu DB_PASSWORD trong .env}
+    ports:
+      # Chỉ mở cho máy host (127.0.0.1) để chạy pytest với TEST_DB=postgres từ venv local.
+      - "127.0.0.1:${DB_HOST_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

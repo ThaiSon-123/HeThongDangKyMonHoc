@@ -4,6 +4,7 @@ from rest_framework import viewsets
 
 from apps.audit.models import AuditLog, HanhDong
 from core.permissions import Role
+from core.utils import client_ip
 
 
 class AuditLogMixin(viewsets.ModelViewSet):
@@ -28,7 +29,7 @@ class AuditLogMixin(viewsets.ModelViewSet):
             doi_tuong=self.audit_model or instance.__class__.__name__,
             doi_tuong_id=str(instance.pk) if instance.pk is not None else "",
             chi_tiet=chi_tiet or {"serialized": self._safe_repr(instance)},
-            ip=self._client_ip(),
+            ip=client_ip(self.request),
         )
 
     @staticmethod
@@ -41,12 +42,6 @@ class AuditLogMixin(viewsets.ModelViewSet):
             else:
                 data[field.name] = str(value)
         return data
-
-    def _client_ip(self):
-        forwarded = self.request.META.get("HTTP_X_FORWARDED_FOR")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-        return self.request.META.get("REMOTE_ADDR")
 
     def perform_create(self, serializer):
         instance = serializer.save()
