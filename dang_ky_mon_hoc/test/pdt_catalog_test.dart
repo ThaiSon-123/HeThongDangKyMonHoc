@@ -19,6 +19,7 @@ Map<String, dynamic> khoa(
 };
 
 void main() {
+  profileTests();
   group('Khoa / viện', () {
     testWidgets(
       'hiện bảng đúng mockup; sửa không đổi được mã; ngừng bị server chặn → toast',
@@ -178,6 +179,121 @@ void main() {
           'ten_nganh': 'Kỹ thuật phần mềm',
           'khoa': 2,
         });
+      },
+    );
+  });
+}
+
+void profileTests() {
+  group('Hồ sơ SV / GV', () {
+    final pending = [
+      {
+        'id': 21,
+        'username': 'sv2025011',
+        'email': 'a@x.vn',
+        'role': 'SINH_VIEN',
+      },
+      {'id': 22, 'username': 'gv006', 'email': 'b@x.vn', 'role': 'GIAO_VIEN'},
+    ];
+    final sv = {
+      'id': 1,
+      'user': 12,
+      'username': 'sv2023014',
+      'ma_sv': 'SV2023014',
+      'ho_ten': 'Trần Hoàng Nam',
+      'nganh': 1,
+      'nganh_ten': 'Công nghệ thông tin',
+      'khoa_nhap_hoc': 'K2023',
+      'ctdt': 1,
+      'ctdt_ma': 'CTDT-CNTT-K2023',
+      'gpa': '3.21',
+      'tin_chi_tich_luy': 96,
+      'email': 'nam@x.vn',
+      'sdt': '',
+    };
+
+    testWidgets(
+      'chip tài khoản chưa có hồ sơ → form tạo đã chọn sẵn tài khoản; lưu → POST',
+      (t) async {
+        final api = pdtApi({
+          'GET /profiles/pending-accounts/': (_) => reply(200, pageOf(pending)),
+          'GET /profiles/students/': (_) => reply(200, pageOf([sv])),
+          'GET /profiles/teachers/': (_) => reply(200, pageOf([])),
+          'GET /majors/': (_) => reply(
+            200,
+            pageOf([
+              {'id': 1, 'ma_nganh': 'CNTT', 'ten_nganh': 'Công nghệ thông tin'},
+            ]),
+          ),
+          'POST /profiles/students/': (_) => reply(201, sv),
+        });
+        await openPdt(t, api, '/pdt/profiles');
+        expect(find.text('2 tài khoản'), findsOneWidget);
+        expect(find.text('CTDT-CNTT-K2023'), findsOneWidget);
+        expect(find.text('96'), findsOneWidget);
+
+        await tapText(t, 'sv2025011 · Sinh viên — Tạo hồ sơ');
+        expect(
+          find.textContaining('CTĐT được chọn theo ngành và khóa'),
+          findsOneWidget,
+        );
+        await enterField(t, 'Mã sinh viên', 'SV2025011');
+        await enterField(t, 'Họ tên', 'Lê Văn Bình');
+        await enterField(t, 'Ngành', 'Công');
+        await t.pumpAndSettle();
+        await t.tap(find.text('Công nghệ thông tin').last);
+        await t.pumpAndSettle();
+        await enterField(t, 'Khóa nhập học', 'K2025');
+        await tapText(t, 'Lưu hồ sơ');
+        expect(api.bodies['POST /profiles/students/'], {
+          'user': 21,
+          'ma_sv': 'SV2025011',
+          'ho_ten': 'Lê Văn Bình',
+          'nganh': 1,
+          'khoa_nhap_hoc': 'K2025',
+          'email': '',
+          'sdt': '',
+        });
+      },
+    );
+
+    testWidgets(
+      'tab Giáo viên đổi bảng; không có CTĐT khớp → lỗi hiện trong form',
+      (t) async {
+        final api = pdtApi({
+          'GET /profiles/pending-accounts/': (_) => reply(200, pageOf([])),
+          'GET /profiles/students/': (_) => reply(200, pageOf([sv])),
+          'GET /profiles/teachers/': (_) => reply(
+            200,
+            pageOf([
+              {
+                'id': 4,
+                'user': 30,
+                'username': 'gv001',
+                'ma_gv': 'GV001',
+                'ho_ten': 'Trần Minh Quân',
+                'khoa': 1,
+                'khoa_ten': 'Khoa CNTT',
+                'hoc_vi': 'Thạc sĩ',
+                'email': 'q@x.vn',
+                'sdt': '',
+              },
+            ]),
+          ),
+          'PATCH /profiles/teachers/4/': (_) => reply(400, {
+            'ho_ten': ['Họ tên không hợp lệ.'],
+          }),
+        });
+        await openPdt(t, api, '/pdt/profiles');
+        expect(find.text('Tài khoản chưa có hồ sơ'), findsNothing);
+        await tapText(t, 'Giáo viên');
+        expect(find.text('GV001'), findsOneWidget);
+        expect(find.text('Thạc sĩ'), findsOneWidget);
+
+        await tapText(t, 'Sửa');
+        await enterField(t, 'Họ tên', 'X');
+        await tapText(t, 'Lưu');
+        expect(find.text('Họ tên không hợp lệ.'), findsOneWidget);
       },
     );
   });

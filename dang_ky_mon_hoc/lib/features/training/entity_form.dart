@@ -193,7 +193,8 @@ class _EntityDialogState extends ConsumerState<_EntityDialog> {
         case DateSpec() || DateTimeSpec():
           _values[s.key] = init[s.key];
         case SelectSpec():
-          _values[s.key] = init[s.key];
+          // Tạo mới có thể đặt sẵn lựa chọn qua initialSelected (vd chọn tài khoản từ chip).
+          _values[s.key] = init[s.key] ?? widget.initialSelected[s.key]?.id;
           _selected[s.key] = widget.initialSelected[s.key];
       }
     }

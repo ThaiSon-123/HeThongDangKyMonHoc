@@ -457,6 +457,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
 | GET/POST/PATCH | `/api/profiles/students/` · `/api/profiles/teachers/` | Hồ sơ (PĐT sửa, Admin đọc). Lọc `?khoa=` (giáo viên), `?nganh=` (sinh viên). |
+| GET | `/api/profiles/pending-accounts/` | Tài khoản SV/GV chưa có hồ sơ (PĐT tạo hồ sơ, PDT-01). Lọc `?role=`, `?search=`. |
 | GET/POST/PATCH | `/api/faculties/` · `/api/majors/` · `/api/curriculums/` · `/api/courses/` | PDT-02..05. Không xóa, chỉ đổi `trang_thai`. `/api/courses/` lọc `?nganh=` (qua CTĐT) và `?khoa=`; `tong_tin_chi` do server tính (LT + TH). |
 | GET/POST/DELETE (+PATCH cho `curriculum-courses`) | `/api/curriculum-courses/` · `/api/prerequisites/` | Bản ghi nối: gán sai thì xóa. Tiên quyết chống chu trình (DFS) → `400`. |
 | GET/POST/PATCH | `/api/semesters/` | PDT-06; cửa sổ đăng ký sửa qua `PATCH /api/semesters/{id}/window/`, giới hạn tín chỉ qua `PATCH /api/semesters/{id}/` (PDT-07). |

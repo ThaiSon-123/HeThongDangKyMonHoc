@@ -74,8 +74,8 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Màn hình theo `design_mockups/`: đăng nhập (Web 2 cột / App), quên + đặt lại mật khẩu 3 bước, đổi mật khẩu, hồ sơ SV/GV (Web + App), `/web-only`, hộp thoại tài khoản (Admin/PĐT/KT)
 - [x] Khung điều hướng: sidebar navy 260 · thanh icon 600–1024 · header navy + thanh dưới nổi (App) · AppBar + Drawer (3 vai trò Web-only) — đã xem trên trình duyệt với backend thật
 - [x] Màn Admin quản lý tài khoản (`/admin/accounts`, ADM-02): lọc/tìm/phân trang, khóa-mở khóa (xác nhận), tạo, sửa (đổi vai trò có xác nhận), đặt lại mật khẩu, ngăn chi tiết hồ sơ học vụ
-- [ ] Màn PĐT quản lý hồ sơ SV/GV (`/pdt/profiles`, PDT-01) — **chưa làm**: mockup chọn tuần tự Khoa/viện → Ngành → CTĐT, cần thực thể `Faculty` (plan v3.8, làm ở Pha 2) nên để sau Pha 2
-- [ ] **Milestone:** đăng nhập cả 5 role; khóa tài khoản chặn cả token đang dùng *(API đã đạt, còn phần màn hình)*
+- [x] Màn PĐT quản lý hồ sơ SV/GV (`/pdt/profiles`, PDT-01): chip tài khoản chưa có hồ sơ (`GET /profiles/pending-accounts/`), tab Sinh viên / Giáo viên, tạo + sửa hồ sơ
+- [x] **Milestone:** đăng nhập cả 5 role; khóa tài khoản chặn cả token đang dùng *(API và màn hình đã đạt)*
 
 ## 3. PHA 2 — DỮ LIỆU ĐÀO TẠO (1.5 tuần) ✅
 

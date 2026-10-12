@@ -5,6 +5,7 @@ import '../../features/training/courses_screen.dart';
 import '../../features/training/curriculums_screen.dart';
 import '../../features/training/faculties_screen.dart';
 import '../../features/training/majors_screen.dart';
+import '../../features/training/profiles_screen.dart';
 import '../../features/training/semesters_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
@@ -13,7 +14,7 @@ const pdtRoutes = RoleRoutes(
   UserRole.pdt,
   [
     RouteDef('/pdt', 'Tổng quan'),
-    RouteDef('/pdt/profiles', 'Hồ sơ SV / GV'),
+    RouteDef('/pdt/profiles', 'Hồ sơ SV / GV', builder: ProfilesScreen.new),
     RouteDef('/pdt/faculties', 'Khoa / viện', builder: FacultiesScreen.new),
     RouteDef('/pdt/majors', 'Ngành', builder: MajorsScreen.new),
     RouteDef(

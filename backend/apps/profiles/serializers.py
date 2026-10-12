@@ -1,7 +1,7 @@
 from django.core.validators import RegexValidator
 from rest_framework import serializers
 
-from apps.auth.models import Role
+from apps.auth.models import Role, User
 from apps.auth.serializers import UserBriefSerializer
 from apps.profiles import services
 from apps.profiles.models import StudentProfile, TeacherProfile
@@ -43,6 +43,8 @@ class _ProfileBase(serializers.ModelSerializer):
 class StudentProfileSerializer(_ProfileBase):
     ROLE = Role.SINH_VIEN
     CODE_FIELD = "ma_sv"
+    nganh_ten = serializers.CharField(source="nganh.ten_nganh", read_only=True)
+    ctdt_ma = serializers.CharField(source="ctdt.ma_ctdt", read_only=True, default=None)
     sdt = serializers.CharField(required=False, allow_blank=True, validators=[SDT_VALIDATOR])
 
     class Meta:
@@ -54,8 +56,10 @@ class StudentProfileSerializer(_ProfileBase):
             "ma_sv",
             "ho_ten",
             "nganh",
+            "nganh_ten",
             "khoa_nhap_hoc",
             "ctdt",
+            "ctdt_ma",
             "gpa",
             "tin_chi_tich_luy",
             "email",
@@ -105,6 +109,12 @@ class TeacherProfileSerializer(_ProfileBase):
             "email",
             "sdt",
         ]
+
+
+class PendingAccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "role"]
 
 
 class MeSerializer(UserBriefSerializer):
