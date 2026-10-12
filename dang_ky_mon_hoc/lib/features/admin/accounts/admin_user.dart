@@ -1,5 +1,7 @@
 import '../../../core/auth/auth_user.dart';
 
+export '../../../core/api/page_result.dart';
+
 /// Một tài khoản trong danh sách của Admin (`GET /api/users/`, plan.md mục 8.1).
 class AdminUser {
   const AdminUser({
@@ -64,16 +66,6 @@ class AdminUser {
             ('Học vị', v('hoc_vi')),
           ];
   }
-}
-
-/// Một trang kết quả phân trang của DRF (`count` + `results`).
-class PageResult<T> {
-  const PageResult({required this.count, required this.items});
-
-  final int count;
-  final List<T> items;
-
-  int pages(int pageSize) => count == 0 ? 1 : (count / pageSize).ceil();
 }
 
 /// Bộ lọc danh sách tài khoản.
