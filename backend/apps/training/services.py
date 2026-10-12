@@ -7,6 +7,7 @@ from datetime import timedelta
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from apps.attendance.models import AttendanceRequest
 from apps.config.models import SystemConfig
@@ -87,6 +88,28 @@ def dong_hoc_ky(hoc_ky):
         raise sai_trang_thai("Không đóng được: học kỳ còn lớp đang mở hoặc đang học.")
     hoc_ky.trang_thai = TrangThaiHocKy.DONG
     hoc_ky.save(update_fields=["trang_thai"])
+    return hoc_ky
+
+
+def hoc_ky_mac_dinh():
+    """`?hoc_ky=` mặc định (plan 8.2): học kỳ chứa ngày hiện tại, rồi học kỳ `MO` gần nhất, rồi None."""
+    hom_nay = timezone.localdate()
+    return (
+        Semester.objects.filter(ngay_bat_dau__lte=hom_nay, ngay_ket_thuc__gte=hom_nay).first()
+        or Semester.objects.filter(trang_thai=TrangThaiHocKy.MO).order_by("-ngay_bat_dau").first()
+    )
+
+
+def chon_hoc_ky(hoc_ky_id=None):
+    """Học kỳ theo `?hoc_ky=` hoặc mặc định; không có thì ValidationError field `hoc_ky` (400)."""
+    if hoc_ky_id:
+        hoc_ky = Semester.objects.filter(pk=hoc_ky_id).first() if str(hoc_ky_id).isdigit() else None
+        if hoc_ky is None:
+            raise ValidationError({"hoc_ky": ["Học kỳ không tồn tại."]})
+        return hoc_ky
+    hoc_ky = hoc_ky_mac_dinh()
+    if hoc_ky is None:
+        raise ValidationError({"hoc_ky": ["Không xác định được học kỳ, hãy chọn học kỳ."]})
     return hoc_ky
 
 

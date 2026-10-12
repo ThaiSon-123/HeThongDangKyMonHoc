@@ -172,6 +172,7 @@ SPECTACULAR_SETTINGS = {
         "TrangThaiMonEnum": "apps.training.models.TrangThaiMon.choices",
         "TrangThaiHocKyEnum": "apps.training.models.TrangThaiHocKy.choices",
         "TrangThaiLopEnum": "apps.training.models.TrangThaiLop.choices",
+        "TrangThaiDangKyEnum": "apps.registration.models.TrangThaiDangKy.choices",
     },
 }
 

@@ -10,6 +10,7 @@ from apps.profiles.views import (
     StudentProfileViewSet,
     TeacherProfileViewSet,
 )
+from apps.registration import views as registration
 from apps.training import views as training
 from core.views import HealthView
 
@@ -29,10 +30,15 @@ router.register("prerequisites", training.PrerequisiteViewSet, basename="prerequ
 router.register("semesters", training.SemesterViewSet, basename="semester")
 router.register("class-sections", training.ClassSectionViewSet, basename="class-section")
 router.register("schedules", training.ScheduleViewSet, basename="schedule")
+router.register("registrations", registration.RegistrationViewSet, basename="registration")
 
 urlpatterns = [
     path("health/", HealthView.as_view()),
     path("auth/", include("apps.auth.urls")),
     path("profiles/me/", MeView.as_view()),
+    # Đặt trước router: `courses/available/`, `curriculums/my/` không bị hiểu là `<pk>`.
+    path("courses/available/", registration.AvailableCoursesView.as_view()),
+    path("curriculums/my/", registration.MyCurriculumView.as_view()),
+    path("timetable/my/", registration.MyTimetableView.as_view()),
     *router.urls,
 ]

@@ -475,8 +475,8 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
-| GET | `/api/curriculums/my/` | CTĐT của mình (SV-03). |
-| GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{tin_chi_toi_da, tin_chi_toi_da_canh_bao}` (lấy từ `Semester`). |
+| GET | `/api/curriculums/my/` | CTĐT của mình (SV-03), mỗi môn kèm `da_dat` (BR-04). |
+| GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{hoc_ky, ten_hk, trong_cua_so, tin_chi_toi_thieu, tin_chi_toi_da, tin_chi_toi_da_canh_bao, tin_chi_da_dang_ky, bi_canh_bao_hoc_vu}` (lấy từ `Semester` + đăng ký hiện tại). Mỗi lớp kèm `khoi_kien_thuc`, `loai_mon`, `hoc_ky_goi_y` theo CTĐT của SV. |
 | GET | `/api/auto-schedule/available-courses/` | Toàn bộ lớp mở, **không lọc** (SV-06). |
 | POST | `/api/registrations/` | Đăng ký (BR-01..07). **Bắt buộc** `Idempotency-Key`. |
 | DELETE | `/api/registrations/{id}/` | Hủy (BR-05). |
@@ -534,7 +534,7 @@ lưu vào `request_id` của thực thể với **UNIQUE ở DB** (không dùng 
 ### 8.4. Lỗi
 
 Envelope lỗi nghiệp vụ (`core/exceptions.py`): `{"error": {"code", "message", "details"}}`; lỗi field DRF giữ `{"field": ["…"]}`.
-Cảnh báo không chặn trả ở `warnings: [{code, message}]` của response thành công.
+Cảnh báo không chặn trả ở `warnings: [{code, message}]` của response thành công. Mã cảnh báo: `CHUA_CAU_HINH_GIA` (BR-16), `DUOI_TIN_CHI_TOI_THIEU` (BR-07).
 
 | HTTP | `code` | Khi nào |
 | :--- | :--- | :--- |
