@@ -1,5 +1,6 @@
 import 'package:dang_ky_mon_hoc/core/router/router_web.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -23,13 +24,19 @@ FakeAdapter pdtApi(Map<String, Handler> extra) => FakeAdapter({
   ...extra,
 });
 
-Future<void> openPdt(WidgetTester t, FakeAdapter api, String path) async {
+Future<void> openPdt(
+  WidgetTester t,
+  FakeAdapter api,
+  String path, {
+  List<Override> overrides = const [],
+}) async {
   await pumpApp(
     t,
     router: webRouterProvider,
     adapter: api,
     tokens: signedIn,
     size: bigScreen,
+    overrides: overrides,
   );
   GoRouter.of(t.element(find.byType(Scaffold).first)).go(path);
   await t.pumpAndSettle();

@@ -73,6 +73,26 @@ class TrainingApi {
   Future<void> delete(String path, Object id) =>
       _guard(() => _dio.delete('$path$id/'));
 
+  /// `DELETE` kèm body (hủy đăng ký hộ cần `ly_do`); trả bản ghi sau khi hủy.
+  Future<Json> cancel(String path, Object id, Json body) =>
+      _guard(() async => _json(await _dio.delete('$path$id/', data: body)));
+
+  /// Tải tệp nhị phân (xuất Excel).
+  Future<List<int>> getBytes(
+    String path, {
+    Map<String, Object?> query = const {},
+  }) => _guard(() async {
+    final res = await _dio.get<List<int>>(
+      path,
+      queryParameters: {
+        for (final e in query.entries)
+          if (e.value != null && '${e.value}'.isNotEmpty) e.key: e.value,
+      },
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return res.data ?? const <int>[];
+  });
+
   /// Action kiểu `POST /semesters/1/open/` (đổi trạng thái, gia hạn…).
   Future<Json> action(String path, Object id, String name, [Json? body]) =>
       _guard(() async => _json(await _dio.post('$path$id/$name/', data: body)));

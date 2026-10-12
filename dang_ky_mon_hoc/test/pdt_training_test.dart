@@ -301,6 +301,17 @@ void main() {
         'GET /class-sections/': (_) => reply(200, pageOf([lop(tt: tt)])),
         'GET /class-sections/3/': (_) => reply(200, lop(tt: tt, lich: lichDs)),
         'GET /semesters/': (_) => reply(200, pageOf([hocKy()])),
+        'GET /registrations/': (_) => reply(
+          200,
+          pageOf([
+            {
+              'id': 1,
+              'ma_sv': 'SV2023014',
+              'ho_ten': 'Trần Hoàng Nam',
+              'ngay_dang_ky': '2027-01-10T08:30:00+07:00',
+            },
+          ]),
+        ),
         'POST /schedules/': (_) {
           lichDs = [
             {
@@ -328,6 +339,8 @@ void main() {
 
       await tapText(t, 'Nhập môn lập trình');
       expect(find.text('Lớp chưa có lịch học.'), findsOneWidget);
+      expect(find.text('SV2023014'), findsOneWidget); // sinh viên đăng ký
+      expect(api.queries['GET /registrations/']!['lop_hoc_phan'], 3);
 
       await tapText(t, 'Thêm buổi học');
       await tapText(t, 'Thứ 2');

@@ -8,6 +8,7 @@ import 'package:dang_ky_mon_hoc/core/auth/token_storage.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -107,6 +108,7 @@ Future<void> pumpApp(
   required FakeAdapter adapter,
   Map<String, String> tokens = const {},
   Size size = const Size(1440, 900),
+  List<Override> overrides = const [],
 }) async {
   GoogleFonts.config.allowRuntimeFetching = false;
   FlutterSecureStorage.setMockInitialValues(Map.of(tokens));
@@ -117,6 +119,7 @@ Future<void> pumpApp(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        ...overrides,
         apiClientProvider.overrideWith(
           (ref) => ApiClient(
             baseUrl: 'http://x/api',
