@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/auth/auth_repository.dart';
+import '../../core/download/print_html.dart';
+import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
@@ -9,6 +13,14 @@ import 'registration_format.dart';
 
 /// Đồng hồ, thay được trong test.
 final clockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
+/// Hàm in HTML, thay được trong test; `null` = không in được (bản App).
+final printHtmlProvider = Provider<Future<void> Function(String)?>(
+  (ref) => kIsWeb ? printHtml : null,
+);
+
+String _esc(String s) =>
+    s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 const _rowH = 34.0;
 const _labelW = 56.0;
@@ -136,6 +148,12 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
               ),
             ],
           ),
+          if (_weekly && ref.watch(printHtmlProvider) != null)
+            OutlinedButton.icon(
+              onPressed: () => _print(d),
+              icon: const Icon(Icons.print_outlined, size: 18),
+              label: const Text('In thời khóa biểu'),
+            ),
           if (_weekly)
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -166,6 +184,68 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
         ],
       ),
     );
+  }
+
+  /// Tài liệu in A4 ngang của tuần đang xem: tiêu đề, thông tin SV/GV, bảng tiết × thứ có ngày thật.
+  String _printDocument(Json d, String who) {
+    final lop = [
+      for (final l in d['lop_hoc_phan'] as List) Json.from(l as Map),
+    ];
+    final blocks = _blocks(d, lop);
+    final mon = _weekStart;
+    final rows = StringBuffer();
+    final skip = <String>{}; // ô đã bị rowspan của khối phía trên chiếm
+    for (var t = 1; t <= 15; t++) {
+      rows.write('<tr><th>Tiết $t</th>');
+      for (var day = 0; day < 7; day++) {
+        if (skip.contains('$day-$t')) continue;
+        final b = blocks.where((b) => b.day == day && b.start == t).firstOrNull;
+        if (b == null) {
+          rows.write('<td></td>');
+          continue;
+        }
+        final n = b.end - b.start + 1;
+        for (var k = 1; k < n; k++) {
+          skip.add('$day-${t + k}');
+        }
+        rows.write(
+          '<td class="b" rowspan="$n"><b>${_esc(b.lop.str('ten_mon'))}</b><br>'
+          '${_esc(b.lop.str('ma_lop'))} · ${_esc(b.phong)}<br>'
+          'GV ${_esc(b.lop.str('giao_vien_ten'))}</td>',
+        );
+      }
+      rows.write('</tr>');
+      if (t == 5 || t == 10) {
+        rows.write('<tr class="sep"><td colspan="8"></td></tr>');
+      }
+    }
+    final head = [
+      for (var i = 0; i < 7; i++)
+        '<th>${_days[i]}<br>${_dm(mon.add(Duration(days: i)))}</th>',
+    ].join();
+    return '<!doctype html><html lang="vi"><head><meta charset="utf-8">'
+        '<title>Thời khóa biểu</title><style>'
+        '@page{size:A4 landscape;margin:10mm}'
+        'body{font-family:Arial,sans-serif;font-size:11px;color:#111}'
+        'h1{font-size:16px;margin:0 0 4px}p{margin:0 0 8px;color:#444}'
+        'table{border-collapse:collapse;width:100%;table-layout:fixed}'
+        'th,td{border:1px solid #999;padding:3px;text-align:center;vertical-align:top;height:18px}'
+        'td.b{background:#e8eaf6;text-align:left}tr.sep td{height:2px;padding:0;background:#555}'
+        '</style></head><body>'
+        '<h1>Thời khóa biểu</h1>'
+        '<p>${_esc(who)} · ${_esc(d.str('ten_hk'))} · Tuần ${_dm(mon)} – ${_dm(mon.add(const Duration(days: 6)))}</p>'
+        '<table><tr><th style="width:48px"></th>$head</tr>$rows</table>'
+        '<p style="margin-top:6px">Sáng 1–5 · Chiều 6–10 · Tối 11–15 · In lúc ${formatDateTime(DateTime.now())}</p>'
+        '</body></html>';
+  }
+
+  Future<void> _print(Json d) async {
+    final profile = await ref.read(myProfileProvider.future);
+    final who = [
+      profile.fullName,
+      profile.subtitle,
+    ].where((e) => e.isNotEmpty).join(' · ');
+    await ref.read(printHtmlProvider)!(_printDocument(d, who));
   }
 
   Widget _legend(List<Json> lop) => lop.isEmpty

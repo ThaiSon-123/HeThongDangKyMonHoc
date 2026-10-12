@@ -1,5 +1,6 @@
 import 'package:dang_ky_mon_hoc/features/registration/timetable_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/fake_api.dart';
@@ -47,12 +48,13 @@ Future<void> open(
   WidgetTester t,
   Map<String, dynamic> data, {
   Size size = bigScreen,
+  List<Override> extra = const [],
 }) => openStudent(
   t,
   svApi({'GET /timetable/my/': (_) => reply(200, data)}),
   '/student/schedule',
   size: size,
-  overrides: [clockProvider.overrideWithValue(() => _homNay)],
+  overrides: [clockProvider.overrideWithValue(() => _homNay), ...extra],
 );
 
 void main() {
@@ -166,5 +168,43 @@ void main() {
     );
     expect(find.text('CNTT101-01 · A101'), findsOneWidget);
     expect(t.takeException(), isNull);
+  });
+
+  testWidgets(
+    'nút In (Web): sinh tài liệu A4 ngang có thông tin SV, ngày thật, ô gộp theo số tiết',
+    (t) async {
+      final printed = <String>[];
+      await open(
+        t,
+        tkb([
+          lop(1, 'CNTT101-01', 'Nhập môn <lập trình>', [lich(2, 1, 3, 'A101')]),
+        ]),
+        extra: [
+          printHtmlProvider.overrideWithValue(
+            (html) async => printed.add(html),
+          ),
+        ],
+      );
+      await tapText(t, 'In thời khóa biểu');
+
+      expect(printed, hasLength(1));
+      final html = printed.single;
+      expect(html, contains('size:A4 landscape'));
+      expect(html, contains('Trần Hoàng Nam')); // từ hồ sơ đăng nhập
+      expect(html, contains('Tuần 11/01 – 17/01'));
+      expect(html, contains('rowspan="3"')); // 3 tiết gộp thành một ô
+      expect(html, contains('Nhập môn &lt;lập trình&gt;')); // escape HTML
+      expect(html, contains('CNTT101-01 · A101'));
+    },
+  );
+
+  testWidgets('bản App (không in được): không có nút In', (t) async {
+    await open(
+      t,
+      tkb([
+        lop(1, 'CNTT101-01', 'Môn A', [lich(2, 1, 3, 'A101')]),
+      ]),
+    );
+    expect(find.text('In thời khóa biểu'), findsNothing);
   });
 }

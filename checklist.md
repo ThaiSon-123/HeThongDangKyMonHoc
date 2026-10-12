@@ -93,7 +93,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Lưới tuần của lịch lớp và hạn nhập điểm mặc định (`han_nhap_diem_hieu_luc`, BR-13) trong ngăn chi tiết lớp
 - [x] **Milestone:** PĐT tạo đủ dữ liệu cho 1 học kỳ *(đã chạy luồng học kỳ → lớp → lịch → mở lớp trên API thật)*
 
-## 4. PHA 3 — ĐĂNG KÝ (2 tuần) ⭐ critical — làm theo cặp *(backend + màn hình đã xong; còn nút In)*
+## 4. PHA 3 — ĐĂNG KÝ (2 tuần) ⭐ critical — làm theo cặp ✅
 
 - [x] `registration/services.py`: BR-01 · BR-02 · BR-03 · BR-04 · BR-07
 - [x] BR-06: `SELECT … FOR UPDATE` + đọc lại sĩ số trong lock; hủy giảm sĩ số, không xuống dưới 0
@@ -104,7 +104,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Thông báo xác nhận đăng ký/hủy (trigger)
 - [x] Flutter (PĐT): tab *Sinh viên đăng ký* trong ngăn chi tiết lớp (mockup `PDT-Web-LopHP`)
 - [x] Flutter: SV xem lớp (**gom theo môn, bấm môn để xem các lớp học phần**), đăng ký, hủy, lịch sử (`/student/register`); lọc *Theo CTĐT + kỳ* và *Môn chưa học* (kết hợp được); TKB theo tuần có ngày thật (`/student/schedule`, `/timetable/my/`)
-- [ ] Bản Web: nút **In** thời khóa biểu (`window.print()`, A4 ngang) — chưa làm
+- [x] Bản Web: nút **In** thời khóa biểu — sinh tài liệu HTML A4 ngang riêng (iframe ẩn + `print()`), không in canvas; bản App không có nút
 - [x] _Bổ sung:_ PĐT theo dõi đăng ký + hủy hộ + xuất Excel (`/pdt/registrations`); `GET /api/curriculums/my/`; `GET /api/timetable/my/` dùng chung SV/GV; `tuition/services.tinh_hoc_phi` (BR-15..17)
 - [x] **Milestone:** 2 SV bấm chỗ cuối → chỉ 1 thành công (test trên PostgreSQL thật)
 
