@@ -33,9 +33,8 @@ String failureText(ApiFailure f, String fallback) {
     return 'Bạn không có quyền thực hiện thao tác này.';
   }
   if (f.fields.isNotEmpty) return f.fields.values.first;
-  if (f.code == 'TRANG_THAI_KHONG_HOP_LE' && f.message != null) {
-    return f.message!;
-  }
+  // Lỗi nghiệp vụ (envelope) đã có thông điệp tiếng Việt hướng người dùng — hiện nguyên văn.
+  if (f.code != null && f.message != null) return f.message!;
   return fallback;
 }
 

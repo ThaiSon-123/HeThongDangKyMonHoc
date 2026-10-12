@@ -121,17 +121,18 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] **Milestone:** GV điểm danh, SV xin sửa, GV duyệt *(đã chạy trọn luồng trên API thật với dữ liệu seed)*
 - [x] _Bổ sung:_ `GET /api/class-sections/my/` (GV-03) để GV chọn lớp. _Hạn chế:_ bản App chưa mở được minh chứng (cần plugin mở tệp) — GV xem minh chứng trên Web
 
-## 6. PHA 5 — ĐIỂM (1.5 tuần)
+## 6. PHA 5 — ĐIỂM (1.5 tuần) ✅
 
-- [ ] `GET/PUT /class-sections/{id}/grades/` (nhập cả lớp, `NHAP_TAM`, xem trước BR-10)
-- [ ] `POST …/grades/lock/` `{lock|unlock}` cả lớp — BR-14 (unlock: lớp `DANG_HOC` + trong hạn, audit log)
-- [ ] BR-10 (NULL ≠ 0) · BR-11 (band liên tục, `DAT_KHONG_DAT` → P) · BR-12
-- [ ] BR-13: hạn mặc định có fallback `Semester.ngay_ket_thuc`; PĐT gia hạn / nhập hộ (audit log)
-- [ ] `POST …/grades/approve/` (PĐT, lớp `DA_DONG`) → `KHOA` → BR-25 (GPA, tín chỉ tích lũy, "lần mới nhất" theo `hoc_ky.ngay_bat_dau`)
-- [ ] Đóng lớp: mọi ĐK `DA_DANG_KY` có `Grade ≥ CHINH_THUC`
-- [ ] `/grades/my/` (chỉ `KHOA`)
-- [ ] Flutter: GV nhập điểm (lưới) + xem trước; PĐT duyệt; SV xem điểm **kèm thống kê từng học kỳ** (tín chỉ học/đạt, điểm TB, GPA, xếp loại; `grades/my.thong_ke[]`, BR-25g)
-- [ ] **Milestone:** nhập → khóa → đóng lớp → duyệt → SV xem; GPA đúng
+- [x] `GET/PUT /class-sections/{id}/grades/` (nhập cả lớp, `NHAP_TAM`, xem trước BR-10)
+- [x] `POST …/grades/lock/` `{lock|unlock}` cả lớp — BR-14 (unlock: lớp `DANG_HOC` + trong hạn, audit log)
+- [x] BR-10 (NULL ≠ 0) · BR-11 (band liên tục, `DAT_KHONG_DAT` → P) · BR-12
+- [x] BR-13: hạn mặc định có fallback `Semester.ngay_ket_thuc`; PĐT gia hạn / nhập hộ (audit log)
+- [x] `POST …/grades/approve/` (PĐT, lớp `DA_DONG`) → `KHOA` → BR-25 (GPA, tín chỉ tích lũy, "lần mới nhất" theo `hoc_ky.ngay_bat_dau`)
+- [x] Đóng lớp: mọi ĐK `DA_DANG_KY` có `Grade ≥ CHINH_THUC`
+- [x] `/grades/my/` (chỉ `KHOA`)
+- [x] Flutter: GV nhập điểm (lưới) + xem trước; PĐT duyệt; SV xem điểm **kèm thống kê từng học kỳ** (tín chỉ học/đạt, điểm TB, GPA, xếp loại; `grades/my.thong_ke[]`, BR-25g)
+- [x] **Milestone:** nhập → khóa → đóng lớp → duyệt → SV xem; GPA đúng
+- [x] _Bổ sung:_ `GET /api/grade-sheets/` (danh sách lớp + số dòng điểm theo trạng thái cho PĐT duyệt); `failureText` hiện nguyên thông điệp lỗi nghiệp vụ của server
 
 ## 7. PHA 6 — HỌC PHÍ (1.5 tuần)
 
@@ -231,11 +232,11 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | BR-07 | Tín chỉ 12–24 · cảnh báo GPA < 2.0 → 14 · đọc từ `Semester` (PĐT đặt theo học kỳ) | 3 | [x] |
 | BR-08 | 15 tiết/ngày; `thu` 2..8 (8 = Chủ nhật) | 2 | [x] |
 | BR-09 | Bắt buộc `so_tiet_moi_buoi`, không vượt nhóm tiết | 2 | [x] |
-| BR-10 | Tổng kết 10/40/50 + fallback (NULL ≠ 0) | 5 | [ ] |
-| BR-11 | Thang chữ band liên tục; P/F; đạt = ≠ F | 5 | [ ] |
-| BR-12 | GV chỉ nhập lớp mình | 5 | [ ] |
-| BR-13 | Hạn nhập điểm + gia hạn / nhập hộ | 5 | [ ] |
-| BR-14 | `NHAP_TAM` → `CHINH_THUC` → `KHOA`; unlock có điều kiện | 5 | [ ] |
+| BR-10 | Tổng kết 10/40/50 + fallback (NULL ≠ 0) | 5 | [x] |
+| BR-11 | Thang chữ band liên tục; P/F; đạt = ≠ F | 5 | [x] |
+| BR-12 | GV chỉ nhập lớp mình | 5 | [x] |
+| BR-13 | Hạn nhập điểm + gia hạn / nhập hộ | 5 | [x] |
+| BR-14 | `NHAP_TAM` → `CHINH_THUC` → `KHOA`; unlock có điều kiện | 5 | [x] |
 | BR-15 | Học phí = Σ môn; tính lại bất cứ lúc nào | 6 | [ ] |
 | BR-16 | Tra giá 2 trục `hoc_ky` × khối → ngành → mặc định | 6 | [ ] |
 | BR-17 | LT = giá gốc; TH = `GIA_TH` nếu có | 6 | [ ] |
@@ -246,7 +247,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | BR-22 | JWT; khóa tài khoản chặn login + refresh | 1 | [ ] |
 | BR-23 | SV chỉ dữ liệu mình; GV chỉ lớp mình | 1–10 | [ ] |
 | BR-24 | *(đã gỡ v3.0)* | — | — |
-| BR-25 | GPA, tín chỉ tích lũy, xếp loại | 5 | [ ] |
+| BR-25 | GPA, tín chỉ tích lũy, xếp loại | 5 | [x] |
 | BR-26 | Thu / hoàn tiền: `FOR UPDATE`, không vượt `con_no` / `can_hoan` | 6 | [ ] |
 
 ## 13. ENDPOINT — tick khi có code + test + Swagger
@@ -260,14 +261,14 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 **PĐT:** [ ] profiles/students · [ ] profiles/teachers · [x] faculties · [x] majors · [x] curriculums · [x] curriculum-courses ·
 [x] courses · [x] prerequisites · [x] semesters (+ open/close/window) · [x] class-sections (+ open/close/grade-deadline) ·
 [x] schedules · [x] registrations (GET/DELETE/export) · [x] attendance/sessions (xem) ·
-[ ] class-sections/{id}/grades/approve · [ ] reports/training (+ export)
+[x] class-sections/{id}/grades/approve · [ ] reports/training (+ export)
 
 **SV:** [x] curriculums/my · [x] courses/available · [ ] auto-schedule/available-courses · [x] registrations (POST/DELETE) ·
-[x] registrations/history · [x] timetable/my · [x] attendance/my · [x] attendance/requests (GET/POST) · [ ] grades/my · [ ] tuition/my
+[x] registrations/history · [x] timetable/my · [x] attendance/my · [x] attendance/requests (GET/POST) · [x] grades/my · [ ] tuition/my
 
 **GV:** [x] class-sections/my · [ ] class-sections/{id} · [ ] class-sections/{id}/students ·
 [x] attendance/sessions (GET, sinh sẵn) · [x] attendance/sessions/{id}/records (GET/PUT) · [x] attendance/requests (GET/PATCH, chỉ lớp mình) ·
-[ ] class-sections/{id}/grades (GET/PUT) · [ ] class-sections/{id}/grades/lock · [ ] class-sections/{id}/export
+[x] class-sections/{id}/grades (GET/PUT) · [x] class-sections/{id}/grades/lock · [ ] class-sections/{id}/export
 
 **KT:** [ ] tuition/config · [ ] tuition/pricing · [ ] tuition/discounts · [ ] tuition (GET) · [ ] tuition/calculate ·
 [ ] tuition/payments · [ ] tuition/debts · [ ] tuition/payments/{id}/receipt · [ ] reports/finance (+ export)
@@ -283,12 +284,12 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] BR-04: `THIEU_TIEN_QUYET`; `DA_DAT_MON` (kể cả điểm D); F đăng ký lại được; chu trình tiên quyết → 400
 - [x] BR-07: vượt tối đa · dưới tối thiểu → 201 + warning · GPA < 2.0 vượt 14 · GPA NULL không bị giới hạn
 - [x] Hủy: SV khi lớp `DANG_HOC` → `409`; PĐT hủy hộ lớp `DANG_HOC` OK (lý do bắt buộc, sĩ số giảm, học phí tính lại)
-- [ ] BR-10: thiếu GK → 20/80; CK NULL vs 0
-- [ ] BR-11: 8.45/6.95/5.45 → B/C/D · biên 8.50/7.00/5.50/4.00 → A/B/C/D · 3.99 → F · `DAT_KHONG_DAT` → P (ngoài GPA) · F trong mẫu GPA
-- [ ] BR-25: học lại môn F chỉ tính lần mới nhất (theo `hoc_ky.ngay_bat_dau`); điểm D cộng tín chỉ tích lũy
-- [ ] BR-13: fallback `ngay_ket_thuc` NULL; `QUA_HAN_NHAP_DIEM`; gia hạn / nhập hộ có audit log
-- [ ] BR-14: unlock chỉ khi `DANG_HOC` + trong hạn; `KHOA` bất biến
-- [ ] Đóng lớp chỉ khi đủ `Grade ≥ CHINH_THUC`; học phí không chặn; đóng học kỳ còn lớp → `409`
+- [x] BR-10: thiếu GK → 20/80; CK NULL vs 0
+- [x] BR-11: 8.45/6.95/5.45 → B/C/D · biên 8.50/7.00/5.50/4.00 → A/B/C/D · 3.99 → F · `DAT_KHONG_DAT` → P (ngoài GPA) · F trong mẫu GPA
+- [x] BR-25: học lại môn F chỉ tính lần mới nhất (theo `hoc_ky.ngay_bat_dau`); điểm D cộng tín chỉ tích lũy
+- [x] BR-13: fallback `ngay_ket_thuc` NULL; `QUA_HAN_NHAP_DIEM`; gia hạn / nhập hộ có audit log
+- [x] BR-14: unlock chỉ khi `DANG_HOC` + trong hạn; `KHOA` bất biến
+- [x] Đóng lớp chỉ khi đủ `Grade ≥ CHINH_THUC`; học phí không chặn; đóng học kỳ còn lớp → `409`
 - [x] Buổi sinh sẵn: lớp 01/10–05/11 chỉ thứ 5 → 6 buổi; sửa lịch chỉ đổi buổi tương lai chưa điểm danh; điểm danh buổi tương lai → `TRANG_THAI_KHONG_HOP_LE`
 - [x] Yêu cầu sửa điểm danh: lớp `DA_DONG` không gửi được; đóng lớp → yêu cầu chờ tự từ chối; chỉ GV lớp đó duyệt được
 - [x] Tỷ lệ vắng: mẫu số = tổng buổi theo lịch (1/6 không cờ, 2/6 có cờ); vắng có phép không tính; cờ không chặn nhập CK

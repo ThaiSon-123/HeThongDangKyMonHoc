@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/attendance/student_attendance_screen.dart';
+import '../../features/grades/student_grades_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/register_screen.dart';
 import '../../features/registration/timetable_screen.dart';
@@ -32,7 +33,12 @@ const studentRoutes = RoleRoutes(
       builder: TimetableScreen.new,
     ),
     RouteDef('/student/curriculum', 'Chương trình đào tạo'),
-    RouteDef('/student/grades', 'Điểm'),
+    RouteDef(
+      '/student/grades',
+      'Điểm',
+      subtitle: 'Chỉ hiển thị điểm đã được Phòng đào tạo duyệt',
+      builder: StudentGradesScreen.new,
+    ),
     RouteDef(
       '/student/attendance',
       'Điểm danh',
