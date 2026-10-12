@@ -185,6 +185,11 @@ class ClassSectionViewSet(_PdtViewSet):
     search_fields = ["ma_lop", "mon_hoc__ma_mon", "mon_hoc__ten_mon", "giao_vien__ho_ten"]
     ordering_fields = ["id", "ma_lop", "ngay_bat_dau"]
 
+    def perform_update(self, serializer):
+        lop = super().perform_update(serializer)
+        services.dong_bo_buoi_diem_danh(lop)  # ngày bắt đầu/kết thúc có thể đã đổi (BR-20)
+        return lop
+
     def _doi_trang_thai(self, ham):
         lop = ham(self.get_object())
         self._audit(HanhDong.UPDATE, lop, {"trang_thai": lop.trang_thai})
@@ -231,6 +236,16 @@ class ScheduleViewSet(_CoXoaViewSet):
     search_fields = ["phong", "lop_hoc_phan__ma_lop"]
     ordering_fields = ["id", "thu", "tiet_bat_dau"]
 
+    def perform_create(self, serializer):
+        lich = super().perform_create(serializer)
+        services.dong_bo_buoi_diem_danh(lich.lop_hoc_phan)  # BR-20
+        return lich
+
+    def perform_update(self, serializer):
+        lich = super().perform_update(serializer)
+        services.dong_bo_buoi_diem_danh(lich.lop_hoc_phan)
+        return lich
+
     def perform_destroy(self, instance):
         lop = instance.lop_hoc_phan
         services.kiem_tra_sua_lop(lop)
@@ -239,3 +254,4 @@ class ScheduleViewSet(_CoXoaViewSet):
                 "TRANG_THAI_KHONG_HOP_LE", "Lớp đã mở phải còn ít nhất một lịch học."
             )
         super().perform_destroy(instance)
+        services.dong_bo_buoi_diem_danh(lop)

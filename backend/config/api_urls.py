@@ -3,6 +3,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from apps.attendance import views as attendance
 from apps.auth.views import UserViewSet
 from apps.profiles.views import (
     MeView,
@@ -31,6 +32,10 @@ router.register("semesters", training.SemesterViewSet, basename="semester")
 router.register("class-sections", training.ClassSectionViewSet, basename="class-section")
 router.register("schedules", training.ScheduleViewSet, basename="schedule")
 router.register("registrations", registration.RegistrationViewSet, basename="registration")
+router.register("attendance/sessions", attendance.SessionViewSet, basename="attendance-session")
+router.register(
+    "attendance/requests", attendance.AttendanceRequestViewSet, basename="attendance-request"
+)
 
 urlpatterns = [
     path("health/", HealthView.as_view()),
@@ -40,5 +45,6 @@ urlpatterns = [
     path("courses/available/", registration.AvailableCoursesView.as_view()),
     path("curriculums/my/", registration.MyCurriculumView.as_view()),
     path("timetable/my/", registration.MyTimetableView.as_view()),
+    path("attendance/my/", attendance.MyAttendanceView.as_view()),
     *router.urls,
 ]

@@ -10,6 +10,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.attendance.models import AttendanceRequest
+from apps.attendance.services import dong_bo_buoi
 from apps.config.models import SystemConfig
 from apps.grades.models import Grade, TrangThaiDiem
 from apps.profiles.models import TeacherProfile
@@ -140,6 +141,12 @@ def kiem_tra_sua_lop(lop):
         raise sai_trang_thai("Lớp đã đóng, không sửa được.")
 
 
+def dong_bo_buoi_diem_danh(lop):
+    """BR-20: lớp `MO`/`DANG_HOC` luôn có buổi điểm danh sinh sẵn khớp lịch hiện tại."""
+    if lop.trang_thai in (TrangThaiLop.MO, TrangThaiLop.DANG_HOC):
+        dong_bo_buoi(lop)
+
+
 @transaction.atomic
 def mo_lop(lop):
     lop = ClassSection.objects.select_for_update().select_related("mon_hoc").get(pk=lop.pk)
@@ -151,6 +158,7 @@ def mo_lop(lop):
         raise sai_trang_thai("Lớp chưa có lịch học.")
     lop.trang_thai = TrangThaiLop.MO
     lop.save(update_fields=["trang_thai"])
+    dong_bo_buoi_diem_danh(lop)
     return lop
 
 
