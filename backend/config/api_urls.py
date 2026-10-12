@@ -14,6 +14,7 @@ from apps.profiles.views import (
 )
 from apps.registration import views as registration
 from apps.training import views as training
+from apps.tuition import views as tuition
 from core.views import HealthView
 
 router = DefaultRouter()
@@ -32,6 +33,10 @@ router.register("prerequisites", training.PrerequisiteViewSet, basename="prerequ
 router.register("semesters", training.SemesterViewSet, basename="semester")
 router.register("class-sections", training.ClassSectionViewSet, basename="class-section")
 router.register("schedules", training.ScheduleViewSet, basename="schedule")
+router.register("tuition/config", tuition.TuitionConfigViewSet, basename="tuition-config")
+router.register("tuition/pricing", tuition.PricingViewSet, basename="tuition-pricing")
+router.register("tuition/discounts", tuition.DiscountViewSet, basename="tuition-discount")
+router.register("tuition/payments", tuition.PaymentViewSet, basename="tuition-payment")
 router.register("registrations", registration.RegistrationViewSet, basename="registration")
 router.register("attendance/sessions", attendance.SessionViewSet, basename="attendance-session")
 router.register(
@@ -46,6 +51,12 @@ urlpatterns = [
     path("class-sections/<int:pk>/grades/", grades.ClassGradesView.as_view()),
     path("class-sections/<int:pk>/grades/lock/", grades.ClassGradesLockView.as_view()),
     path("class-sections/<int:pk>/grades/approve/", grades.ClassGradesApproveView.as_view()),
+    path("tuition/my/", tuition.MyTuitionView.as_view()),
+    path("tuition/debts/", tuition.TuitionDebtsView.as_view()),
+    path("tuition/calculate/", tuition.TuitionCalculateView.as_view()),
+    path("tuition/students/", tuition.TuitionStudentsView.as_view()),
+    path("tuition/", tuition.TuitionListView.as_view()),
+    path("tuition/<int:pk>/", tuition.TuitionDetailView.as_view()),
     path("grades/my/", grades.MyGradesView.as_view()),
     path("grade-sheets/", grades.GradeSheetListView.as_view()),
     path("class-sections/my/", training.MyClassSectionsView.as_view()),

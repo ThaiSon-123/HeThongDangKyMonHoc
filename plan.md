@@ -486,7 +486,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET | `/api/attendance/my/` | Điểm danh + tỷ lệ vắng của mình; mỗi lớp kèm `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep` (BR-20). |
 | GET/POST | `/api/attendance/requests/` | SV gửi / xem yêu cầu của mình; GV xem yêu cầu của lớp mình. POST dạng `multipart/form-data` (kèm tệp `minh_chung` tùy chọn); response GET có đường dẫn `minh_chung` (`GET /api/attendance/requests/{id}/minh-chung/`, chỉ GV lớp đó và SV chủ yêu cầu tải được). |
 | GET | `/api/grades/my/` | Điểm `KHOA` + GPA; kèm `thong_ke[]` theo học kỳ: `so_mon`, `tin_chi_hoc`, `tin_chi_dat`, `diem_tb`, `gpa`, `xep_loai` (BR-25g). |
-| GET | `/api/tuition/my/` | Học phí (kèm giá trị dẫn xuất, `chi_tiet[]` từng môn, `payments[]` giao dịch, `thanh_toan{ngan_hang, so_tai_khoan, chu_tai_khoan, noi_dung_ck}` để SV chuyển khoản/quét QR). |
+| GET | `/api/tuition/my/` | Học phí (kèm giá trị dẫn xuất, `chi_tiet[]` từng môn, `payments[]` giao dịch, `thanh_toan{ngan_hang, so_tai_khoan, chu_tai_khoan, noi_dung_ck}` để SV chuyển khoản/quét QR; `noi_dung_ck` = `HOCPHI <ma_sv> HK<id học kỳ>`). |
 
 **Giáo viên**
 
@@ -506,7 +506,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
 | GET/POST/PATCH | `/api/tuition/config/` · `/api/tuition/pricing/` · `/api/tuition/discounts/` | KT-01..05. |
-| GET | `/api/tuition/` · `/api/tuition/debts/` | Danh sách; công nợ (gồm `can_hoan`). |
+| GET | `/api/tuition/` · `/api/tuition/{id}/` · `/api/tuition/debts/` · `/api/tuition/students/` | Danh sách (lọc `?hoc_ky=&nganh=&lop_hoc_phan=&search=&hien_thi=`); chi tiết từng môn + giao dịch; công nợ (gồm `can_hoan`, cờ `qua_han`, lọc `?qua_han=1`); tra SV (chỉ mã SV, họ tên, ngành) để lập miễn giảm. |
 | POST | `/api/tuition/calculate/` | Tính lại hàng loạt theo `?hoc_ky=` (KT-06). |
 | POST | `/api/tuition/payments/` | Ghi `THU`/`HOAN` (BR-26). Hỗ trợ `Idempotency-Key`. |
 | GET | `/api/tuition/payments/{id}/receipt/` | Biên lai Excel (KT-10). |
