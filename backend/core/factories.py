@@ -1,10 +1,20 @@
 """factory-boy dùng chung cho test (không import ở code chạy thật)."""
 
+from datetime import UTC, date, datetime
+
 import factory
 
 from apps.auth.models import Role, User
 from apps.profiles.models import StudentProfile, TeacherProfile
-from apps.training.models import Curriculum, Faculty, Major
+from apps.training.models import (
+    ClassSection,
+    Course,
+    Curriculum,
+    Faculty,
+    Major,
+    Schedule,
+    Semester,
+)
 
 MAT_KHAU = "Matkhau123"
 
@@ -75,3 +85,49 @@ class TeacherProfileFactory(factory.django.DjangoModelFactory):
     ho_ten = factory.Sequence(lambda n: f"Giảng viên {n}")
     khoa = factory.SubFactory(FacultyFactory)
     email = factory.LazyAttribute(lambda o: o.user.email)
+
+
+class CourseFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Course
+
+    ma_mon = factory.Sequence(lambda n: f"MH{n:03d}")
+    ten_mon = factory.Sequence(lambda n: f"Môn {n}")
+    tong_tin_chi = 3
+    tin_chi_ly_thuyet = 3
+    tin_chi_thuc_hanh = 0
+    khoa = factory.SubFactory(FacultyFactory)
+
+
+class SemesterFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Semester
+
+    ten_hk = factory.Sequence(lambda n: f"HK{n}")
+    nam_hoc = "2025-2026"
+    ngay_bat_dau = date(2026, 2, 1)
+    ngay_ket_thuc = date(2026, 6, 30)
+    cua_so_dk_bat_dau = datetime(2026, 2, 1, 1, 0, tzinfo=UTC)
+    cua_so_dk_ket_thuc = datetime(2026, 2, 14, 1, 0, tzinfo=UTC)
+
+
+class ClassSectionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ClassSection
+
+    ma_lop = factory.Sequence(lambda n: f"LOP{n:03d}")
+    mon_hoc = factory.SubFactory(CourseFactory)
+    hoc_ky = factory.SubFactory(SemesterFactory)
+    giao_vien = factory.SubFactory(TeacherProfileFactory)
+    si_so_toi_da = 60
+
+
+class ScheduleFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Schedule
+
+    lop_hoc_phan = factory.SubFactory(ClassSectionFactory)
+    thu = 2
+    tiet_bat_dau = 1
+    so_tiet_moi_buoi = 3
+    phong = "A101"

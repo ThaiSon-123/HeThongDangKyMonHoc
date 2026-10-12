@@ -57,6 +57,7 @@ def test_tao_ho_so_sv_tu_chon_ctdt_hoat_dong_khop_nganh_va_khoa(pdt_api):
 
     assert res.status_code == 201
     assert res.data["ctdt"] == ctdt.id
+    assert res.data["ctdt_ma"] == ctdt.ma_ctdt and res.data["nganh_ten"] == ctdt.nganh.ten_nganh
     assert AuditLog.objects.filter(hanh_dong=HanhDong.CREATE, doi_tuong="StudentProfile").exists()
 
 
@@ -215,3 +216,31 @@ def test_loc_giao_vien_theo_khoa(pdt_api):
     res = pdt_api.get(GV, {"khoa": gv.khoa_id})
 
     assert [r["id"] for r in res.data["results"]] == [gv.id]
+
+
+def test_tai_khoan_chua_co_ho_so_chi_sv_gv_va_loc_theo_vai_tro(pdt_api, login_as):
+    sv_co = StudentProfileFactory()
+    sv_chua = UserFactory(role=Role.SINH_VIEN, username="sv_chua")
+    gv_chua = UserFactory(role=Role.GIAO_VIEN, username="gv_chua")
+    UserFactory(role=Role.KE_TOAN)  # vai trò không cần hồ sơ
+    TeacherProfileFactory()  # GV đã có hồ sơ
+
+    res = pdt_api.get("/api/profiles/pending-accounts/")
+    assert res.status_code == 200
+    assert {u["username"] for u in res.data["results"]} == {"sv_chua", "gv_chua"}
+    assert sv_co.user.username not in str(res.data)
+
+    loc = pdt_api.get("/api/profiles/pending-accounts/?role=GIAO_VIEN")
+    assert [u["id"] for u in loc.data["results"]] == [gv_chua.id]
+    assert sv_chua.id not in [u["id"] for u in loc.data["results"]]
+
+    assert (
+        login_as(UserFactory(role=Role.ADMIN)).get("/api/profiles/pending-accounts/").status_code
+        == 200
+    )
+    assert (
+        login_as(UserFactory(role=Role.SINH_VIEN))
+        .get("/api/profiles/pending-accounts/")
+        .status_code
+        == 403
+    )

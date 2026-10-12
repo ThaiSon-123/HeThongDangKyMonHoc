@@ -23,10 +23,12 @@ class LabeledField extends StatelessWidget {
     this.textInputAction,
     this.enabled = true,
     this.inputFormatters,
+    this.focusNode,
   });
 
   final String label;
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String? hint;
   final String? helper;
   final String? error;
@@ -65,6 +67,7 @@ class LabeledField extends StatelessWidget {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
+          focusNode: focusNode,
           enabled: enabled,
           obscureText: obscure,
           keyboardType: keyboardType,

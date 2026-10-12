@@ -51,7 +51,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
       test hạ tầng `core/` (envelope, phân trang, middleware idempotency, IP client) ·
       `NUM_PROXIES` (rate limit không bị lách bằng `X-Forwarded-For`) · `createsuperuser` tạo `ADMIN`
       (migration `user.0002`) · `pytest-cov` (coverage `auth/services` 96%, tổng 85%)
-- [ ] Thêm `services.py` cho từng app khi bắt đầu pha tương ứng (mục 1.2) — đã có: `auth`, `profiles`
+- [ ] Thêm `services.py` cho từng app khi bắt đầu pha tương ứng (mục 1.2) — đã có: `auth`, `profiles`, `training`
 
 ---
 
@@ -74,20 +74,24 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Màn hình theo `design_mockups/`: đăng nhập (Web 2 cột / App), quên + đặt lại mật khẩu 3 bước, đổi mật khẩu, hồ sơ SV/GV (Web + App), `/web-only`, hộp thoại tài khoản (Admin/PĐT/KT)
 - [x] Khung điều hướng: sidebar navy 260 · thanh icon 600–1024 · header navy + thanh dưới nổi (App) · AppBar + Drawer (3 vai trò Web-only) — đã xem trên trình duyệt với backend thật
 - [x] Màn Admin quản lý tài khoản (`/admin/accounts`, ADM-02): lọc/tìm/phân trang, khóa-mở khóa (xác nhận), tạo, sửa (đổi vai trò có xác nhận), đặt lại mật khẩu, ngăn chi tiết hồ sơ học vụ
-- [ ] Màn PĐT quản lý hồ sơ SV/GV (`/pdt/profiles`, PDT-01) — **chưa làm**: mockup chọn tuần tự Khoa/viện → Ngành → CTĐT, cần thực thể `Faculty` (plan v3.8, làm ở Pha 2) nên để sau Pha 2
-- [ ] **Milestone:** đăng nhập cả 5 role; khóa tài khoản chặn cả token đang dùng *(API đã đạt, còn phần màn hình)*
+- [x] Màn PĐT quản lý hồ sơ SV/GV (`/pdt/profiles`, PDT-01): chip tài khoản chưa có hồ sơ (`GET /profiles/pending-accounts/`), tab Sinh viên / Giáo viên, tạo + sửa hồ sơ
+- [x] **Milestone:** đăng nhập cả 5 role; khóa tài khoản chặn cả token đang dùng *(API và màn hình đã đạt)*
 
-## 3. PHA 2 — DỮ LIỆU ĐÀO TẠO (1.5 tuần)
+## 3. PHA 2 — DỮ LIỆU ĐÀO TẠO (1.5 tuần) ✅
 
-- [ ] CRUD Faculty (PĐT; ngừng chỉ khi không còn ngành/GV hoạt động) · Major · Curriculum (unique `HOAT_DONG` mỗi ngành × khóa) · CurriculumCourse · Course · Prerequisite (chống chu trình, DFS)
-- [ ] Semester + cửa sổ đăng ký (`PATCH /window/`); `open`/`close` (đóng: hết lớp `MO`/`DANG_HOC` → `409`)
-- [ ] ClassSection (`open`/`close`/`grade-deadline`; môn `NGUNG_SU_DUNG` không mở được)
-- [ ] Schedule: BR-08 (`thu` 2..8, Chủ nhật = 8) · BR-09 · phòng/GV không giao tiết cùng `thu`
-- [ ] Job `classes_transition_daily` (mục 6, 7.8)
-- [ ] `AuditLogMixin` áp cho các ViewSet ghi của pha này
-- [ ] _(model + seed đã đồng bộ ở Pha 1; còn API/validate)_ `Semester` thêm `tin_chi_toi_thieu`/`tin_chi_toi_da`/`tin_chi_toi_da_canh_bao` (mặc định 12/24/14, PĐT sửa; bỏ 3 khóa tương ứng khỏi `SystemConfig` và `seed_demo`); `Course.khoa_bo_mon`; lọc `?khoa=` `?nganh=`
-- [ ] Flutter (Web): PĐT quản lý ngành / CTĐT / môn / học kỳ (kèm giới hạn tín chỉ) / lớp / lịch; ô chọn có gợi ý và lọc liên động (ngành → môn → giáo viên cùng khoa)
-- [ ] **Milestone:** PĐT tạo đủ dữ liệu cho 1 học kỳ
+**Backend (156 test qua; coverage `training` 99%; đã chạy thử trên PostgreSQL qua Docker):**
+- [x] CRUD Faculty (PĐT; ngừng chỉ khi không còn ngành/GV hoạt động) · Major · Curriculum (unique `HOAT_DONG` mỗi ngành × khóa) · CurriculumCourse · Course (`tong_tin_chi` server tính) · Prerequisite (chống chu trình, DFS) — `GET` kèm số ngành/GV/môn (khoa), số CTĐT (ngành)
+- [x] Semester + cửa sổ đăng ký (`PATCH /window/`); `open`/`close` (đóng: còn lớp `MO`/`DANG_HOC` → `409`)
+- [x] ClassSection (`open`/`close`/`grade-deadline`; môn `NGUNG_SU_DUNG` không mở được; lớp `DA_DONG` không sửa; ngày lớp nằm trong học kỳ)
+- [x] Schedule: BR-08 (`thu` 2..8, Chủ nhật = 8) · BR-09 · phòng/GV không giao tiết cùng `thu` (cùng học kỳ)
+- [x] Job `classes_transition_daily` (mục 6, 7.8) — idempotent
+- [x] `AuditLogMixin` áp cho các ViewSet ghi của pha này (kèm audit cho `open`/`close`/`grade-deadline`)
+- [x] `Semester` `tin_chi_toi_thieu`/`tin_chi_toi_da`/`tin_chi_toi_da_canh_bao` (mặc định 12/24/14, PĐT sửa, có validate); lọc `?khoa=` `?nganh=`
+
+**Flutter (Web, 79 test qua; bản App đã kiểm tra không chứa màn PĐT/Admin):**
+- [x] PĐT: Khoa/viện · Ngành · CTĐT & gán môn · Môn học & tiên quyết · Học kỳ (cửa sổ + giới hạn tín chỉ + mở/đóng) · Lớp học phần & lịch (mở/đóng, gia hạn nhập điểm); ô chọn có gợi ý và lọc liên động (ngành → môn → giáo viên cùng khoa)
+- [x] Lưới tuần của lịch lớp và hạn nhập điểm mặc định (`han_nhap_diem_hieu_luc`, BR-13) trong ngăn chi tiết lớp
+- [x] **Milestone:** PĐT tạo đủ dữ liệu cho 1 học kỳ *(đã chạy luồng học kỳ → lớp → lịch → mở lớp trên API thật)*
 
 ## 4. PHA 3 — ĐĂNG KÝ (2 tuần) ⭐ critical — làm theo cặp
 
@@ -98,6 +102,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [ ] Tính lại học phí sau đăng ký/hủy — **ngoài transaction, không chặn**; lỗi → `warnings[]` (`CHUA_CAU_HINH_GIA`)
 - [ ] `GET /api/courses/available/` · `/registrations/history/` · `/registrations/` (PĐT) · `/registrations/export/`
 - [ ] Thông báo xác nhận đăng ký/hủy (trigger)
+- [ ] Flutter (PĐT): tab *Sinh viên đăng ký* trong ngăn chi tiết lớp (mockup `PDT-Web-LopHP`)
 - [ ] Flutter: SV xem lớp (**gom theo môn, bấm môn để xem các lớp học phần**), đăng ký, hủy, lịch sử, TKB (`/timetable/my/`) — lọc *Theo CTĐT + kỳ* và *Môn chưa học* (kết hợp được) — TKB theo tuần có ngày thật, bản Web có nút **In**
 - [ ] **Milestone:** 2 SV bấm chỗ cuối → chỉ 1 thành công (test trên PostgreSQL thật)
 
@@ -108,6 +113,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [ ] Tỷ lệ vắng = `VANG_KHONG_PHEP` / **tổng số buổi theo lịch** (cố định cả khóa; vắng có phép không tính) + cờ cảnh báo (`max_absent_pct`); `/attendance/my/` trả `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep`; **không** chặn nhập điểm
 - [ ] _(model + ràng buộc 1 yêu cầu chờ duyệt/buổi đã xong; còn API)_ `AttendanceRequest`: SV gửi (trạng thái mong muốn + `di_tre_mong_muon`, lý do bắt buộc, `minh_chung` tùy chọn ≤ 5 MB, `multipart`) · **chỉ GV (lớp mình)** xem minh chứng và duyệt → ghi lại `Attendance` (PĐT không duyệt); chỉ gửi/duyệt khi lớp `DANG_HOC`; đóng lớp ⇒ yêu cầu chờ tự `TU_CHOI` (`ghi_chu` quá hạn)
 - [ ] `/attendance/my/` · `/attendance/sessions/?lop_hoc_phan=` (danh sách buổi sinh sẵn)
+- [ ] Flutter (PĐT): tab *Điểm danh* (chỉ xem) trong ngăn chi tiết lớp
 - [ ] Flutter: GV điểm danh cả lớp; SV xem + xin sửa (chọn trạng thái mong muốn, lý do bắt buộc, minh chứng tùy chọn); **chỉ GV (lớp mình)** xem minh chứng và duyệt
 - [ ] Flutter: GV xem thời khóa biểu theo tuần (`/teacher/schedule`, dùng `/timetable/my/`); bản Web có nút **In** (`window.print()`, A4 ngang)
 - [ ] **Milestone:** GV điểm danh, SV xin sửa, GV duyệt
@@ -220,8 +226,8 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | BR-05 | Hủy: SV (lớp `MO` + cửa sổ) · PĐT (lớp `MO`/`DANG_HOC`) | 3 | [ ] |
 | BR-06 | Transaction + `FOR UPDATE` chống overbook | 3 | [ ] |
 | BR-07 | Tín chỉ 12–24 · cảnh báo GPA < 2.0 → 14 · đọc từ `Semester` (PĐT đặt theo học kỳ) | 3 | [ ] |
-| BR-08 | 15 tiết/ngày; `thu` 2..8 (8 = Chủ nhật) | 2 | [ ] |
-| BR-09 | Bắt buộc `so_tiet_moi_buoi`, không vượt nhóm tiết | 2 | [ ] |
+| BR-08 | 15 tiết/ngày; `thu` 2..8 (8 = Chủ nhật) | 2 | [x] |
+| BR-09 | Bắt buộc `so_tiet_moi_buoi`, không vượt nhóm tiết | 2 | [x] |
 | BR-10 | Tổng kết 10/40/50 + fallback (NULL ≠ 0) | 5 | [ ] |
 | BR-11 | Thang chữ band liên tục; P/F; đạt = ≠ F | 5 | [ ] |
 | BR-12 | GV chỉ nhập lớp mình | 5 | [ ] |
@@ -248,9 +254,9 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 **Admin:** [ ] users · [ ] users/{id}/lock · [ ] users/{id}/reset-password · [ ] admin/permissions (GET) ·
 [ ] admin/config · [ ] admin/audit-logs · [ ] admin/backups (GET/POST)
 
-**PĐT:** [ ] profiles/students · [ ] profiles/teachers · [ ] faculties · [ ] majors · [ ] curriculums · [ ] curriculum-courses ·
-[ ] courses · [ ] prerequisites · [ ] semesters (+ open/close/window) · [ ] class-sections (+ open/close/grade-deadline) ·
-[ ] schedules · [ ] registrations (GET/DELETE/export) · [ ] attendance/sessions (xem) ·
+**PĐT:** [ ] profiles/students · [ ] profiles/teachers · [x] faculties · [x] majors · [x] curriculums · [x] curriculum-courses ·
+[x] courses · [x] prerequisites · [x] semesters (+ open/close/window) · [x] class-sections (+ open/close/grade-deadline) ·
+[x] schedules · [ ] registrations (GET/DELETE/export) · [ ] attendance/sessions (xem) ·
 [ ] class-sections/{id}/grades/approve · [ ] reports/training (+ export)
 
 **SV:** [ ] curriculums/my · [ ] courses/available · [ ] auto-schedule/available-courses · [ ] registrations (POST/DELETE) ·

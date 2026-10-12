@@ -1,4 +1,4 @@
-"""4 job nền — lịch ở config/celery.py (plan.md mục 7.8). Pha 0: stub, trừ flush_expired_tokens."""
+"""4 job nền — lịch ở config/celery.py (plan.md mục 7.8). đã làm: classes_transition_daily, flush_expired_tokens; còn lại stub."""
 
 from django.core.management import call_command
 
@@ -7,8 +7,10 @@ from config.celery import app
 
 @app.task(name="jobs.classes_transition_daily")
 def classes_transition_daily():
-    # TODO(Pha 2): mục 6 — MO→DANG_HOC→DA_DONG
-    pass
+    """Mục 6/7.8: `MO` qua ngày bắt đầu → `DANG_HOC`; `DANG_HOC` đủ điều kiện → `DA_DONG`."""
+    from apps.training.services import chuyen_trang_thai_lop_hang_ngay
+
+    return chuyen_trang_thai_lop_hang_ngay()
 
 
 @app.task(name="jobs.tuition_overdue_notify")

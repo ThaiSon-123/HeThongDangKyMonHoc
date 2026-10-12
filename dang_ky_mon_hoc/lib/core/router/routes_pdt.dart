@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../features/training/classes_screen.dart';
+import '../../features/training/courses_screen.dart';
+import '../../features/training/curriculums_screen.dart';
+import '../../features/training/faculties_screen.dart';
+import '../../features/training/majors_screen.dart';
+import '../../features/training/profiles_screen.dart';
+import '../../features/training/semesters_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
 
@@ -7,13 +14,25 @@ const pdtRoutes = RoleRoutes(
   UserRole.pdt,
   [
     RouteDef('/pdt', 'Tổng quan'),
-    RouteDef('/pdt/profiles', 'Hồ sơ SV / GV'),
-    RouteDef('/pdt/faculties', 'Khoa / viện'),
-    RouteDef('/pdt/majors', 'Ngành'),
-    RouteDef('/pdt/curriculums', 'Chương trình đào tạo'),
-    RouteDef('/pdt/courses', 'Môn học'),
-    RouteDef('/pdt/semesters', 'Học kỳ'),
-    RouteDef('/pdt/classes', 'Lớp học phần'),
+    RouteDef('/pdt/profiles', 'Hồ sơ SV / GV', builder: ProfilesScreen.new),
+    RouteDef('/pdt/faculties', 'Khoa / viện', builder: FacultiesScreen.new),
+    RouteDef('/pdt/majors', 'Ngành', builder: MajorsScreen.new),
+    RouteDef(
+      '/pdt/curriculums',
+      'CTĐT & gán môn',
+      builder: CurriculumsScreen.new,
+    ),
+    RouteDef(
+      '/pdt/courses',
+      'Môn học & tiên quyết',
+      builder: CoursesScreen.new,
+    ),
+    RouteDef(
+      '/pdt/semesters',
+      'Học kỳ & cửa sổ đăng ký',
+      builder: SemestersScreen.new,
+    ),
+    RouteDef('/pdt/classes', 'Lớp học phần & lịch', builder: ClassesScreen.new),
     RouteDef('/pdt/registrations', 'Đăng ký'),
     RouteDef('/pdt/grade-sheets', 'Duyệt điểm'),
     RouteDef('/pdt/reports', 'Báo cáo'),
