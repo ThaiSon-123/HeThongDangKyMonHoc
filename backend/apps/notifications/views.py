@@ -147,12 +147,16 @@ class NotificationViewSet(viewsets.GenericViewSet):
         return Response(status=204)
 
     @extend_schema(
-        parameters=[OpenApiParameter("search", str), OpenApiParameter("role", str)],
+        parameters=[
+            OpenApiParameter("search", str),
+            OpenApiParameter("role", str),
+            OpenApiParameter("page_size", int),
+        ],
         responses=RecipientSerializer(many=True),
     )
     @action(detail=False, methods=["get"])
     def recipients(self, request):
-        """Tra người nhận để gửi riêng (`USER`): tối đa 20 kết quả. Giáo viên không dùng."""
+        """Tra người nhận để gửi riêng (`USER`), phân trang. Giáo viên không dùng."""
         if request.user.role == Role.GIAO_VIEN:
             raise business_error(Codes.KHONG_CO_QUYEN, "Giáo viên chỉ gửi theo lớp.")
         qs = User.objects.filter(is_locked=False)
@@ -168,5 +172,6 @@ class NotificationViewSet(viewsets.GenericViewSet):
                 | Q(giang_vien__ho_ten__icontains=t)
                 | Q(giang_vien__ma_gv__icontains=t)
             )
-        qs = qs.select_related("sinh_vien", "giang_vien").order_by("username")[:20]
-        return Response(RecipientSerializer(qs, many=True).data)
+        qs = qs.select_related("sinh_vien", "giang_vien").order_by("username")
+        page = self.paginate_queryset(qs)
+        return self.get_paginated_response(RecipientSerializer(page, many=True).data)

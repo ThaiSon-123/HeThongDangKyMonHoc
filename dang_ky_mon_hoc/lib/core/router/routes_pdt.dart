@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../features/notifications/audit_log_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/grades/pdt_grade_sheets_screen.dart';
 import '../../features/training/classes_screen.dart';
 import '../../features/training/courses_screen.dart';
@@ -47,8 +49,18 @@ const pdtRoutes = RoleRoutes(
       builder: PdtGradeSheetsScreen.new,
     ),
     RouteDef('/pdt/reports', 'Báo cáo'),
-    RouteDef('/pdt/notifications', 'Thông báo'),
-    RouteDef('/pdt/logs', 'Nhật ký'),
+    RouteDef(
+      '/pdt/notifications',
+      'Thông báo',
+      subtitle: 'Nhận thông báo và soạn gửi theo vai trò, lớp hoặc từng người',
+      builder: NotificationsScreen.new,
+    ),
+    RouteDef(
+      '/pdt/logs',
+      'Nhật ký thao tác',
+      subtitle: 'Lịch sử thao tác đào tạo — bấm một dòng để xem chi tiết',
+      builder: AuditLogScreen.new,
+    ),
   ],
   brandSub: 'Cổng phòng đào tạo',
   groups: [

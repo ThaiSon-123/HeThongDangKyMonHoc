@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../features/notifications/audit_log_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/tuition/tuition_config_screen.dart';
 import '../../features/tuition/tuition_ledger_screens.dart';
 import '../auth/auth_user.dart';
@@ -28,8 +30,18 @@ const accountantRoutes = RoleRoutes(
       builder: DebtsScreen.new,
     ),
     RouteDef('/accountant/reports', 'Báo cáo'),
-    RouteDef('/accountant/notifications', 'Thông báo'),
-    RouteDef('/accountant/logs', 'Nhật ký'),
+    RouteDef(
+      '/accountant/notifications',
+      'Thông báo',
+      subtitle: 'Nhận thông báo và soạn gửi theo vai trò, lớp hoặc từng người',
+      builder: NotificationsScreen.new,
+    ),
+    RouteDef(
+      '/accountant/logs',
+      'Nhật ký thao tác',
+      subtitle: 'Lịch sử thao tác tài chính — bấm một dòng để xem chi tiết',
+      builder: AuditLogScreen.new,
+    ),
   ],
   brandSub: 'Cổng kế toán',
   groups: [

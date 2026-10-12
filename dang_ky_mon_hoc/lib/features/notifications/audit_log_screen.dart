@@ -1,0 +1,247 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/auth/auth_provider.dart';
+import '../../core/auth/auth_user.dart';
+import '../../core/format.dart';
+import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/app_dialog.dart';
+import '../../shared/widgets/status_chip.dart';
+import '../training/resource_list.dart';
+import '../training/training_api.dart';
+import '../training/training_widgets.dart' show monoStyle;
+
+const _hanhDong = <(String, String)>[
+  ('', 'Tất cả'),
+  ('CREATE', 'Tạo mới'),
+  ('UPDATE', 'Cập nhật'),
+  ('DELETE', 'Xóa'),
+  ('LOGIN', 'Đăng nhập'),
+  ('PHAN_QUYEN', 'Phân quyền'),
+];
+
+String hanhDongLabel(String h) =>
+    _hanhDong.firstWhere((e) => e.$1 == h, orElse: () => (h, h)).$2;
+
+const _tenDoiTuong = {
+  'Faculty': 'Khoa/viện',
+  'Major': 'Ngành',
+  'Curriculum': 'CTĐT',
+  'CurriculumCourse': 'Môn trong CTĐT',
+  'Course': 'Môn học',
+  'Prerequisite': 'Tiên quyết',
+  'Semester': 'Học kỳ',
+  'ClassSection': 'Lớp học phần',
+  'Schedule': 'Lịch học',
+  'Registration': 'Đăng ký',
+  'AttendanceSession': 'Buổi điểm danh',
+  'AttendanceRequest': 'Yêu cầu sửa điểm danh',
+  'Grade': 'Điểm',
+  'HocPhanGia': 'Bảng giá',
+  'TuitionConfig': 'Hạn đóng học phí',
+  'Discount': 'Miễn giảm',
+  'Payment': 'Thanh toán',
+  'Tuition': 'Học phí',
+  'Notification': 'Thông báo',
+  'User': 'Tài khoản',
+  'StudentProfile': 'Hồ sơ SV',
+  'TeacherProfile': 'Hồ sơ GV',
+};
+
+/// `ten_hanh_dong · k=v · k=v` — tóm tắt `chi_tiet` cho cột "Tóm tắt".
+String tomTat(Json log) {
+  final ct = log['chi_tiet'];
+  if (ct is! Map || ct.isEmpty) return '—';
+  final nguon = ct['serialized'] is Map ? ct['serialized'] as Map : ct;
+  final parts = <String>[
+    if (ct['hanh_dong'] != null) '${ct['hanh_dong']}',
+    for (final e in nguon.entries.where((e) => e.key != 'hanh_dong').take(3))
+      '${e.key}=${e.value}',
+  ];
+  return parts.isEmpty ? '—' : parts.join(' · ');
+}
+
+/// Nhật ký thao tác (ADM-06) — mockup `AD-Web-NhatKy`: Admin xem tất cả, PĐT chỉ phạm vi đào tạo,
+/// KT chỉ phạm vi tài chính (server tự lọc). Bấm một dòng để xem toàn bộ chi tiết.
+class AuditLogScreen extends ConsumerStatefulWidget {
+  const AuditLogScreen({super.key});
+
+  @override
+  ConsumerState<AuditLogScreen> createState() => _AuditLogScreenState();
+}
+
+class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
+  final _ctl = ResourceListController();
+  DateTime? _tu, _den;
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  String _ymd(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> _chonNgay(bool tu) async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: (tu ? _tu : _den) ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (d == null) return;
+    setState(() => tu ? _tu = d : _den = d);
+    _ctl.setFilter(tu ? 'tu_ngay' : 'den_ngay', _ymd(d));
+  }
+
+  void _xoaNgay() {
+    setState(() {
+      _tu = null;
+      _den = null;
+    });
+    _ctl
+      ..filters.remove('tu_ngay')
+      ..setFilter('den_ngay', null);
+  }
+
+  Future<void> _xem(Json r) => showDialog<void>(
+    context: context,
+    builder: (_) => AppDialog(
+      title: 'Chi tiết thao tác #${r.id}',
+      maxWidth: 640,
+      actions: [
+        DialogButton(
+          'Đóng',
+          onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${r.str('nguoi_thuc_hien')} · ${hanhDongLabel(r.str('hanh_dong'))} · '
+            '${_tenDoiTuong[r.str('doi_tuong')] ?? r.str('doi_tuong')} #${r.str('doi_tuong_id')}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            '${formatIso(r.str('thoi_gian'))}${r['ip'] != null ? ' · IP ${r.str('ip')}' : ''}',
+            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F5FA),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: SelectableText(
+              const JsonEncoder.withIndent('  ').convert(r['chi_tiet']),
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final admin =
+        ref.watch(authControllerProvider).user?.role == UserRole.admin;
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListToolbar(
+            children: [
+              SearchBox(
+                controller: _ctl,
+                label: 'Tìm kiếm',
+                hint: 'Người thực hiện hoặc đối tượng',
+              ),
+              FilterDropdown(
+                controller: _ctl,
+                filterKey: 'hanh_dong',
+                label: 'Hành động',
+                options: _hanhDong,
+              ),
+              if (admin)
+                FilterDropdown(
+                  controller: _ctl,
+                  filterKey: 'scope',
+                  label: 'Phạm vi',
+                  options: const [
+                    ('', 'Tất cả'),
+                    ('training', 'Đào tạo'),
+                    ('finance', 'Tài chính'),
+                    ('other', 'Hệ thống'),
+                  ],
+                ),
+              OutlinedButton(
+                onPressed: () => _chonNgay(true),
+                child: Text(_tu == null ? 'Từ ngày' : 'Từ ${_ymd(_tu!)}'),
+              ),
+              OutlinedButton(
+                onPressed: () => _chonNgay(false),
+                child: Text(_den == null ? 'Đến ngày' : 'Đến ${_ymd(_den!)}'),
+              ),
+              if (_tu != null || _den != null)
+                TextButton(
+                  onPressed: _xoaNgay,
+                  child: const Text('Xóa lọc ngày'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ResourceList(
+            controller: _ctl,
+            path: '/admin/audit-logs/',
+            minWidth: 900,
+            emptyText: 'Chưa có thao tác nào phù hợp.',
+            onRowTap: _xem,
+            columns: const [
+              ListColumn('Thời gian', width: 150),
+              ListColumn('Người thực hiện', width: 150),
+              ListColumn('Hành động', width: 120),
+              ListColumn('Đối tượng', flex: 2),
+              ListColumn('Tóm tắt', flex: 3),
+            ],
+            cells: (r) => [
+              Text(
+                formatIso(r.str('thoi_gian')),
+                style: const TextStyle(fontSize: 13),
+              ),
+              Text(r.str('nguoi_thuc_hien'), overflow: TextOverflow.ellipsis),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: StatusChip.of(
+                  hanhDongLabel(r.str('hanh_dong')),
+                  switch (r.str('hanh_dong')) {
+                    'CREATE' => StatusChip.green,
+                    'DELETE' => StatusChip.red,
+                    'UPDATE' => StatusChip.indigo,
+                    _ => StatusChip.gray,
+                  },
+                ),
+              ),
+              Text(
+                '${_tenDoiTuong[r.str('doi_tuong')] ?? r.str('doi_tuong')} #${r.str('doi_tuong_id')}',
+                style: monoStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                tomTat(r),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: AppColors.label),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

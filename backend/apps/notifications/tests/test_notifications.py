@@ -218,9 +218,14 @@ def test_tra_nguoi_nhan_theo_ten_ma_va_vai_tro(login_as):
     gv = TeacherProfileFactory(ho_ten="Trần Thị Bình")
     pdt = login_as(UserFactory(role=Role.PHONG_DAO_TAO))
     r = pdt.get(f"{URL}recipients/?search=SV12345")
-    assert [(x["id"], x["full_name"]) for x in r.data] == [(sv.user_id, "Nguyễn Văn An")]
-    assert [x["id"] for x in pdt.get(f"{URL}recipients/?search=Bình").data] == [gv.user_id]
-    assert all(x["role"] == "GIAO_VIEN" for x in pdt.get(f"{URL}recipients/?role=GIAO_VIEN").data)
+    assert [(x["id"], x["full_name"]) for x in r.data["results"]] == [(sv.user_id, "Nguyễn Văn An")]
+    assert [x["id"] for x in pdt.get(f"{URL}recipients/?search=Bình").data["results"]] == [
+        gv.user_id
+    ]
+    assert all(
+        x["role"] == "GIAO_VIEN"
+        for x in pdt.get(f"{URL}recipients/?role=GIAO_VIEN").data["results"]
+    )
     assert login_as(lop_gv()).get(f"{URL}recipients/").status_code == 403  # GV chỉ gửi theo lớp
     assert login_as(sv.user).get(f"{URL}recipients/").status_code == 403
 

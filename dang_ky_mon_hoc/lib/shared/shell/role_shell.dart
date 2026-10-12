@@ -8,6 +8,7 @@ import '../../core/router/role_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../features/profile/my_profile.dart';
 import 'app_chrome.dart';
+import 'bell_badge.dart';
 import 'sidebar.dart';
 
 /// Khung điều hướng theo vai trò (design.md 1.8 + 2.2):
@@ -217,18 +218,20 @@ class _PageHeader extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () => context.go(config.notificationsPath),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: AppColors.cardShadow,
-                ),
-                child: const Icon(
-                  Icons.notifications_none_outlined,
-                  color: AppColors.navy,
-                  size: 22,
+              child: BellBadge(
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: AppColors.cardShadow,
+                  ),
+                  child: const Icon(
+                    Icons.notifications_none_outlined,
+                    color: AppColors.navy,
+                    size: 22,
+                  ),
                 ),
               ),
             ),

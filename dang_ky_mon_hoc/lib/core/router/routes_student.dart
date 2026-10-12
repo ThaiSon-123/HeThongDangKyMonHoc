@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/attendance/student_attendance_screen.dart';
 import '../../features/grades/student_grades_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/register_screen.dart';
 import '../../features/registration/timetable_screen.dart';
@@ -59,7 +60,12 @@ const studentRoutes = RoleRoutes(
           'Chuyển khoản bằng mã QR — Phòng Kế toán xác nhận sau khi nhận tiền',
       builder: StudentPayScreen.new,
     ),
-    RouteDef('/student/notifications', 'Thông báo'),
+    RouteDef(
+      '/student/notifications',
+      'Thông báo',
+      subtitle: 'Nhận thông báo từ nhà trường, giáo viên và hệ thống',
+      builder: NotificationsScreen.new,
+    ),
   ],
   brandSub: 'Cổng sinh viên',
   groups: [

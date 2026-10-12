@@ -150,11 +150,12 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 ## 8. PHA 7 — THÔNG BÁO & AUDIT (1 tuần)
 
-- [ ] Notification (`ROLE`/`CLASS`/`USER`) + NotificationRead; `read`, `read-all`; thu hồi
-- [ ] Trigger: đăng ký/hủy · lớp đổi lịch/phòng · điểm `KHOA` · học phí quá hạn
-- [ ] `AuditLogMixin` đủ cho mọi ViewSet ghi; `GET /admin/audit-logs/` lọc scope theo role
-- [ ] Flutter: thông báo cho 5 role; Web: màn audit log
-- [ ] **Milestone:** gửi đúng đích, log đầy đủ
+- [x] Notification (`ROLE`/`CLASS`/`USER`) + NotificationRead; `read`, `read-all`; thu hồi
+- [x] Trigger: đăng ký/hủy · lớp đổi lịch/phòng · điểm `KHOA` · học phí quá hạn
+- [x] `AuditLogMixin` đủ cho mọi ViewSet ghi; `GET /admin/audit-logs/` lọc scope theo role
+- [x] Flutter: thông báo cho 5 role (hộp thư, chuông + số chưa đọc, gửi theo vai trò/lớp/người, thu hồi); Web: màn nhật ký (lọc hành động/phạm vi/ngày, xem chi tiết)
+- [x] **Milestone:** gửi đúng đích, log đầy đủ
+- [x] _Ghi chú:_ phạm vi hiển thị thông báo lọc ở tầng Python (đủ cho quy mô đồ án; chuyển sang SQL nếu hộp thư lớn). GV chỉ gửi cho lớp mình; Admin không gửi cho lớp
 
 ## 9. PHA 8–10
 
@@ -254,10 +255,10 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 ## 13. ENDPOINT — tick khi có code + test + Swagger
 
 **Auth & chung:** [ ] login · [ ] logout · [ ] refresh · [ ] forgot-password · [ ] reset-password · [ ] change-password ·
-[ ] profiles/me · [ ] health · [ ] notifications (list / read / read-all / gửi / thu hồi)
+[ ] profiles/me · [ ] health · [x] notifications (list / read / read-all / gửi / thu hồi)
 
 **Admin:** [ ] users · [ ] users/{id}/lock · [ ] users/{id}/reset-password · [ ] admin/permissions (GET) ·
-[ ] admin/config · [ ] admin/audit-logs · [ ] admin/backups (GET/POST)
+[ ] admin/config · [x] admin/audit-logs · [ ] admin/backups (GET/POST)
 
 **PĐT:** [ ] profiles/students · [ ] profiles/teachers · [x] faculties · [x] majors · [x] curriculums · [x] curriculum-courses ·
 [x] courses · [x] prerequisites · [x] semesters (+ open/close/window) · [x] class-sections (+ open/close/grade-deadline) ·
