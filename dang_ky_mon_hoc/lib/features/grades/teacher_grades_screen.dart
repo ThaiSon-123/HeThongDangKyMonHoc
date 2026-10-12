@@ -38,7 +38,9 @@ class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
         return ListErrorCard(
           onRetry: () {
             final next = _load();
-            setState(() => _classes = next);
+            setState(() {
+              _classes = next;
+            });
           },
         );
       }

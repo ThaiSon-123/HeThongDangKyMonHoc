@@ -40,7 +40,7 @@ from apps.training.serializers import (
 from core.exceptions import business_error
 from core.mixins import AuditLogMixin
 from core.pagination import StandardPagination
-from core.permissions import IsGiaoVien, IsPhongDaoTao
+from core.permissions import IsGiaoVien, IsPhongDaoTao, PdtWriteKtRead
 
 
 class _PdtViewSet(AuditLogMixin):
@@ -71,6 +71,7 @@ class FacultyViewSet(_PdtViewSet):
 
 
 class MajorViewSet(_PdtViewSet):
+    permission_classes = [PdtWriteKtRead]  # KT chỉ đọc
     audit_model = "Major"
     queryset = Major.objects.select_related("khoa").annotate(
         so_ctdt=Count("ctdts", filter=Q(ctdts__trang_thai=TrangThaiDung.HOAT_DONG))
@@ -129,6 +130,7 @@ class PrerequisiteViewSet(_CoXoaViewSet):
 
 
 class SemesterViewSet(_PdtViewSet):
+    permission_classes = [PdtWriteKtRead]  # KT chỉ đọc
     audit_model = "Semester"
     queryset = Semester.objects.all()
     serializer_class = SemesterSerializer
@@ -179,6 +181,7 @@ class ClassSectionFilter(django_filters.FilterSet):
 
 
 class ClassSectionViewSet(_PdtViewSet):
+    permission_classes = [PdtWriteKtRead]  # KT chỉ đọc
     audit_model = "ClassSection"
     queryset = ClassSection.objects.select_related(
         "mon_hoc", "hoc_ky", "giao_vien"

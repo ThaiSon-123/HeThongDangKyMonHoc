@@ -5,6 +5,7 @@ import '../../features/grades/student_grades_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/register_screen.dart';
 import '../../features/registration/timetable_screen.dart';
+import '../../features/tuition/student_tuition_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
 
@@ -45,8 +46,19 @@ const studentRoutes = RoleRoutes(
       subtitle: 'Tỷ lệ vắng, từng buổi học và yêu cầu sửa điểm danh',
       builder: StudentAttendanceScreen.new,
     ),
-    RouteDef('/student/tuition', 'Học phí'),
-    RouteDef('/student/tuition/pay', 'Thanh toán học phí'),
+    RouteDef(
+      '/student/tuition',
+      'Học phí',
+      subtitle: 'Tổng hợp học phí, miễn giảm, đã nộp và công nợ',
+      builder: StudentTuitionScreen.new,
+    ),
+    RouteDef(
+      '/student/tuition/pay',
+      'Thanh toán học phí',
+      subtitle:
+          'Chuyển khoản bằng mã QR — Phòng Kế toán xác nhận sau khi nhận tiền',
+      builder: StudentPayScreen.new,
+    ),
     RouteDef('/student/notifications', 'Thông báo'),
   ],
   brandSub: 'Cổng sinh viên',

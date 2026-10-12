@@ -24,7 +24,9 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
 
   void _reload() {
     final next = ref.read(trainingApiProvider).get('/grades/my/');
-    setState(() => _data = next);
+    setState(() {
+      _data = next;
+    });
   }
 
   @override

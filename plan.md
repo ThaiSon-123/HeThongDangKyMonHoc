@@ -584,6 +584,8 @@ Cảnh báo không chặn trả ở `warnings: [{code, message}]` của response
 | Báo cáo tài chính / xuất | ✗ | ✗ | ✗ | ✗ | ✓ |
 | Xuất danh sách lớp | ✗ | ✓ | ✗ | *(lớp mình)* | ✗ |
 
+KT được **đọc** (GET) học kỳ, ngành, lớp học phần để chọn khi lập giá / thu phí (không sửa).
+
 KT xem học phí cần tên SV/ngành/lớp: serializer học phí của KT trả tối thiểu `ma_sv`, `ho_ten`, `nganh` (không lộ sdt/email/GPA).
 
 ---

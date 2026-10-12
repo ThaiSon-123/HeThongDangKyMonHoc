@@ -140,6 +140,34 @@ def test_calculate_chi_ke_toan(login_as):
         assert login_as(UserFactory(role=r)).post("/api/tuition/calculate/").status_code == 403
 
 
+def test_huy_mon_da_thu_du_phat_sinh_can_hoan_roi_hoan_xong_dong_du(kt):
+    from apps.tuition.services import dan_xuat_cua
+
+    hk = SemesterFactory()
+    ctdt = CurriculumFactory()
+    sv = StudentProfileFactory(nganh=ctdt.nganh, ctdt=ctdt)
+    mon = CourseFactory(tin_chi_ly_thuyet=3, tong_tin_chi=3)
+    reg = dang_ky(sv, ClassSectionFactory(hoc_ky=hk, mon_hoc=mon, trang_thai=TrangThaiLop.MO))
+    gia("MAC_DINH", 100_000)
+    t = tinh_hoc_phi(sv.user, hk)
+    assert thu(kt, t, 300_000).status_code == 201  # đóng đủ
+
+    reg.trang_thai = "DA_HUY"  # hủy môn → tính lại: phải nộp 0
+    reg.save()
+    t = tinh_hoc_phi(sv.user, hk)
+    dx = dan_xuat_cua(t)
+    assert (dx["phai_nop"], dx["con_no"], dx["can_hoan"], dx["hien_thi"]) == (
+        D(0),
+        D(0),
+        D(300_000),
+        "CHO_HOAN_TIEN",
+    )
+
+    assert thu(kt, t, 300_001, loai="HOAN").status_code == 400
+    assert thu(kt, t, 300_000, loai="HOAN").status_code == 201
+    assert dan_xuat_cua(t)["hien_thi"] == "DA_DONG"
+
+
 # --------------------------------------------------------------- bảng giá / cấu hình / miễn giảm
 
 

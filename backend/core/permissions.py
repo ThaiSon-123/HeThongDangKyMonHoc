@@ -59,3 +59,18 @@ class ReadByAdminWriteByPdt(BasePermission):
         if user.role == Role.ADMIN and request.method in SAFE_METHODS:
             return True
         raise business_error(Codes.KHONG_CO_QUYEN, "Bạn không có quyền thực hiện thao tác này.")
+
+
+class PdtWriteKtRead(BasePermission):
+    """PĐT đọc + ghi; Kế toán chỉ đọc (cần chọn học kỳ/ngành/lớp khi lập giá, thu phí — mục 9);
+    vai trò khác bị từ chối."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if user.role == Role.PHONG_DAO_TAO:
+            return True
+        if user.role == Role.KE_TOAN and request.method in SAFE_METHODS:
+            return True
+        raise business_error(Codes.KHONG_CO_QUYEN, "Bạn không có quyền thực hiện thao tác này.")

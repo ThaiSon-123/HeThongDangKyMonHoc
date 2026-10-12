@@ -134,18 +134,19 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] **Milestone:** nhập → khóa → đóng lớp → duyệt → SV xem; GPA đúng
 - [x] _Bổ sung:_ `GET /api/grade-sheets/` (danh sách lớp + số dòng điểm theo trạng thái cho PĐT duyệt); `failureText` hiện nguyên thông điệp lỗi nghiệp vụ của server
 
-## 7. PHA 6 — HỌC PHÍ (1.5 tuần)
+## 7. PHA 6 — HỌC PHÍ (1.5 tuần) ✅
 
-- [ ] `pricing.py` (BR-16/17) — self-check đã có; nối vào service tính học phí
-- [ ] `HocPhanGia` (UNIQUE functional index) · `TuitionConfig` · `Discount` (`MIEN_GIAM`/`HOC_BONG`)
-- [ ] `POST /tuition/calculate/?hoc_ky=` (hàng loạt, lỗi giá → `400 CHUA_CAU_HINH_GIA`)
-- [ ] Giá trị dẫn xuất của `Tuition` (`mien_giam`, `phai_nop`, `thuc_thu`, `con_no`, `can_hoan`, trạng thái hiển thị)
-- [ ] `POST /tuition/payments/` — BR-26: `THU`/`HOAN`, `FOR UPDATE` trên `Tuition`, `request_id`, `SO_TIEN_KHONG_HOP_LE`
-- [ ] `GET /tuition/` · `/tuition/debts/` · `/tuition/my/` · biên lai
-- [ ] Job `tuition_overdue_notify`
-- [ ] Flutter: KT cấu hình + thu/hoàn; SV xem học phí và **thanh toán bằng chuyển khoản QR** (`/student/tuition/pay`: chọn toàn bộ/một phần ≤ `con_no`, QR sinh ở client từ `tuition/my.thanh_toan`, sao chép thông tin); KT đối soát theo nội dung `HOCPHI <ma_sv> <hoc_ky>`
-- [ ] _(khóa đã có trong `seed_demo`; còn `tuition/my`)_ `SystemConfig` thêm `ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan` + `tuition/my` trả `thanh_toan{…}`
-- [ ] **Milestone:** tính đúng, thu/hoàn đúng; hủy môn đã thu dư → `can_hoan > 0`
+- [x] `pricing.py` (BR-16/17) — self-check đã có; nối vào service tính học phí
+- [x] `HocPhanGia` (UNIQUE functional index) · `TuitionConfig` · `Discount` (`MIEN_GIAM`/`HOC_BONG`)
+- [x] `POST /tuition/calculate/?hoc_ky=` (hàng loạt, lỗi giá → `400 CHUA_CAU_HINH_GIA`)
+- [x] Giá trị dẫn xuất của `Tuition` (`mien_giam`, `phai_nop`, `thuc_thu`, `con_no`, `can_hoan`, trạng thái hiển thị)
+- [x] `POST /tuition/payments/` — BR-26: `THU`/`HOAN`, `FOR UPDATE` trên `Tuition`, `request_id`, `SO_TIEN_KHONG_HOP_LE`
+- [x] `GET /tuition/` · `/tuition/debts/` · `/tuition/my/` · biên lai
+- [x] Job `tuition_overdue_notify`
+- [x] Flutter: KT cấu hình + thu/hoàn; SV xem học phí và **thanh toán bằng chuyển khoản QR** (`/student/tuition/pay`: chọn toàn bộ/một phần ≤ `con_no`, QR sinh ở client từ `tuition/my.thanh_toan`, sao chép thông tin); KT đối soát theo nội dung `HOCPHI <ma_sv> <hoc_ky>`
+- [x] _(khóa đã có trong `seed_demo`; còn `tuition/my`)_ `SystemConfig` thêm `ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan` + `tuition/my` trả `thanh_toan{…}`
+- [x] **Milestone:** tính đúng, thu/hoàn đúng; hủy môn đã thu dư → `can_hoan > 0`
+- [x] _Bổ sung:_ `GET /api/tuition/{id}/` (chi tiết + giao dịch) và `GET /api/tuition/students/` (KT tra SV, chỉ mã SV/họ tên/ngành); KT được **đọc** học kỳ/ngành/lớp học phần (`PdtWriteKtRead`). _Hạn chế:_ mã QR là QR văn bản thông tin chuyển khoản (chưa phải VietQR chuẩn ngân hàng); chưa có nút "Tải mã QR về máy" và "Xuất danh sách" công nợ
 
 ## 8. PHA 7 — THÔNG BÁO & AUDIT (1 tuần)
 
@@ -237,10 +238,10 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | BR-12 | GV chỉ nhập lớp mình | 5 | [x] |
 | BR-13 | Hạn nhập điểm + gia hạn / nhập hộ | 5 | [x] |
 | BR-14 | `NHAP_TAM` → `CHINH_THUC` → `KHOA`; unlock có điều kiện | 5 | [x] |
-| BR-15 | Học phí = Σ môn; tính lại bất cứ lúc nào | 6 | [ ] |
-| BR-16 | Tra giá 2 trục `hoc_ky` × khối → ngành → mặc định | 6 | [ ] |
-| BR-17 | LT = giá gốc; TH = `GIA_TH` nếu có | 6 | [ ] |
-| BR-18 | Miễn giảm do KT, có audit log | 6 | [ ] |
+| BR-15 | Học phí = Σ môn; tính lại bất cứ lúc nào | 6 | [x] |
+| BR-16 | Tra giá 2 trục `hoc_ky` × khối → ngành → mặc định | 6 | [x] |
+| BR-17 | LT = giá gốc; TH = `GIA_TH` nếu có | 6 | [x] |
+| BR-18 | Miễn giảm do KT, có audit log | 6 | [x] |
 | BR-19 | 3 trạng thái điểm danh + cờ `di_tre` (chỉ khi `CO_MAT`; UI 4 nút) | 4 | [x] |
 | BR-20 | Buổi điểm danh sinh sẵn theo lịch; tỷ lệ vắng = vắng KP / tổng số buổi theo lịch + cờ cảnh báo | 4 | [x] |
 | BR-21 | Phân quyền 5 vai trò | 1–10 | [ ] |
@@ -248,7 +249,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | BR-23 | SV chỉ dữ liệu mình; GV chỉ lớp mình | 1–10 | [ ] |
 | BR-24 | *(đã gỡ v3.0)* | — | — |
 | BR-25 | GPA, tín chỉ tích lũy, xếp loại | 5 | [x] |
-| BR-26 | Thu / hoàn tiền: `FOR UPDATE`, không vượt `con_no` / `can_hoan` | 6 | [ ] |
+| BR-26 | Thu / hoàn tiền: `FOR UPDATE`, không vượt `con_no` / `can_hoan` | 6 | [x] |
 
 ## 13. ENDPOINT — tick khi có code + test + Swagger
 
@@ -264,20 +265,20 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 [x] class-sections/{id}/grades/approve · [ ] reports/training (+ export)
 
 **SV:** [x] curriculums/my · [x] courses/available · [ ] auto-schedule/available-courses · [x] registrations (POST/DELETE) ·
-[x] registrations/history · [x] timetable/my · [x] attendance/my · [x] attendance/requests (GET/POST) · [x] grades/my · [ ] tuition/my
+[x] registrations/history · [x] timetable/my · [x] attendance/my · [x] attendance/requests (GET/POST) · [x] grades/my · [x] tuition/my
 
 **GV:** [x] class-sections/my · [ ] class-sections/{id} · [ ] class-sections/{id}/students ·
 [x] attendance/sessions (GET, sinh sẵn) · [x] attendance/sessions/{id}/records (GET/PUT) · [x] attendance/requests (GET/PATCH, chỉ lớp mình) ·
 [x] class-sections/{id}/grades (GET/PUT) · [x] class-sections/{id}/grades/lock · [ ] class-sections/{id}/export
 
-**KT:** [ ] tuition/config · [ ] tuition/pricing · [ ] tuition/discounts · [ ] tuition (GET) · [ ] tuition/calculate ·
-[ ] tuition/payments · [ ] tuition/debts · [ ] tuition/payments/{id}/receipt · [ ] reports/finance (+ export)
+**KT:** [x] tuition/config · [x] tuition/pricing · [x] tuition/discounts · [x] tuition (GET) · [x] tuition/calculate ·
+[x] tuition/payments · [x] tuition/debts · [x] tuition/payments/{id}/receipt · [ ] reports/finance (+ export)
 
 ## 14. TEST BẮT BUỘC (plan mục 13)
 
 - [x] 2 SV cùng bấm chỗ cuối → 1 thành công; sĩ số không lệch sau hủy / đăng ký lại *(PostgreSQL thật)*
 - [ ] Replay `Idempotency-Key` (đăng ký, thanh toán); re-activate không đổi `request_id`; key khác khi đã đăng ký → `409 DA_DANG_KY`
-- [ ] Thanh toán đồng thời không vượt `phai_nop`; `SO_TIEN_KHONG_HOP_LE` (vượt `con_no` / `can_hoan` / ≤ 0)
+- [x] Thanh toán đồng thời không vượt `phai_nop`; `SO_TIEN_KHONG_HOP_LE` (vượt `con_no` / `can_hoan` / ≤ 0)
 - [x] `LOP_CHUA_MO` (lớp `KE_HOACH`/`DANG_HOC`/`DA_DONG`) · `NGOAI_CUA_SO_DANG_KY`
 - [x] Trùng lịch (cùng `thu` giao tiết); không giao tiết → hợp lệ; thứ 7 + Chủ nhật hợp lệ; `thu = 1`/`9` → 400
 - [x] BR-04(d): đã đăng ký lớp A của môn X, đăng ký lớp B của X cùng học kỳ → `409 DA_DANG_KY_MON`; hủy A rồi đăng ký B được
@@ -293,7 +294,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Buổi sinh sẵn: lớp 01/10–05/11 chỉ thứ 5 → 6 buổi; sửa lịch chỉ đổi buổi tương lai chưa điểm danh; điểm danh buổi tương lai → `TRANG_THAI_KHONG_HOP_LE`
 - [x] Yêu cầu sửa điểm danh: lớp `DA_DONG` không gửi được; đóng lớp → yêu cầu chờ tự từ chối; chỉ GV lớp đó duyệt được
 - [x] Tỷ lệ vắng: mẫu số = tổng buổi theo lịch (1/6 không cờ, 2/6 có cờ); vắng có phép không tính; cờ không chặn nhập CK
-- [ ] Học phí: ưu tiên `hoc_ky` → NULL; khối → ngành → mặc định; `GIA_TH`; thiếu giá → `calculate` 400 nhưng đăng ký vẫn 201 + warning; hủy hết môn đã thu → `can_hoan > 0`; UNIQUE `MAC_DINH` cùng `hoc_ky`
+- [x] Học phí: ưu tiên `hoc_ky` → NULL; khối → ngành → mặc định; `GIA_TH`; thiếu giá → `calculate` 400 nhưng đăng ký vẫn 201 + warning; hủy hết môn đã thu → `can_hoan > 0`; UNIQUE `MAC_DINH` cùng `hoc_ky`
 - [ ] Token: khóa chặn request + refresh; logout / đổi / reset blacklist refresh cũ; reset token 30 phút 1 lần; forgot-password không lộ email
 - [ ] Phân quyền: mỗi endpoint một test sai role; SV không xem SV khác; GV không xem lớp khác
 - [ ] Flutter: widget test Web + App; mọi route nằm dưới prefix vai trò (đã có); E2E đăng ký → điểm → học phí
