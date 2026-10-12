@@ -48,6 +48,16 @@ class TrainingApi {
     );
   });
 
+  /// Một trang nguyên vẹn của DRF (`count`, `results`, và các khóa thêm như `meta`).
+  Future<Json> page(String path, {int page = 1, int pageSize = 50}) => _guard(
+    () async => _json(
+      await _dio.get(
+        path,
+        queryParameters: {'page': page, 'page_size': pageSize},
+      ),
+    ),
+  );
+
   /// Gom mọi trang (50 dòng/trang) — dùng khi cần tổng/tập đầy đủ nhỏ (vd môn của một CTĐT).
   Future<List<Json>> listAll(
     String path, {
@@ -64,8 +74,16 @@ class TrainingApi {
   Future<Json> get(String path) =>
       _guard(() async => _json(await _dio.get(path)));
 
-  Future<Json> create(String path, Json body) =>
-      _guard(() async => _json(await _dio.post(path, data: body)));
+  Future<Json> create(String path, Json body, {Map<String, String>? headers}) =>
+      _guard(
+        () async => _json(
+          await _dio.post(
+            path,
+            data: body,
+            options: Options(headers: headers),
+          ),
+        ),
+      );
 
   Future<Json> update(String path, Object id, Json body) =>
       _guard(() async => _json(await _dio.patch('$path$id/', data: body)));

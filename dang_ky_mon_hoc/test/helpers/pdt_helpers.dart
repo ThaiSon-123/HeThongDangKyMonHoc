@@ -60,3 +60,29 @@ Future<void> enterField(WidgetTester t, String label, String text) async {
   await t.enterText(field.first, text);
   await t.pump();
 }
+
+/// Backend giả cho sinh viên: hồ sơ đăng nhập + các route [extra].
+FakeAdapter svApi(Map<String, Handler> extra) => FakeAdapter({
+  'GET /profiles/me/': (_) => reply(200, studentProfile()),
+  ...extra,
+});
+
+/// Mở một route của sinh viên (mặc định cỡ Web; truyền [size] nhỏ để thử bố cục App).
+Future<void> openStudent(
+  WidgetTester t,
+  FakeAdapter api,
+  String path, {
+  Size size = bigScreen,
+  List<Override> overrides = const [],
+}) async {
+  await pumpApp(
+    t,
+    router: webRouterProvider,
+    adapter: api,
+    tokens: signedIn,
+    size: size,
+    overrides: overrides,
+  );
+  GoRouter.of(t.element(find.byType(Scaffold).first)).go(path);
+  await t.pumpAndSettle();
+}

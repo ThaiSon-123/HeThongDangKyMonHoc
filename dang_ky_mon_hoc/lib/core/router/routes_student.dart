@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/profile/profile_screen.dart';
+import '../../features/registration/register_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
 
@@ -14,7 +15,13 @@ const studentRoutes = RoleRoutes(
       subtitle: 'Thông tin cá nhân và bảo mật',
       builder: ProfileScreen.new,
     ),
-    RouteDef('/student/register', 'Đăng ký môn học'),
+    RouteDef(
+      '/student/register',
+      'Đăng ký môn học',
+      subtitle:
+          'Lớp học phần được gom theo môn — bấm vào môn để xem các lớp đang mở',
+      builder: RegisterScreen.new,
+    ),
     RouteDef('/student/auto-schedule', 'Tạo TKB tự động'),
     RouteDef('/student/schedule', 'Thời khóa biểu'),
     RouteDef('/student/curriculum', 'Chương trình đào tạo'),
