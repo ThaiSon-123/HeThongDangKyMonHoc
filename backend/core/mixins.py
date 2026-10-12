@@ -7,6 +7,18 @@ from core.permissions import Role
 from core.utils import client_ip
 
 
+def write_audit(request, hanh_dong, doi_tuong, doi_tuong_id, chi_tiet):
+    """Ghi một dòng AuditLog (dùng cho view không phải ModelViewSet, vd đăng ký/hủy môn)."""
+    AuditLog.objects.create(
+        user=getattr(request, "user", None),
+        hanh_dong=hanh_dong,
+        doi_tuong=doi_tuong,
+        doi_tuong_id=str(doi_tuong_id),
+        chi_tiet=chi_tiet,
+        ip=client_ip(request),
+    )
+
+
 class AuditLogMixin(viewsets.ModelViewSet):
     """Ghi AuditLog cho mọi create/update/delete.
 
@@ -23,13 +35,12 @@ class AuditLogMixin(viewsets.ModelViewSet):
     }
 
     def _audit(self, hanh_dong, instance, chi_tiet=None):
-        AuditLog.objects.create(
-            user=getattr(self.request, "user", None),
-            hanh_dong=hanh_dong,
-            doi_tuong=self.audit_model or instance.__class__.__name__,
-            doi_tuong_id=str(instance.pk) if instance.pk is not None else "",
-            chi_tiet=chi_tiet or {"serialized": self._safe_repr(instance)},
-            ip=client_ip(self.request),
+        write_audit(
+            self.request,
+            hanh_dong,
+            self.audit_model or instance.__class__.__name__,
+            instance.pk if instance.pk is not None else "",
+            chi_tiet or {"serialized": self._safe_repr(instance)},
         )
 
     @staticmethod

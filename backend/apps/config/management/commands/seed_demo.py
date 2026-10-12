@@ -373,7 +373,8 @@ class Command(BaseCommand):
 
     def _seed_dang_ky_diem(self, sv_users, lops, hk_mo):
         """HK trước: 10 SV đăng ký 2 lớp, điểm KHOA (sv05 điểm F, sv06 điểm D — test "đạt" BR-11).
-        HK hiện tại: 10 SV đăng ký 3 lớp; sv01+sv02 đăng ký lớp sĩ số 2.
+        HK hiện tại: sv01–sv08 đăng ký 3 lớp, sv09+sv10 chưa đăng ký gì (để thử luồng đăng ký);
+        sv01+sv02 đăng ký lớp sĩ số 2.
         GPA cache: sv01 = 3.99, sv02 = 2.10."""
 
         lop_dong = lops["lop_dong"]
@@ -404,9 +405,10 @@ class Command(BaseCommand):
             gpa=Decimal("2.10"), tin_chi_tich_luy=6
         )
 
-        # HK hiện tại: 10 SV đăng ký 3 lớp MO; sv01+sv02 đăng ký lớp sĩ số 2.
+        # HK hiện tại: sv01–sv08 đăng ký 3 lớp MO; sv09, sv10 để trống cho demo đăng ký;
+        # sv01+sv02 đăng ký lớp sĩ số 2.
         lop_mo = lops["mo"]
-        for sv in sv_users:
+        for sv in sv_users[:8]:
             for lop in lop_mo[:3]:
                 Registration.objects.update_or_create(
                     sinh_vien=sv,

@@ -371,6 +371,7 @@ class ClassDetailDialog extends ConsumerStatefulWidget {
 
 class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
   Json? _lop;
+  Future<List<Json>?>? _sinhVien; // null khi tải lỗi
   bool _error = false;
   bool _changed = false;
 
@@ -389,6 +390,18 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
         setState(() {
           _lop = l;
           _error = false;
+          _sinhVien = ref
+              .read(trainingApiProvider)
+              .list(
+                '/registrations/',
+                pageSize: 50,
+                query: {
+                  'lop_hoc_phan': widget.classId,
+                  'trang_thai': 'DA_DANG_KY',
+                },
+              )
+              .then<List<Json>?>((p) => p.items)
+              .catchError((_) => null);
         });
       }
     } catch (_) {
@@ -528,6 +541,62 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
     );
   }
 
+  Widget _studentList(Json lop) => FutureBuilder<List<Json>?>(
+    future: _sinhVien,
+    builder: (context, snap) {
+      if (snap.connectionState != ConnectionState.done) {
+        return const ListSkeleton();
+      }
+      final items = snap.data;
+      if (items == null) {
+        return const Text(
+          'Không tải được danh sách sinh viên.',
+          style: TextStyle(color: AppColors.muted, fontSize: 14),
+        );
+      }
+      if (items.isEmpty) {
+        return const Text(
+          'Chưa có sinh viên đăng ký.',
+          style: TextStyle(color: AppColors.muted, fontSize: 14),
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final r in items)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.divider)),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 110,
+                    child: Text(r.str('ma_sv'), style: monoStyle),
+                  ),
+                  Expanded(child: Text(r.str('ho_ten'))),
+                  Text(
+                    formatIso(r.str('ngay_dang_ky')).split(' ').first,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 6),
+          Text(
+            'Hiển thị ${items.length} / ${lop.num0('si_so_hien_tai')} sinh viên. '
+            'Quản lý và hủy hộ ở mục Theo dõi đăng ký.',
+            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+        ],
+      );
+    },
+  );
+
   Widget _body(Json lop) {
     final tt = lop.str('trang_thai');
     final lich = [for (final l in lop['lich_hoc'] as List) Json.from(l as Map)];
@@ -614,6 +683,10 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
           const SizedBox(height: 12),
           _WeekGrid(lich, key: const ValueKey('week-grid')),
         ],
+        const SizedBox(height: 18),
+        const Text('Sinh viên đăng ký', style: sectionTitleStyle),
+        const SizedBox(height: 8),
+        _studentList(lop),
         const SizedBox(height: 18),
         const Text('Hạn nhập điểm', style: sectionTitleStyle),
         const SizedBox(height: 8),

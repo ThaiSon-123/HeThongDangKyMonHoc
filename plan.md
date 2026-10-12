@@ -475,15 +475,15 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
-| GET | `/api/curriculums/my/` | CTĐT của mình (SV-03). |
-| GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{tin_chi_toi_da, tin_chi_toi_da_canh_bao}` (lấy từ `Semester`). |
+| GET | `/api/curriculums/my/` | CTĐT của mình (SV-03), mỗi môn kèm `da_dat` (BR-04). |
+| GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{hoc_ky, ten_hk, trong_cua_so, tin_chi_toi_thieu, tin_chi_toi_da, tin_chi_toi_da_canh_bao, tin_chi_da_dang_ky, bi_canh_bao_hoc_vu}` (lấy từ `Semester` + đăng ký hiện tại). Mỗi lớp kèm `khoi_kien_thuc`, `loai_mon`, `hoc_ky_goi_y` theo CTĐT của SV. |
 | GET | `/api/auto-schedule/available-courses/` | Toàn bộ lớp mở, **không lọc** (SV-06). |
 | POST | `/api/registrations/` | Đăng ký (BR-01..07). **Bắt buộc** `Idempotency-Key`. |
 | DELETE | `/api/registrations/{id}/` | Hủy (BR-05). |
 | GET | `/api/registrations/history/` | Lịch sử (SV-09). |
 | GET | `/api/timetable/my/` | TKB (dùng chung cho GV; phân giải theo role token). |
 | GET | `/api/attendance/my/` | Điểm danh + tỷ lệ vắng của mình; mỗi lớp kèm `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep` (BR-20). |
-| GET/POST | `/api/attendance/requests/` | SV gửi / xem yêu cầu của mình; GV xem yêu cầu của lớp mình. POST dạng `multipart/form-data` (kèm tệp `minh_chung` tùy chọn); response GET có link tải minh chứng cho GV. |
+| GET/POST | `/api/attendance/requests/` | SV gửi / xem yêu cầu của mình; GV xem yêu cầu của lớp mình. POST dạng `multipart/form-data` (kèm tệp `minh_chung` tùy chọn); response GET có đường dẫn `minh_chung` (`GET /api/attendance/requests/{id}/minh-chung/`, chỉ GV lớp đó và SV chủ yêu cầu tải được). |
 | GET | `/api/grades/my/` | Điểm `KHOA` + GPA; kèm `thong_ke[]` theo học kỳ: `so_mon`, `tin_chi_hoc`, `tin_chi_dat`, `diem_tb`, `gpa`, `xep_loai` (BR-25g). |
 | GET | `/api/tuition/my/` | Học phí (kèm giá trị dẫn xuất, `chi_tiet[]` từng môn, `payments[]` giao dịch, `thanh_toan{ngan_hang, so_tai_khoan, chu_tai_khoan, noi_dung_ck}` để SV chuyển khoản/quét QR). |
 
@@ -493,7 +493,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | :--- | :--- | :--- |
 | GET | `/api/class-sections/my/` · `/api/class-sections/{id}/` | Lớp phụ trách; chi tiết (BR-23). |
 | GET | `/api/class-sections/{id}/students/` | Danh sách SV (GV-04). |
-| GET/PUT | `/api/attendance/sessions/{id}/records/` | Xem / **lưu cả lớp** (upsert danh sách, GV-07/08). |
+| GET/PUT | `/api/attendance/sessions/{id}/records/` | Xem / **lưu cả lớp** (GV-07/08): PUT phải gửi đúng danh sách SV đang đăng ký; GET kèm tỷ lệ vắng + cờ cảnh báo từng SV (BR-20). PĐT xem được, không PUT. |
 | PATCH | `/api/attendance/requests/{id}/` | GV (lớp mình) duyệt / từ chối yêu cầu sửa điểm danh của SV (GV-08). |
 | GET | `/api/attendance/sessions/?lop_hoc_phan=` | Danh sách buổi sinh sẵn của lớp + tổng số buổi (GV-06, GV-09). Không có endpoint tạo buổi. |
 | GET/PUT | `/api/class-sections/{id}/grades/` | Xem / **nhập cả lớp** (upsert `NHAP_TAM`, GV-10). PĐT dùng PUT này để nhập hộ khi quá hạn. |
@@ -534,7 +534,7 @@ lưu vào `request_id` của thực thể với **UNIQUE ở DB** (không dùng 
 ### 8.4. Lỗi
 
 Envelope lỗi nghiệp vụ (`core/exceptions.py`): `{"error": {"code", "message", "details"}}`; lỗi field DRF giữ `{"field": ["…"]}`.
-Cảnh báo không chặn trả ở `warnings: [{code, message}]` của response thành công.
+Cảnh báo không chặn trả ở `warnings: [{code, message}]` của response thành công. Mã cảnh báo: `CHUA_CAU_HINH_GIA` (BR-16), `DUOI_TIN_CHI_TOI_THIEU` (BR-07).
 
 | HTTP | `code` | Khi nào |
 | :--- | :--- | :--- |

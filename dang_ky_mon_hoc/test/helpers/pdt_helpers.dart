@@ -1,5 +1,6 @@
 import 'package:dang_ky_mon_hoc/core/router/router_web.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -23,13 +24,19 @@ FakeAdapter pdtApi(Map<String, Handler> extra) => FakeAdapter({
   ...extra,
 });
 
-Future<void> openPdt(WidgetTester t, FakeAdapter api, String path) async {
+Future<void> openPdt(
+  WidgetTester t,
+  FakeAdapter api,
+  String path, {
+  List<Override> overrides = const [],
+}) async {
   await pumpApp(
     t,
     router: webRouterProvider,
     adapter: api,
     tokens: signedIn,
     size: bigScreen,
+    overrides: overrides,
   );
   GoRouter.of(t.element(find.byType(Scaffold).first)).go(path);
   await t.pumpAndSettle();
@@ -52,4 +59,30 @@ Future<void> enterField(WidgetTester t, String label, String text) async {
   );
   await t.enterText(field.first, text);
   await t.pump();
+}
+
+/// Backend giả cho sinh viên: hồ sơ đăng nhập + các route [extra].
+FakeAdapter svApi(Map<String, Handler> extra) => FakeAdapter({
+  'GET /profiles/me/': (_) => reply(200, studentProfile()),
+  ...extra,
+});
+
+/// Mở một route của sinh viên (mặc định cỡ Web; truyền [size] nhỏ để thử bố cục App).
+Future<void> openStudent(
+  WidgetTester t,
+  FakeAdapter api,
+  String path, {
+  Size size = bigScreen,
+  List<Override> overrides = const [],
+}) async {
+  await pumpApp(
+    t,
+    router: webRouterProvider,
+    adapter: api,
+    tokens: signedIn,
+    size: size,
+    overrides: overrides,
+  );
+  GoRouter.of(t.element(find.byType(Scaffold).first)).go(path);
+  await t.pumpAndSettle();
 }

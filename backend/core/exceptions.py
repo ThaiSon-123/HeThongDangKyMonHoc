@@ -38,6 +38,7 @@ class Codes:
     LOP_DAY = "LOP_DAY"
     TRUNG_LICH = "TRUNG_LICH"
     DA_DANG_KY = "DA_DANG_KY"
+    DA_DANG_KY_MON = "DA_DANG_KY_MON"
     DA_DAT_MON = "DA_DAT_MON"
     THIEU_TIEN_QUYET = "THIEU_TIEN_QUYET"
     VUOT_TIN_TC_TOI_DA = "VUOT_TIN_TC_TOI_DA"
@@ -58,6 +59,7 @@ _CODE_STATUS = {
     Codes.LOP_DAY: 409,
     Codes.TRUNG_LICH: 409,
     Codes.DA_DANG_KY: 409,
+    Codes.DA_DANG_KY_MON: 409,
     Codes.DA_DAT_MON: 400,
     Codes.THIEU_TIEN_QUYET: 400,
     Codes.VUOT_TIN_TC_TOI_DA: 400,

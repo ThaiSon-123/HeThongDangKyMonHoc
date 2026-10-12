@@ -48,6 +48,26 @@ class TrainingApi {
     );
   });
 
+  /// Một trang nguyên vẹn của DRF (`count`, `results`, và các khóa thêm như `meta`).
+  Future<Json> page(
+    String path, {
+    int page = 1,
+    int pageSize = 50,
+    Map<String, Object?> query = const {},
+  }) => _guard(
+    () async => _json(
+      await _dio.get(
+        path,
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+          for (final e in query.entries)
+            if (e.value != null && '${e.value}'.isNotEmpty) e.key: e.value,
+        },
+      ),
+    ),
+  );
+
   /// Gom mọi trang (50 dòng/trang) — dùng khi cần tổng/tập đầy đủ nhỏ (vd môn của một CTĐT).
   Future<List<Json>> listAll(
     String path, {
@@ -64,14 +84,61 @@ class TrainingApi {
   Future<Json> get(String path) =>
       _guard(() async => _json(await _dio.get(path)));
 
-  Future<Json> create(String path, Json body) =>
-      _guard(() async => _json(await _dio.post(path, data: body)));
+  Future<Json> create(String path, Json body, {Map<String, String>? headers}) =>
+      _guard(
+        () async => _json(
+          await _dio.post(
+            path,
+            data: body,
+            options: Options(headers: headers),
+          ),
+        ),
+      );
 
   Future<Json> update(String path, Object id, Json body) =>
       _guard(() async => _json(await _dio.patch('$path$id/', data: body)));
 
+  Future<Json> put(String path, Json body) =>
+      _guard(() async => _json(await _dio.put(path, data: body)));
+
   Future<void> delete(String path, Object id) =>
       _guard(() => _dio.delete('$path$id/'));
+
+  /// `DELETE` kèm body (hủy đăng ký hộ cần `ly_do`); trả bản ghi sau khi hủy.
+  Future<Json> cancel(String path, Object id, Json body) =>
+      _guard(() async => _json(await _dio.delete('$path$id/', data: body)));
+
+  /// Tải tệp nhị phân (xuất Excel).
+  Future<List<int>> getBytes(
+    String path, {
+    Map<String, Object?> query = const {},
+  }) => _guard(() async {
+    final res = await _dio.get<List<int>>(
+      path,
+      queryParameters: {
+        for (final e in query.entries)
+          if (e.value != null && '${e.value}'.isNotEmpty) e.key: e.value,
+      },
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return res.data ?? const <int>[];
+  });
+
+  /// `POST multipart/form-data` (gửi yêu cầu sửa điểm danh kèm minh chứng tùy chọn).
+  Future<Json> createForm(
+    String path,
+    Map<String, Object> fields, {
+    String? fileField,
+    String? fileName,
+    List<int>? fileBytes,
+  }) => _guard(() async {
+    final form = FormData.fromMap({
+      ...fields,
+      if (fileField != null && fileBytes != null)
+        fileField: MultipartFile.fromBytes(fileBytes, filename: fileName),
+    });
+    return _json(await _dio.post(path, data: form));
+  });
 
   /// Action kiểu `POST /semesters/1/open/` (đổi trạng thái, gia hạn…).
   Future<Json> action(String path, Object id, String name, [Json? body]) =>

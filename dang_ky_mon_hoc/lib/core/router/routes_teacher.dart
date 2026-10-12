@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../features/attendance/teacher_attendance_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/registration/timetable_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
 
@@ -15,8 +17,18 @@ const teacherRoutes = RoleRoutes(
       builder: ProfileScreen.new,
     ),
     RouteDef('/teacher/classes', 'Lớp phụ trách'),
-    RouteDef('/teacher/schedule', 'Thời khóa biểu'),
-    RouteDef('/teacher/attendance', 'Điểm danh'),
+    RouteDef(
+      '/teacher/schedule',
+      'Thời khóa biểu',
+      subtitle: 'Lịch dạy theo tuần của các lớp phụ trách',
+      builder: TimetableScreen.new,
+    ),
+    RouteDef(
+      '/teacher/attendance',
+      'Điểm danh',
+      subtitle: 'Chọn lớp, điểm danh cả lớp và duyệt yêu cầu sửa của sinh viên',
+      builder: TeacherAttendanceScreen.new,
+    ),
     RouteDef('/teacher/grades', 'Nhập điểm'),
     RouteDef('/teacher/notifications', 'Thông báo'),
   ],

@@ -6,6 +6,7 @@ import '../../features/training/curriculums_screen.dart';
 import '../../features/training/faculties_screen.dart';
 import '../../features/training/majors_screen.dart';
 import '../../features/training/profiles_screen.dart';
+import '../../features/training/registrations_screen.dart';
 import '../../features/training/semesters_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
@@ -33,7 +34,11 @@ const pdtRoutes = RoleRoutes(
       builder: SemestersScreen.new,
     ),
     RouteDef('/pdt/classes', 'Lớp học phần & lịch', builder: ClassesScreen.new),
-    RouteDef('/pdt/registrations', 'Đăng ký'),
+    RouteDef(
+      '/pdt/registrations',
+      'Theo dõi đăng ký & hủy hộ',
+      builder: RegistrationsScreen.new,
+    ),
     RouteDef('/pdt/grade-sheets', 'Duyệt điểm'),
     RouteDef('/pdt/reports', 'Báo cáo'),
     RouteDef('/pdt/notifications', 'Thông báo'),
