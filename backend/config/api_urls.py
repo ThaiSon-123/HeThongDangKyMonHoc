@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.attendance import views as attendance
 from apps.auth.views import UserViewSet
+from apps.grades import views as grades
 from apps.profiles.views import (
     MeView,
     PendingAccountViewSet,
@@ -42,6 +43,11 @@ urlpatterns = [
     path("auth/", include("apps.auth.urls")),
     path("profiles/me/", MeView.as_view()),
     # Đặt trước router: `courses/available/`, `curriculums/my/` không bị hiểu là `<pk>`.
+    path("class-sections/<int:pk>/grades/", grades.ClassGradesView.as_view()),
+    path("class-sections/<int:pk>/grades/lock/", grades.ClassGradesLockView.as_view()),
+    path("class-sections/<int:pk>/grades/approve/", grades.ClassGradesApproveView.as_view()),
+    path("grades/my/", grades.MyGradesView.as_view()),
+    path("grade-sheets/", grades.GradeSheetListView.as_view()),
     path("class-sections/my/", training.MyClassSectionsView.as_view()),
     path("courses/available/", registration.AvailableCoursesView.as_view()),
     path("curriculums/my/", registration.MyCurriculumView.as_view()),

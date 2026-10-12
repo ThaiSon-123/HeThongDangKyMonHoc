@@ -261,8 +261,8 @@ class ScheduleViewSet(_CoXoaViewSet):
 
 
 class MyClassSectionsView(APIView):
-    """`GET /api/class-sections/my/` (GV-03): lớp tôi phụ trách. Mặc định học kỳ hiện tại; truyền
-    `?hoc_ky=` để xem học kỳ khác; không xác định được học kỳ thì trả mọi lớp."""
+    """`GET /api/class-sections/my/` (GV-03): lớp tôi phụ trách, mới nhất trước. Lọc `?hoc_ky=`,
+    `?trang_thai=`."""
 
     permission_classes = [IsGiaoVien]
 
@@ -285,8 +285,6 @@ class MyClassSectionsView(APIView):
         hoc_ky_id = request.query_params.get("hoc_ky")
         if hoc_ky_id:
             qs = qs.filter(hoc_ky=services.chon_hoc_ky(hoc_ky_id))
-        elif (hoc_ky := services.hoc_ky_mac_dinh()) is not None:
-            qs = qs.filter(hoc_ky=hoc_ky)
         if request.query_params.get("trang_thai"):
             qs = qs.filter(trang_thai=request.query_params["trang_thai"])
         paginator = StandardPagination()

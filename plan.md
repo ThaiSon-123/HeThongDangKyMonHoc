@@ -466,6 +466,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/class-sections/{id}/open/` · `/close/` | Mở lớp; đóng lớp. |
 | POST | `/api/class-sections/{id}/grade-deadline/` | Gia hạn nhập điểm (BR-13). |
 | POST | `/api/class-sections/{id}/grades/approve/` | **Duyệt cả lớp** `CHINH_THUC` → `KHOA` (PDT-12). |
+| GET | `/api/grade-sheets/` | Lớp `DANG_HOC`/`DA_DONG` kèm số dòng điểm `NHAP_TAM/CHINH_THUC/KHOA` để duyệt. Lọc `?hoc_ky=&trang_thai=&search=`. |
 | GET | `/api/registrations/` · `/api/registrations/export/` | Theo dõi; xuất Excel (PDT-10). |
 | DELETE | `/api/registrations/{id}/` | Hủy hộ (PDT-11, BR-05), body `ly_do`. |
 | GET | `/api/attendance/sessions/` | Xem điểm danh theo lớp (PDT-10). |
@@ -496,7 +497,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET/PUT | `/api/attendance/sessions/{id}/records/` | Xem / **lưu cả lớp** (GV-07/08): PUT phải gửi đúng danh sách SV đang đăng ký; GET kèm tỷ lệ vắng + cờ cảnh báo từng SV (BR-20). PĐT xem được, không PUT. |
 | PATCH | `/api/attendance/requests/{id}/` | GV (lớp mình) duyệt / từ chối yêu cầu sửa điểm danh của SV (GV-08). |
 | GET | `/api/attendance/sessions/?lop_hoc_phan=` | Danh sách buổi sinh sẵn của lớp + tổng số buổi (GV-06, GV-09). Không có endpoint tạo buổi. |
-| GET/PUT | `/api/class-sections/{id}/grades/` | Xem / **nhập cả lớp** (upsert `NHAP_TAM`, GV-10). PĐT dùng PUT này để nhập hộ khi quá hạn. |
+| GET/PUT | `/api/class-sections/{id}/grades/` | Xem / **nhập cả lớp** (upsert `NHAP_TAM`, GV-10); PUT nhận danh sách một phần (SV nào gửi mới ghi). GET kèm cờ `co_the_nhap/khoa/mo_khoa/duyet`, `han_nhap_diem`. PĐT dùng PUT này để nhập hộ (lưu thẳng `CHINH_THUC`). Tổng kết: QT NULL coi như 0 (BR-10). |
 | POST | `/api/class-sections/{id}/grades/lock/` | Body `{action: "lock" \| "unlock"}` cả lớp (BR-14). |
 | GET | `/api/class-sections/{id}/export/` | Excel (GV-12). |
 
