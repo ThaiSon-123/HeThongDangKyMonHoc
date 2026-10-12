@@ -434,9 +434,10 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/auth/change-password/` | Mọi vai trò | Body `{old_password, new_password}` → `204`; blacklist refresh cũ (client phải đăng nhập lại). |
 | GET/PATCH | `/api/profiles/me/` | Mọi vai trò | Xem hồ sơ; sửa `email`, `sdt` (không sửa trường học vụ). |
 | GET | `/api/health/` · `/api/schema/` · `/api/docs/` | Public | Health, OpenAPI, Swagger. |
-| GET | `/api/notifications/` | Mọi vai trò | Thông báo của mình. |
+| GET | `/api/notifications/` | Mọi vai trò | Thông báo của mình (kèm `chua_doc`); `?da_doc=false` chỉ chưa đọc; `?gui=true` thông báo mình đã gửi (kể cả đã thu hồi). |
 | PATCH | `/api/notifications/{id}/read/` · POST `/api/notifications/read-all/` | Mọi vai trò | Đánh dấu đã đọc. |
 | POST | `/api/notifications/` | PĐT/GV/KT/Admin | Gửi (GV chỉ `CLASS` lớp mình). |
+| GET | `/api/notifications/recipients/?search=&role=` | PĐT/KT/Admin | Tra người nhận để gửi riêng (`USER`), tối đa 20. |
 | DELETE | `/api/notifications/{id}/` | Admin / người gửi | Thu hồi. |
 
 **Admin**
@@ -448,7 +449,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/users/{id}/reset-password/` | Admin đặt mật khẩu mới (body `{new_password}`, áp chính sách mật khẩu) → `204`, thu hồi refresh cũ. |
 | GET | `/api/admin/permissions/` | Ma trận quyền (**chỉ đọc**, ADM-04). |
 | GET/PATCH | `/api/admin/config/` | `SystemConfig` (ADM-05). |
-| GET | `/api/admin/audit-logs/` | Admin/PĐT/KT; `?scope=` server tự lọc theo role (ADM-06). |
+| GET | `/api/admin/audit-logs/` | Admin/PĐT/KT; phạm vi do role quyết định (Admin tất cả, PĐT `training`, KT `finance`), `?scope=` chỉ thu hẹp thêm. Lọc `?hanh_dong=&doi_tuong=&nguoi_thuc_hien=&tu_ngay=&den_ngay=&search=`. |
 | GET | `/api/admin/backups/` | Danh sách file trong `BACKUP_DIR` (tên, kích thước, thời gian). |
 | POST | `/api/admin/backups/` | Tạo backup (chạy nền). Không có restore. |
 

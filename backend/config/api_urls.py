@@ -4,8 +4,10 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from apps.attendance import views as attendance
+from apps.audit.views import AuditLogListView
 from apps.auth.views import UserViewSet
 from apps.grades import views as grades
+from apps.notifications.views import NotificationViewSet
 from apps.profiles.views import (
     MeView,
     PendingAccountViewSet,
@@ -37,6 +39,7 @@ router.register("tuition/config", tuition.TuitionConfigViewSet, basename="tuitio
 router.register("tuition/pricing", tuition.PricingViewSet, basename="tuition-pricing")
 router.register("tuition/discounts", tuition.DiscountViewSet, basename="tuition-discount")
 router.register("tuition/payments", tuition.PaymentViewSet, basename="tuition-payment")
+router.register("notifications", NotificationViewSet, basename="notification")
 router.register("registrations", registration.RegistrationViewSet, basename="registration")
 router.register("attendance/sessions", attendance.SessionViewSet, basename="attendance-session")
 router.register(
@@ -51,6 +54,7 @@ urlpatterns = [
     path("class-sections/<int:pk>/grades/", grades.ClassGradesView.as_view()),
     path("class-sections/<int:pk>/grades/lock/", grades.ClassGradesLockView.as_view()),
     path("class-sections/<int:pk>/grades/approve/", grades.ClassGradesApproveView.as_view()),
+    path("admin/audit-logs/", AuditLogListView.as_view()),
     path("tuition/my/", tuition.MyTuitionView.as_view()),
     path("tuition/debts/", tuition.TuitionDebtsView.as_view()),
     path("tuition/calculate/", tuition.TuitionCalculateView.as_view()),

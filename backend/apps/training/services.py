@@ -13,6 +13,7 @@ from apps.attendance.models import AttendanceRequest
 from apps.attendance.services import dong_bo_buoi
 from apps.config.models import SystemConfig
 from apps.grades.models import Grade, TrangThaiDiem
+from apps.notifications.services import gui_cho_lop
 from apps.profiles.models import TeacherProfile
 from apps.registration.models import Registration, TrangThaiDangKy
 from apps.training.models import (
@@ -139,6 +140,12 @@ def kiem_tra_sua_lop(lop):
     """Lớp `DA_DONG` không sửa lớp/lịch nữa."""
     if lop.trang_thai == TrangThaiLop.DA_DONG:
         raise sai_trang_thai("Lớp đã đóng, không sửa được.")
+
+
+def bao_doi_lich(lop, nguoi_gui, noi_dung):
+    """Thông báo CLASS khi PĐT đổi lịch / phòng / ngày của lớp đã mở (mục 7.6)."""
+    if lop.trang_thai in (TrangThaiLop.MO, TrangThaiLop.DANG_HOC):
+        gui_cho_lop(lop, f"Lớp {lop.ma_lop} thay đổi lịch học", noi_dung, nguoi_gui)
 
 
 def dong_bo_buoi_diem_danh(lop):
