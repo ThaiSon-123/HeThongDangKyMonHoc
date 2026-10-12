@@ -49,11 +49,21 @@ class TrainingApi {
   });
 
   /// Một trang nguyên vẹn của DRF (`count`, `results`, và các khóa thêm như `meta`).
-  Future<Json> page(String path, {int page = 1, int pageSize = 50}) => _guard(
+  Future<Json> page(
+    String path, {
+    int page = 1,
+    int pageSize = 50,
+    Map<String, Object?> query = const {},
+  }) => _guard(
     () async => _json(
       await _dio.get(
         path,
-        queryParameters: {'page': page, 'page_size': pageSize},
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+          for (final e in query.entries)
+            if (e.value != null && '${e.value}'.isNotEmpty) e.key: e.value,
+        },
       ),
     ),
   );
@@ -88,6 +98,9 @@ class TrainingApi {
   Future<Json> update(String path, Object id, Json body) =>
       _guard(() async => _json(await _dio.patch('$path$id/', data: body)));
 
+  Future<Json> put(String path, Json body) =>
+      _guard(() async => _json(await _dio.put(path, data: body)));
+
   Future<void> delete(String path, Object id) =>
       _guard(() => _dio.delete('$path$id/'));
 
@@ -109,6 +122,22 @@ class TrainingApi {
       options: Options(responseType: ResponseType.bytes),
     );
     return res.data ?? const <int>[];
+  });
+
+  /// `POST multipart/form-data` (gửi yêu cầu sửa điểm danh kèm minh chứng tùy chọn).
+  Future<Json> createForm(
+    String path,
+    Map<String, Object> fields, {
+    String? fileField,
+    String? fileName,
+    List<int>? fileBytes,
+  }) => _guard(() async {
+    final form = FormData.fromMap({
+      ...fields,
+      if (fileField != null && fileBytes != null)
+        fileField: MultipartFile.fromBytes(fileBytes, filename: fileName),
+    });
+    return _json(await _dio.post(path, data: form));
   });
 
   /// Action kiểu `POST /semesters/1/open/` (đổi trạng thái, gia hạn…).

@@ -1,4 +1,4 @@
-import 'package:dang_ky_mon_hoc/features/training/registrations_screen.dart';
+import 'package:dang_ky_mon_hoc/core/download/save_file_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/fake_api.dart';

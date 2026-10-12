@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/attendance/student_attendance_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/register_screen.dart';
 import '../../features/registration/timetable_screen.dart';
@@ -32,7 +33,12 @@ const studentRoutes = RoleRoutes(
     ),
     RouteDef('/student/curriculum', 'Chương trình đào tạo'),
     RouteDef('/student/grades', 'Điểm'),
-    RouteDef('/student/attendance', 'Điểm danh'),
+    RouteDef(
+      '/student/attendance',
+      'Điểm danh',
+      subtitle: 'Tỷ lệ vắng, từng buổi học và yêu cầu sửa điểm danh',
+      builder: StudentAttendanceScreen.new,
+    ),
     RouteDef('/student/tuition', 'Học phí'),
     RouteDef('/student/tuition/pay', 'Thanh toán học phí'),
     RouteDef('/student/notifications', 'Thông báo'),

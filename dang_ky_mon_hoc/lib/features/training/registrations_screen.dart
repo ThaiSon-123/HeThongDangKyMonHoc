@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_failure.dart';
-import '../../core/download/save_file.dart';
+import '../../core/download/save_file_provider.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/app_button.dart';
@@ -18,12 +18,6 @@ import 'training_api.dart';
 import 'training_widgets.dart';
 
 const _path = '/registrations/';
-
-/// Hàm lưu tệp, thay được trong test (bản thật tải qua trình duyệt).
-final saveFileProvider =
-    Provider<Future<void> Function(String, List<int>, {String? mime})>(
-      (ref) => saveFile,
-    );
 
 /// Theo dõi đăng ký & hủy hộ (PDT-10/11) — mockup `PDT-Web-DangKy`.
 class RegistrationsScreen extends ConsumerStatefulWidget {

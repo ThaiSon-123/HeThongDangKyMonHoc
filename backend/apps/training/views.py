@@ -2,11 +2,13 @@
 
 import django_filters
 from django.db.models import Count, Q
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.audit.models import HanhDong
+from apps.registration.serializers import ClassBriefSerializer
 from apps.training import services
 from apps.training.models import (
     ClassSection,
@@ -37,7 +39,8 @@ from apps.training.serializers import (
 )
 from core.exceptions import business_error
 from core.mixins import AuditLogMixin
-from core.permissions import IsPhongDaoTao
+from core.pagination import StandardPagination
+from core.permissions import IsGiaoVien, IsPhongDaoTao
 
 
 class _PdtViewSet(AuditLogMixin):
@@ -255,3 +258,37 @@ class ScheduleViewSet(_CoXoaViewSet):
             )
         super().perform_destroy(instance)
         services.dong_bo_buoi_diem_danh(lop)
+
+
+class MyClassSectionsView(APIView):
+    """`GET /api/class-sections/my/` (GV-03): lớp tôi phụ trách. Mặc định học kỳ hiện tại; truyền
+    `?hoc_ky=` để xem học kỳ khác; không xác định được học kỳ thì trả mọi lớp."""
+
+    permission_classes = [IsGiaoVien]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("hoc_ky", int),
+            OpenApiParameter("trang_thai", str),
+            OpenApiParameter("page", int),
+            OpenApiParameter("page_size", int),
+        ],
+        responses=ClassBriefSerializer(many=True),
+    )
+    def get(self, request):
+        qs = (
+            ClassSection.objects.filter(giao_vien__user=request.user)
+            .select_related("mon_hoc", "giao_vien", "hoc_ky")
+            .prefetch_related("lich_hoc")
+            .order_by("-hoc_ky__ngay_bat_dau", "ma_lop")
+        )
+        hoc_ky_id = request.query_params.get("hoc_ky")
+        if hoc_ky_id:
+            qs = qs.filter(hoc_ky=services.chon_hoc_ky(hoc_ky_id))
+        elif (hoc_ky := services.hoc_ky_mac_dinh()) is not None:
+            qs = qs.filter(hoc_ky=hoc_ky)
+        if request.query_params.get("trang_thai"):
+            qs = qs.filter(trang_thai=request.query_params["trang_thai"])
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(qs, request, view=self)
+        return paginator.get_paginated_response(ClassBriefSerializer(page, many=True).data)

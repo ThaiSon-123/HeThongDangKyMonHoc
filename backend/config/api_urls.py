@@ -42,6 +42,7 @@ urlpatterns = [
     path("auth/", include("apps.auth.urls")),
     path("profiles/me/", MeView.as_view()),
     # Đặt trước router: `courses/available/`, `curriculums/my/` không bị hiểu là `<pk>`.
+    path("class-sections/my/", training.MyClassSectionsView.as_view()),
     path("courses/available/", registration.AvailableCoursesView.as_view()),
     path("curriculums/my/", registration.MyCurriculumView.as_view()),
     path("timetable/my/", registration.MyTimetableView.as_view()),

@@ -511,3 +511,21 @@ def test_attendance_my_hien_yeu_cau_gan_nhat(login_as, da_diem_danh):
     buoi = api.get(f"/api/attendance/my/?hoc_ky={lop.hoc_ky_id}").data["lop_hoc_phan"][0]["buoi"][0]
     assert buoi["yeu_cau"]["trang_thai"] == "CHO_DUYET" and buoi["attendance"] == att.id
     assert AttendanceSession.objects.filter(pk=buoi["session"]).exists()
+
+
+def test_lop_phu_trach_cua_gv(login_as, lop_cu):
+    lop, _ = lop_cu
+    ClassSectionFactory(giao_vien=lop.giao_vien, hoc_ky=lop.hoc_ky, ma_lop="KHAC")
+    ClassSectionFactory()  # lớp của GV khác
+    gv = api_gv(login_as, lop)
+
+    res = gv.get(f"/api/class-sections/my/?hoc_ky={lop.hoc_ky_id}")
+    assert res.status_code == 200 and res.data["count"] == 2
+    row = next(r for r in res.data["results"] if r["id"] == lop.id)
+    assert row["si_so_toi_da"] == lop.si_so_toi_da and row["lich_hoc"][0]["thu"] == 5
+    only = gv.get(f"/api/class-sections/my/?hoc_ky={lop.hoc_ky_id}&trang_thai=DANG_HOC")
+    assert [r["id"] for r in only.data["results"]] == [lop.id]
+    assert (
+        login_as(UserFactory(role=Role.SINH_VIEN)).get("/api/class-sections/my/").status_code == 403
+    )
+    assert gv.get("/api/class-sections/my/?hoc_ky=abc").status_code == 400
