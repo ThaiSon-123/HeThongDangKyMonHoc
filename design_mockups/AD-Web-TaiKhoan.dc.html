@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tài khoản — Quản trị</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:var(--bg)}
+a{text-decoration:none}
+button,select,input,textarea{font-family:inherit}
+
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1000px;background:var(--bg)">
+  <nav class="np" aria-label="Điều hướng quản trị" style="flex:1 1 260px;max-width:260px;min-width:220px;background:linear-gradient(180deg,var(--navy) 0%,#26357A 100%);padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)">
+        <div style="flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">ĐK</div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-weight:700;font-size:15px;color:#FFFFFF">Đăng ký môn học</span>
+          <span style="font-size:12px;color:#AEB8E6">Cổng quản trị</span>
+        </div>
+      </div>
+      <sc-for list="{{navGroups}}" as="grp" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:0 12px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8E9AD6">{{grp.title}}</div>
+          <sc-for list="{{grp.items}}" as="item" hint-placeholder-count="2">
+            <a href="{{item.href}}" style="{{item.style}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+              <span style="flex:1">{{item.label}}</span>
+              <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{false}}">
+                <span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--accent);color:#FFFFFF;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{item.badge}}</span>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.12)">
+      <a href="#" aria-label="Tài khoản" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">QT</a>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+        <span style="font-weight:600;font-size:14px;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Quản trị hệ thống</span>
+        <span style="font-size:12px;color:#AEB8E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Quản trị · admin</span>
+      </div>
+      <a href="Web-DangNhap.dc.html" aria-label="Đăng xuất" style="flex:0 0 auto;width:44px;height:44px;border-radius:12px;color:#C9D0F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"></path></svg></a>
+    </div>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header class="np" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:32px 32px 4px;color:var(--navy);flex-wrap:wrap">
+      <div>
+        <div class="ui-bc" aria-label="Đường dẫn"><a href="AD-Web-TongQuan.dc.html">Quản trị</a><span aria-hidden="true">›</span><span style="color:#5B6488;font-weight:600">Tài khoản</span></div><h1 style="margin:0;font-size:28px;font-weight:700">Tài khoản</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:#5B6488">Tạo, khóa và quản lý tài khoản người dùng</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        
+        <a href="AD-Web-ThongBao.dc.html" aria-label="Thông báo, có tin chưa đọc" style="position:relative;width:44px;height:44px;border-radius:12px;border:0;background:#FFFFFF;color:var(--navy);box-shadow:0 2px 10px rgba(31,42,92,.1);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0"></path></svg><span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid #FFFFFF"></span></a>
+      </div>
+    </header>
+
+    <main style="padding:32px;display:flex;flex-direction:column;gap:24px">
+      <sc-if value="{{uiLoading}}" hint-placeholder-val="{{false}}"><div aria-busy="true" aria-label="Đang tải dữ liệu" style="display:flex;flex-direction:column;gap:20px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div></div><div style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:14px"><div class="ui-skel" style="height:20px;width:220px;border-radius:8px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div></div></div></sc-if>
+      <sc-if value="{{uiError}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center"><span style="width:56px;height:56px;border-radius:50%;background:#FDECEA;color:#C62828;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">!</span><span style="font-size:18px;font-weight:700;color:var(--navy)">Không tải được dữ liệu</span><span style="font-size:14px;color:#6B7280;max-width:420px;line-height:1.5">Kết nối bị gián đoạn hoặc máy chủ đang bận. Hãy thử lại sau ít giây.</span><button onClick="{{uiRetry}}" style="min-height:44px;padding:0 24px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Thử lại</button></div></sc-if>
+      <sc-if value="{{uiOk}}" hint-placeholder-val="{{true}}"><div style="display:flex;flex-direction:column;gap:24px">
+      <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);">
+        <div style="padding:18px 24px;display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end">
+          <label style="flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Tìm tài khoản<input type="text" value="{{q}}" onChange="{{setQ}}" placeholder="Tên đăng nhập hoặc email" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600;color:#374151">Vai trò</span><div role="group" aria-label="Vai trò" style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{roleChips}}" as="f" hint-placeholder-count="6"><button aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}}</button></sc-for></div></div>
+          <label style="flex:0 1 190px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Trạng thái<select value="{{fSt}}" onChange="{{setFSt}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{stOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+          <span style="flex:1"></span>
+          <button onClick="{{openNew}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">+ Tạo tài khoản</button>
+        </div>
+      </section>
+      <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);overflow:hidden">
+        <div class="ui-tscroll" style="overflow-x:auto"><div style="min-width:1250px"><div class="ui-thead" style="display:grid;grid-template-columns:130px minmax(150px,1fr) minmax(200px,1fr) 130px 130px 150px 150px 190px;column-gap:16px;align-items:center;padding:12px 20px;background:#FAFAFA;font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.03em"><span style="min-width:0">Tên đăng nhập</span><span style="min-width:0">Họ tên</span><span style="min-width:0">Email</span><span style="min-width:0">Vai trò</span><span style="min-width:0">Hồ sơ</span><span style="min-width:0">Trạng thái</span><span style="min-width:0">Đăng nhập gần nhất</span><span style="min-width:0"></span></div><sc-for list="{{rows}}" as="r" hint-placeholder-count="4"><div onClick="{{r.pick}}" class="ui-trow" style="display:grid;grid-template-columns:130px minmax(150px,1fr) minmax(200px,1fr) 130px 130px 150px 150px 190px;column-gap:16px;align-items:center;padding:12px 20px;border-top:1px solid #EEF0F5;font-size:14px;cursor:pointer;background:{{r.bg}};"><span style="min-width:0"><span style="font-weight:600;font-family:ui-monospace,Menlo,monospace;font-size:13px">{{r.u}}</span></span><span style="min-width:0">{{r.tenT}}</span><span style="min-width:0"><span style="color:#374151;font-size:13px">{{r.mail}}</span></span><span style="min-width:0"><span style="{{r.chip}}">{{r.roleL}}</span></span><span style="min-width:0"><sc-if value="{{r.noProf}}" hint-placeholder-val="{{false}}"><span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:#FFF1E6;color:#9A3412">Chưa có hồ sơ</span></sc-if><sc-if value="{{r.hasProf}}" hint-placeholder-val="{{false}}"><span style="color:#2E7D32;font-weight:600">✓ Đã có</span></sc-if><sc-if value="{{r.noNeed}}" hint-placeholder-val="{{false}}"><span style="color:#9AA1B2">—</span></sc-if></span><span style="min-width:0"><span style="display:flex;align-items:center;gap:10px"><button role="switch" aria-checked="{{r.active}}" aria-label="Trạng thái tài khoản {{r.u}}" onClick="{{r.toggle}}" style="{{r.swStyle}}"><span style="{{r.knob}}"></span></button><span style="font-size:13px">{{r.stT}}</span></span></span><span style="min-width:0"><span style="font-size:13px;color:#374151">{{r.last}}</span></span><span style="min-width:0"><span style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{r.edit}}" style="min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #C4C9D4;background:#FFFFFF;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap">Sửa</button><button onClick="{{r.reset}}" style="min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #C4C9D4;background:#FFFFFF;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap">Đặt lại MK</button></span></span></div></sc-for></div></div><sc-if value="{{noRows}}" hint-placeholder-val="{{false}}"><div style="padding:40px 24px;text-align:center;color:#6B7280;font-size:14px">{{noText}}</div></sc-if><div class="ui-trow" style="padding:12px 20px;border-top:1px solid #EEF0F5;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:#6B7280"><span>{{total}} bản ghi</span><span>Trang 1/1 · 25 dòng/trang</span></div>
+      </section>
+      <sc-if value="{{hasSel}}" hint-placeholder-val="{{false}}">
+        <div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;z-index:40;display:flex;background:rgba(17,24,39,.35)">
+          <div onClick="{{closeSel}}" style="flex:1"></div>
+          <aside role="dialog" aria-label="Hồ sơ tài khoản" style="width:520px;max-width:100%;background:#FFFFFF;height:100%;overflow:auto;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(17,24,39,.2)">
+            <div style="padding:22px 24px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #E3E6EE">
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:20px;font-weight:700;color:var(--navy)">{{d.tenT}}</span><span style="font-size:13px;color:#6B7280;font-family:ui-monospace,Menlo,monospace">{{d.u}}</span><span style="display:flex;gap:8px"><span style="{{d.chip}}">{{d.roleL}}</span><span style="{{d.stChip}}">{{d.stT}}</span></span></div>
+              <button onClick="{{closeSel}}" aria-label="Đóng" style="width:44px;height:44px;border-radius:12px;border:1px solid #C4C9D4;background:#FFFFFF;font-size:18px;cursor:pointer">✕</button>
+            </div>
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:grid;grid-template-columns:150px 1fr;gap:10px 12px;font-size:14px"><span style="color:#6B7280">Email</span><span>{{d.mail}}</span><span style="color:#6B7280">Đăng nhập gần nhất</span><span>{{d.last}}</span></div>
+              <sc-if value="{{profOn}}" hint-placeholder-val="{{false}}">
+                <div style="height:1px;background:#EEF0F5"></div>
+                <span style="font-size:14px;font-weight:700">Hồ sơ học vụ</span>
+                <div style="display:grid;grid-template-columns:170px 1fr;gap:10px 12px;font-size:14px"><sc-for list="{{profRows}}" as="p" hint-placeholder-count="4"><span style="color:#6B7280">{{p.k}}</span><span style="font-weight:600">{{p.v}}</span></sc-for></div>
+                <div style="padding:10px 14px;border-radius:12px;background:#E8EAF6;color:var(--primary-dark);font-size:13px">Chỉ xem. Chỉnh sửa hồ sơ tại <a href="PDT-Web-HoSo.dc.html" style="color:var(--primary);font-weight:600">Phòng đào tạo</a>.</div>
+              </sc-if>
+              <sc-if value="{{noProfOn}}" hint-placeholder-val="{{false}}"><div style="padding:12px 14px;border-radius:12px;background:#FFF1E6;color:#9A3412;font-size:13px;line-height:1.5">Tài khoản này chưa có hồ sơ học vụ. Phòng đào tạo sẽ tạo hồ sơ.</div></sc-if>
+            </div>
+          </aside>
+        </div>
+      </sc-if><sc-if value="{{newOn}}" hint-placeholder-val="{{false}}"><div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;overflow:auto"><div role="dialog" aria-modal="true" aria-label="Tạo tài khoản" style="background:#FFFFFF;border-radius:16px;width:100%;max-width:560px;box-shadow:0 20px 50px rgba(17,24,39,.3);padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:18px;font-weight:700;color:var(--navy)">Tạo tài khoản</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Tên đăng nhập<input type="text" value="{{nU}}" onChange="{{setNU}}" placeholder="VD: gv006" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Vai trò<select value="{{nRole}}" onChange="{{setNRole}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{roleOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label></div><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Email<input type="text" value="{{nMail}}" onChange="{{setNMail}}" placeholder="ten@truong.edu.vn" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Mật khẩu ban đầu<input type="password" value="{{nPw}}" onChange="{{setNPw}}" placeholder="Ít nhất 8 ký tự" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><sc-if value="{{needProf}}" hint-placeholder-val="{{false}}"><div style="padding:10px 14px;border-radius:12px;background:#E8EAF6;color:var(--primary-dark);font-size:13px">Phòng đào tạo sẽ tạo hồ sơ học vụ cho tài khoản này.</div></sc-if><sc-if value="{{hasNErr}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FDECEA;color:#8C1D18;border:1px solid #F3B8B3;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5">{{nErr}}</div></sc-if><div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px"><button onClick="{{closeNew}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Hủy</button><button onClick="{{saveNew}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Tạo tài khoản</button></div></div></div></sc-if><sc-if value="{{editOn}}" hint-placeholder-val="{{false}}"><div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;overflow:auto"><div role="dialog" aria-modal="true" aria-label="Sửa tài khoản {{eU}}" style="background:#FFFFFF;border-radius:16px;width:100%;max-width:520px;box-shadow:0 20px 50px rgba(17,24,39,.3);padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:18px;font-weight:700;color:var(--navy)">Sửa tài khoản {{eU}}</h2><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Email<input type="text" value="{{eMail}}" onChange="{{setEMail}}" placeholder="ten@truong.edu.vn" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Vai trò<select value="{{eRole}}" onChange="{{setERole}}" disabled="{{eSelf}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{roleOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select><span style="font-size:12px;font-weight:400;color:#6B7280">{{eRoleHint}}</span></label><sc-if value="{{hasEErr}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FDECEA;color:#8C1D18;border:1px solid #F3B8B3;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5">{{eErr}}</div></sc-if><div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px"><button onClick="{{closeEdit}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Hủy</button><button onClick="{{saveEdit}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Lưu</button></div></div></div></sc-if><sc-if value="{{roleCfm}}" hint-placeholder-val="{{false}}"><div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;overflow:auto"><div role="dialog" aria-modal="true" aria-label="Đổi vai trò?" style="background:#FFFFFF;border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 50px rgba(17,24,39,.3);padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:18px;font-weight:700;color:var(--navy)">Đổi vai trò?</h2><p style="margin:0;font-size:14px;line-height:1.6;color:#374151">{{roleCfmText}}</p><div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px"><button onClick="{{closeRoleCfm}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Hủy</button><button onClick="{{doRole}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Đổi vai trò</button></div></div></div></sc-if><sc-if value="{{lockOn}}" hint-placeholder-val="{{false}}"><div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;overflow:auto"><div role="dialog" aria-modal="true" aria-label="{{lockTitle}}" style="background:#FFFFFF;border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 50px rgba(17,24,39,.3);padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:18px;font-weight:700;color:var(--navy)">{{lockTitle}}</h2><p style="margin:0;font-size:14px;line-height:1.6;color:#374151">{{lockText}}</p><div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px"><button onClick="{{closeLock}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Hủy</button><button onClick="{{doLock}}" style="{{lockBtn}}">{{lockAct}}</button></div></div></div></sc-if><sc-if value="{{pwOn}}" hint-placeholder-val="{{false}}"><div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;overflow:auto"><div role="dialog" aria-modal="true" aria-label="Đặt lại mật khẩu — {{pU}}" style="background:#FFFFFF;border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 50px rgba(17,24,39,.3);padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:18px;font-weight:700;color:var(--navy)">Đặt lại mật khẩu — {{pU}}</h2><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Mật khẩu mới<input type="password" value="{{pw}}" onChange="{{setPw}}" placeholder="Ít nhất 8 ký tự" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><span style="font-size:12px;color:#6B7280">Hãy chuyển mật khẩu mới cho người dùng; họ nên đổi lại sau lần đăng nhập đầu tiên.</span><sc-if value="{{hasPErr}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FDECEA;color:#8C1D18;border:1px solid #F3B8B3;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5">{{pErr}}</div></sc-if><div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px"><button onClick="{{closePw}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Hủy</button><button onClick="{{savePw}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Đặt lại mật khẩu</button></div></div></div></sc-if><sc-if value="{{toast}}" hint-placeholder-val="{{false}}"><div role="status" class="ui-toast" style="position:fixed;right:32px;bottom:32px;background:#1F2937;color:#FFFFFF;padding:14px 20px;border-radius:12px;font-size:14px;z-index:60">{{toastText}}</div></sc-if>
+      </div></sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000},"uiState":{"editor":"enum","default":"ready","options":["ready","loading","error"],"section":"Trạng thái dữ liệu"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { q: '', fRole: 'all', fSt: 'all', sel: '', mods: {}, created: [], newOn: false, nU: '', nRole: 'GV', nMail: '', nPw: '', nErr: '', editU: '', eMail: '', eRole: '', eErr: '', roleCfm: false, lockU: '', pwU: '', pw: '', pErr: '', toast: false, toastText: '' };
+  }
+  renderVals() {
+    const NAVG = (active) => {
+      const base = 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;';
+      const on = base + 'background:var(--primary);color:#FFFFFF;font-weight:600;box-shadow:0 4px 12px rgba(63,81,181,.35);';
+      const off = base + 'color:#C9D0F2;font-weight:500;';
+      const it = (k, label, href, icon, badge) => ({ label, href, icon, style: k === active ? on : off, hasBadge: !!badge, badge: badge || '' });
+      return [
+        { title: 'TỔNG QUAN', items: [it('home', 'Tổng quan', 'AD-Web-TongQuan.dc.html', 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10')] },
+        { title: 'NGƯỜI DÙNG', items: [
+          it('acc', 'Tài khoản', 'AD-Web-TaiKhoan.dc.html', 'M9 11a4 4 0 100-8 4 4 0 000 8zM2 21a7 7 0 0114 0M17 11a3 3 0 100-6M18 21a6 6 0 00-3-5'),
+          it('perm', 'Ma trận quyền', 'AD-Web-MaTranQuyen.dc.html', 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3zM9 12l2 2 4-4')] },
+        { title: 'HỆ THỐNG', items: [
+          it('cfg', 'Cấu hình', 'AD-Web-CauHinh.dc.html', 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5'),
+          it('bk', 'Sao lưu', 'AD-Web-SaoLuu.dc.html', 'M12 4v10M8 11l4 4 4-4M5 20h14'),
+          it('nk', 'Nhật ký', 'AD-Web-NhatKy.dc.html', 'M6 3h9l4 4v14H6V3zM14 3v5h5M9 13h7M9 17h7')] },
+        { title: 'KHÁC', items: [
+          it('tb', 'Thông báo', 'AD-Web-ThongBao.dc.html', 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0'),
+          it('out', 'Đăng xuất', 'Web-DangNhap.dc.html', 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9')] }
+      ];
+    };
+
+    const S = this.state;
+    const chip = (bg, fg) => 'font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:' + bg + ';color:' + fg;
+    const CH = { green: chip('#E6F4EA', '#2E7D32'), gray: chip('#ECEFF1', '#455A64'), dgray: chip('#CFD8DC', '#263238'), indigo: chip('#E8EAF6', '#2C3A7A'), yellow: chip('#FFF4D6', '#8A5A00'), red: chip('#FDECEA', '#8C1D18'), teal: chip('#E0F2F1', '#00695C'), orange: chip('#FFF1E6', '#9A3412') };
+    const CLS_ST = { KE_HOACH: ['Kế hoạch', CH.gray], MO: ['Đang mở', CH.green], DANG_HOC: ['Đang học', CH.indigo], DA_DONG: ['Đã đóng', CH.dgray] };
+    const set = (k) => (e) => this.setState({ [k]: e.target.value });
+    const toast = (t) => { this.setState({ toast: true, toastText: t }); setTimeout(() => this.setState({ toast: false }), 2600); };
+    const TODAY = new Date(2027, 0, 12);
+    const pd = (s) => { const a = s.split('/'); return new Date(Number(a[2]), Number(a[1]) - 1, Number(a[0])); };
+    const norm = (t) => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    const hl = (label, q) => { const t = q ? String(q).trim() : ''; const i = t ? norm(label).indexOf(norm(t)) : -1; return i < 0 ? { pre: label, mid: '', post: '' } : { pre: label.slice(0, i), mid: label.slice(i, i + t.length), post: label.slice(i + t.length) }; };
+    const combo = (key, opts, ph, extra, off) => {
+      const sel = opts.find((o) => o.v === S[key]);
+      const def = opts.length && (opts[0].v === 'all' || opts[0].v === '') ? opts[0].v : '';
+      const q = S[key + 'Q'];
+      const typed = q !== null && q !== undefined;
+      const shown = typed ? opts.filter((o) => norm(o.l).indexOf(norm(q)) >= 0) : opts;
+      return { text: typed ? q : (sel ? sel.l : ''), open: !!S[key + 'O'] && !off, off: !!off, none: shown.length === 0, ph, canClear: !off && S[key] !== undefined && S[key] !== def && !!S[key],
+        clear: () => this.setState({ [key]: def, [key + 'Q']: null, [key + 'O']: false, ...(extra ? extra(def) : {}) }),
+        focus: (e) => { this.setState({ [key + 'O']: true, [key + 'Q']: null }); if (e && e.target && e.target.select) e.target.select(); }, blur: () => this.setState({ [key + 'O']: false, [key + 'Q']: null }),
+        change: (e) => this.setState({ [key + 'Q']: e.target.value, [key + 'O']: true }),
+        list: shown.map((o) => ({ l: o.l, ...hl(o.l, typed ? q : ''), style: 'padding:10px 14px;font-size:14px;cursor:pointer;line-height:1.35;' + (o.v === S[key] ? 'background:#E8EAF6;font-weight:600;color:var(--primary-dark)' : 'color:#212121'),
+          pick: () => this.setState({ [key]: o.v, [key + 'Q']: null, [key + 'O']: false, ...(extra ? extra(o.v) : {}) }) })) };
+    };
+    const barColor = (p) => (p > 90 ? '#C62828' : p >= 70 ? '#F9A825' : '#2E7D32');
+    const ROLE_L = { ADMIN: ['Quản trị', CH.dgray], PDT: ['Phòng đào tạo', CH.indigo], SV: ['Sinh viên', CH.teal], GV: ['Giáo viên', CH.orange], KT: ['Kế toán', CH.yellow] };
+    const USERS0 = [
+      ['admin', 'Quản trị hệ thống', 'admin@truong.edu.vn', 'ADMIN', true, false, '12/01/2027 07:20'],
+      ['pdt01', 'Lê Thị Hương', 'huong.lt@truong.edu.vn', 'PDT', true, false, '12/01/2027 08:41'],
+      ['pdt02', 'Phạm Văn Sơn', 'son.pv@truong.edu.vn', 'PDT', true, false, '11/01/2027 16:05'],
+      ['kt01', 'Nguyễn Thanh Hà', 'ha.nt@truong.edu.vn', 'KT', true, false, '12/01/2027 10:12'],
+      ['kt02', 'Trịnh Minh Tuấn', 'tuan.tm@truong.edu.vn', 'KT', true, false, '12/01/2027 09:40'],
+      ['gv001', 'Trần Minh Quân', 'quan.tm@truong.edu.vn', 'GV', true, false, '12/01/2027 07:55'],
+      ['gv002', 'Phạm Thu Hà', 'ha.pt@truong.edu.vn', 'GV', true, false, '11/01/2027 20:10'],
+      ['gv003', 'Lê Quốc Bảo', 'bao.lq@truong.edu.vn', 'GV', true, false, '10/01/2027 09:30'],
+      ['gv004', 'Đỗ Văn Hùng', 'hung.dv@truong.edu.vn', 'GV', true, false, '09/01/2027 14:00'],
+      ['gv005', 'Nguyễn Thị Mai', 'mai.nt@truong.edu.vn', 'GV', true, true, '02/12/2026 11:25'],
+      ['gv.nguyenvd', '', 'vd.nguyen@truong.edu.vn', 'GV', false, false, 'Chưa đăng nhập'],
+      ['sv2023014', 'Trần Hoàng Nam', 'nam.th@sv.truong.edu.vn', 'SV', true, false, '12/01/2027 06:50'],
+      ['sv2023021', 'Nguyễn Thị Lan', 'lan.nt@sv.truong.edu.vn', 'SV', true, false, '11/01/2027 22:15'],
+      ['sv2023033', 'Phạm Quang Huy', 'huy.pq@sv.truong.edu.vn', 'SV', true, false, '08/01/2027 13:40'],
+      ['sv2024019', 'Đỗ Thành Đạt', 'dat.dt@sv.truong.edu.vn', 'SV', true, true, '15/11/2026 08:05'],
+      ['sv2025011', '', 'sv2025011@sv.truong.edu.vn', 'SV', false, false, 'Chưa đăng nhập'],
+      ['sv2025012', '', 'sv2025012@sv.truong.edu.vn', 'SV', false, false, 'Chưa đăng nhập']
+    ].map((a) => ({ u: a[0], ten: a[1], mail: a[2], role: a[3], prof: a[4], locked: a[5], last: a[6] }));
+    const PROF = {
+      sv2023014: [['Mã sinh viên', 'SV2023014'], ['Ngành', 'Công nghệ thông tin'], ['Khóa', 'K2023'], ['Chương trình đào tạo', 'CTDT-CNTT-K2023'], ['GPA', '3.21'], ['Tín chỉ tích lũy', '96']],
+      sv2023021: [['Mã sinh viên', 'SV2023021'], ['Ngành', 'Công nghệ thông tin'], ['Khóa', 'K2023'], ['Chương trình đào tạo', 'CTDT-CNTT-K2023'], ['GPA', '3.58'], ['Tín chỉ tích lũy', '102']],
+      sv2023033: [['Mã sinh viên', 'SV2023033'], ['Ngành', 'Kỹ thuật phần mềm'], ['Khóa', 'K2023'], ['Chương trình đào tạo', 'CTDT-KTPM-K2023'], ['GPA', '2.87'], ['Tín chỉ tích lũy', '90']],
+      sv2024019: [['Mã sinh viên', 'SV2024019'], ['Ngành', 'Kỹ thuật phần mềm'], ['Khóa', 'K2024'], ['Chương trình đào tạo', 'CTDT-KTPM-K2024'], ['GPA', '2.45'], ['Tín chỉ tích lũy', '58']],
+      gv001: [['Mã giáo viên', 'GV001'], ['Khoa / viện', 'Công nghệ thông tin'], ['Học vị', 'Thạc sĩ']],
+      gv002: [['Mã giáo viên', 'GV002'], ['Khoa / viện', 'Hệ thống thông tin'], ['Học vị', 'Tiến sĩ']],
+      gv003: [['Mã giáo viên', 'GV003'], ['Khoa / viện', 'Công nghệ thông tin'], ['Học vị', 'Tiến sĩ']],
+      gv004: [['Mã giáo viên', 'GV004'], ['Khoa / viện', 'Kỹ thuật phần mềm'], ['Học vị', 'Thạc sĩ']],
+      gv005: [['Mã giáo viên', 'GV005'], ['Khoa / viện', 'Công nghệ thông tin'], ['Học vị', 'Phó giáo sư']]
+    };
+    const BACKUPS0 = [
+      ['sao-luu-2027-01-10-0200.dump', '10/01/2027 02:00', '412 MB'], ['sao-luu-2027-01-09-0200.dump', '09/01/2027 02:00', '409 MB'], ['sao-luu-2027-01-08-0200.dump', '08/01/2027 02:00', '407 MB'],
+      ['sao-luu-2027-01-07-0200.dump', '07/01/2027 02:00', '405 MB'], ['sao-luu-2027-01-06-0200.dump', '06/01/2027 02:00', '404 MB'], ['sao-luu-2027-01-05-0200.dump', '05/01/2027 02:00', '402 MB']
+    ];
+    const ME = 'admin';
+    const all = USERS0.concat(S.created).map((u) => ({ ...u, ...(S.mods[u.u] || {}) }));
+    const q = S.q.trim().toLowerCase();
+    const list = all.filter((u) => (S.fRole === 'all' || u.role === S.fRole) && (S.fSt === 'all' || (S.fSt === 'locked') === u.locked) && (!q || u.u.toLowerCase().indexOf(q) >= 0 || u.mail.toLowerCase().indexOf(q) >= 0 || u.ten.toLowerCase().indexOf(q) >= 0));
+    const needProfRole = (r) => r === 'SV' || r === 'GV';
+    const sw = (on) => 'flex:0 0 auto;width:44px;height:26px;border-radius:999px;border:0;padding:0;cursor:pointer;position:relative;background:' + (on ? '#2E9D5B' : '#9AA1B2');
+    const knob = (on) => 'position:absolute;top:3px;left:' + (on ? '21px' : '3px') + ';width:20px;height:20px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s';
+    const stop = (e) => { if (e && e.stopPropagation) e.stopPropagation(); };
+    const rows = list.map((u) => ({ ...u, tenT: u.ten || '—', roleL: ROLE_L[u.role][0], chip: ROLE_L[u.role][1], noProf: needProfRole(u.role) && !u.prof, hasProf: needProfRole(u.role) && u.prof, noNeed: !needProfRole(u.role),
+      active: !u.locked, stT: u.locked ? 'Khóa' : 'Hoạt động', swStyle: sw(!u.locked) + (u.u === ME ? ';opacity:.45;cursor:not-allowed' : ''), knob: knob(!u.locked),
+      toggle: (e) => { stop(e); if (u.u === ME) return; this.setState({ lockU: u.u }); },
+      edit: (e) => { stop(e); this.setState({ editU: u.u, eMail: u.mail, eRole: u.role, eErr: '' }); }, reset: (e) => { stop(e); this.setState({ pwU: u.u, pw: '', pErr: '' }); },
+      bg: u.u === S.sel ? '#F5F6FF' : '#FFFFFF', pick: () => this.setState({ sel: u.u }) }));
+    const cur = S.sel ? all.find((u) => u.u === S.sel) : null;
+    const eU = S.editU ? all.find((u) => u.u === S.editU) : null;
+    const lockT = S.lockU ? all.find((u) => u.u === S.lockU) : null;
+    const saveNew = () => {
+      if (!S.nU.trim() || !S.nMail.trim()) return this.setState({ nErr: 'Nhập tên đăng nhập và email.' });
+      if (all.some((u) => u.u.toLowerCase() === S.nU.trim().toLowerCase())) return this.setState({ nErr: 'Tên đăng nhập đã tồn tại.' });
+      if (S.nPw.length < 8) return this.setState({ nErr: 'Mật khẩu ban đầu phải có ít nhất 8 ký tự.' });
+      this.setState({ created: S.created.concat([{ u: S.nU.trim(), ten: '', mail: S.nMail.trim(), role: S.nRole, prof: !needProfRole(S.nRole), locked: false, last: 'Chưa đăng nhập' }]), newOn: false });
+      toast('Đã tạo tài khoản ' + S.nU.trim() + '.');
+    };
+    const applyEdit = () => { this.setState({ mods: { ...S.mods, [S.editU]: { ...(S.mods[S.editU] || {}), mail: S.eMail.trim(), role: S.eRole } }, editU: '', roleCfm: false }); toast('Đã cập nhật tài khoản.'); };
+    const saveEdit = () => {
+      if (!S.eMail.trim()) return this.setState({ eErr: 'Email là bắt buộc.' });
+      if (eU && S.eRole !== eU.role) return this.setState({ roleCfm: true });
+      applyEdit();
+    };
+    const savePw = () => {
+      if (S.pw.length < 8) return this.setState({ pErr: 'Mật khẩu mới phải có ít nhất 8 ký tự.' });
+      this.setState({ pwU: '', pw: '' });
+      toast('Đã đặt lại mật khẩu cho ' + S.pwU + '.');
+    };
+    const rc = 'min-height:44px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;';
+    const roleChips = [['all', 'Tất cả']].concat(Object.keys(ROLE_L).map((r) => [r, ROLE_L[r][0]])).map(([id, label]) => ({ label, on: S.fRole === id, pick: () => this.setState({ fRole: id }), style: rc + (S.fRole === id ? 'background:var(--primary);color:#FFFFFF;border:1px solid var(--primary)' : 'background:#FFFFFF;color:#374151;border:1px solid #C4C9D4') }));
+    const BTN_PV = 'min-height:44px;padding:0 18px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer';
+    const BTN_DV = 'min-height:44px;padding:0 18px;border-radius:12px;border:0;background:#C62828;color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer';
+
+    const UI = (this.props && this.props.uiState) || 'ready';
+    const uiPending = UI !== 'ready' && !S.uiRetried;
+    return {
+      navGroups: NAVG('acc'),
+      uiLoading: uiPending && UI === 'loading', uiError: uiPending && UI === 'error', uiOk: !uiPending, uiRetry: () => this.setState({ uiRetried: true }),
+      q: S.q, setQ: set('q'), roleChips, fSt: S.fSt, setFSt: set('fSt'), stOpts: [{ v: 'all', l: 'Tất cả' }, { v: 'active', l: 'Hoạt động' }, { v: 'locked', l: 'Đang khóa' }],
+      rows, total: rows.length, noRows: rows.length === 0, noText: 'Không có tài khoản phù hợp với bộ lọc.',
+      hasSel: !!cur, closeSel: () => this.setState({ sel: '' }), d: cur ? { ...cur, tenT: cur.ten || '(chưa có hồ sơ)', roleL: ROLE_L[cur.role][0], chip: ROLE_L[cur.role][1], stT: cur.locked ? 'Khóa' : 'Hoạt động', stChip: cur.locked ? CH.red : CH.green } : {},
+      profOn: !!cur && !!PROF[cur.u], profRows: cur && PROF[cur.u] ? PROF[cur.u].map((a) => ({ k: a[0], v: a[1] })) : [], noProfOn: !!cur && needProfRole(cur.role) && !cur.prof,
+      openNew: () => this.setState({ newOn: true, nU: '', nMail: '', nPw: '', nRole: 'GV', nErr: '' }), closeNew: () => this.setState({ newOn: false }), newOn: S.newOn, saveNew,
+      nU: S.nU, setNU: set('nU'), nMail: S.nMail, setNMail: set('nMail'), nPw: S.nPw, setNPw: set('nPw'), nRole: S.nRole, setNRole: set('nRole'), roleOpts: Object.keys(ROLE_L).map((r) => ({ v: r, l: ROLE_L[r][0] })), needProf: needProfRole(S.nRole), hasNErr: !!S.nErr, nErr: S.nErr,
+      editOn: !!eU, eU: eU ? eU.u : '', eMail: S.eMail, setEMail: set('eMail'), eRole: S.eRole, setERole: set('eRole'), eSelf: !!eU && eU.u === ME, eRoleHint: eU && eU.u === ME ? 'Bạn không thể đổi vai trò của chính mình.' : 'Đổi vai trò sẽ thay đổi quyền truy cập của tài khoản.', hasEErr: !!S.eErr, eErr: S.eErr, closeEdit: () => this.setState({ editU: '' }), saveEdit,
+      roleCfm: S.roleCfm, roleCfmText: eU ? 'Đổi vai trò của ' + eU.u + ' từ ' + ROLE_L[eU.role][0] + ' sang ' + ROLE_L[S.eRole][0] + '? Quyền truy cập của tài khoản sẽ thay đổi ngay.' : '', closeRoleCfm: () => this.setState({ roleCfm: false }), doRole: applyEdit,
+      lockOn: !!lockT, lockTitle: lockT ? (lockT.locked ? 'Mở khóa tài khoản?' : 'Khóa tài khoản?') : '', lockText: lockT ? (lockT.locked ? 'Mở khóa ' + lockT.u + '? Người dùng có thể đăng nhập lại.' : 'Khóa ' + lockT.u + '? Người dùng sẽ bị chặn đăng nhập, kể cả phiên đang đăng nhập.') : '',
+      lockAct: lockT && lockT.locked ? 'Mở khóa' : 'Khóa tài khoản', lockBtn: lockT && lockT.locked ? BTN_PV : BTN_DV, closeLock: () => this.setState({ lockU: '' }),
+      doLock: () => { this.setState({ mods: { ...S.mods, [S.lockU]: { ...(S.mods[S.lockU] || {}), locked: !lockT.locked } }, lockU: '' }); toast(lockT.locked ? 'Đã mở khóa ' + lockT.u + '.' : 'Đã khóa ' + lockT.u + '.'); },
+      pwOn: !!S.pwU, pU: S.pwU, pw: S.pw, setPw: set('pw'), hasPErr: !!S.pErr, pErr: S.pErr, closePw: () => this.setState({ pwU: '' }), savePw, toast: S.toast, toastText: S.toastText
+    };
+  }
+}
+</script>
+</body>
+</html>

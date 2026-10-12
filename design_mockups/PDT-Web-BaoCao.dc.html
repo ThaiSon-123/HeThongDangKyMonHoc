@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Báo cáo đào tạo — Phòng đào tạo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:var(--bg)}
+a{text-decoration:none}
+button,select,input,textarea{font-family:inherit}
+
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1200px;background:var(--bg)">
+  <nav class="np" aria-label="Điều hướng phòng đào tạo" style="flex:1 1 260px;max-width:260px;min-width:220px;background:linear-gradient(180deg,var(--navy) 0%,#26357A 100%);padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)">
+        <div style="flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">ĐK</div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-weight:700;font-size:15px;color:#FFFFFF">Đăng ký môn học</span>
+          <span style="font-size:12px;color:#AEB8E6">Cổng phòng đào tạo</span>
+        </div>
+      </div>
+      <sc-for list="{{navGroups}}" as="grp" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:0 12px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8E9AD6">{{grp.title}}</div>
+          <sc-for list="{{grp.items}}" as="item" hint-placeholder-count="2">
+            <a href="{{item.href}}" style="{{item.style}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+              <span style="flex:1">{{item.label}}</span>
+              <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{false}}">
+                <span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--accent);color:#FFFFFF;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{item.badge}}</span>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.12)">
+      <a href="#" aria-label="Tài khoản" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">LH</a>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+        <span style="font-weight:600;font-size:14px;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lê Thị Hương</span>
+        <span style="font-size:12px;color:#AEB8E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Phòng đào tạo · pdt01</span>
+      </div>
+      <a href="Web-DangNhap.dc.html" aria-label="Đăng xuất" style="flex:0 0 auto;width:44px;height:44px;border-radius:12px;color:#C9D0F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"></path></svg></a>
+    </div>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header class="np" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:32px 32px 4px;color:var(--navy);flex-wrap:wrap">
+      <div>
+        <div class="ui-bc" aria-label="Đường dẫn"><a href="PDT-Web-TongQuan.dc.html">Phòng đào tạo</a><span aria-hidden="true">›</span><span style="color:#5B6488;font-weight:600">Báo cáo đào tạo</span></div><h1 style="margin:0;font-size:28px;font-weight:700">Báo cáo đào tạo</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:#5B6488">Số liệu đăng ký theo học kỳ, ngành và môn</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        
+        <a href="PDT-Web-ThongBao.dc.html" aria-label="Thông báo, có tin chưa đọc" style="position:relative;width:44px;height:44px;border-radius:12px;border:0;background:#FFFFFF;color:var(--navy);box-shadow:0 2px 10px rgba(31,42,92,.1);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0"></path></svg><span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid #FFFFFF"></span></a>
+      </div>
+    </header>
+
+    <main style="padding:32px;display:flex;flex-direction:column;gap:24px">
+      <sc-if value="{{uiLoading}}" hint-placeholder-val="{{false}}"><div aria-busy="true" aria-label="Đang tải dữ liệu" style="display:flex;flex-direction:column;gap:20px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div></div><div style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:14px"><div class="ui-skel" style="height:20px;width:220px;border-radius:8px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div></div></div></sc-if>
+      <sc-if value="{{uiError}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center"><span style="width:56px;height:56px;border-radius:50%;background:#FDECEA;color:#C62828;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">!</span><span style="font-size:18px;font-weight:700;color:var(--navy)">Không tải được dữ liệu</span><span style="font-size:14px;color:#6B7280;max-width:420px;line-height:1.5">Kết nối bị gián đoạn hoặc máy chủ đang bận. Hãy thử lại sau ít giây.</span><button onClick="{{uiRetry}}" style="min-height:44px;padding:0 24px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Thử lại</button></div></sc-if>
+      <sc-if value="{{uiOk}}" hint-placeholder-val="{{true}}"><div style="display:flex;flex-direction:column;gap:24px">
+      <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:18px 24px;display:flex;flex-wrap:wrap;gap:14px 16px;align-items:flex-end">
+        <label style="flex:0 1 220px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Học kỳ<select value="{{sem}}" onChange="{{setSem}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{semOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+        <label style="flex:0 1 210px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Ngành<select value="{{ng}}" onChange="{{setNg}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{ngOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+        <div style="flex:1 1 260px;max-width:320px"><div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0"><span>Môn học</span><div style="position:relative"><input type="text" autocomplete="off" value="{{monC.text}}" onFocus="{{monC.focus}}" onBlur="{{monC.blur}}" onChange="{{monC.change}}" placeholder="Gõ mã hoặc tên môn…" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;padding-right:58px"><sc-if value="{{monC.canClear}}" hint-placeholder-val="{{false}}"><button type="button" aria-label="Bỏ chọn" onMouseDown="{{monC.clear}}" style="position:absolute;right:28px;top:6px;width:32px;height:32px;border:0;background:transparent;color:#6B7280;font-size:13px;cursor:pointer;border-radius:8px">✕</button></sc-if><span style="position:absolute;right:12px;top:0;bottom:0;display:flex;align-items:center;color:#6B7280;pointer-events:none;font-size:12px">▾</span><sc-if value="{{monC.open}}" hint-placeholder-val="{{false}}"><div role="listbox" style="position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:4px;max-height:260px;overflow:auto;background:#FFFFFF;border:1px solid #C4C9D4;border-radius:12px;box-shadow:0 10px 28px rgba(17,24,39,.18)"><sc-for list="{{monC.list}}" as="o" hint-placeholder-count="4"><div role="option" onMouseDown="{{o.pick}}" style="{{o.style}}"><span>{{o.pre}}</span><span style="font-weight:700;color:var(--primary-dark);background:#FFF4D6;border-radius:3px">{{o.mid}}</span><span>{{o.post}}</span></div></sc-for><sc-if value="{{monC.none}}" hint-placeholder-val="{{false}}"><div style="padding:12px 14px;font-size:14px;color:#6B7280">Không có kết quả phù hợp</div></sc-if></div></sc-if></div></div></div>
+        <span style="flex:1"></span>
+        <button onClick="{{exportX}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Xuất Excel</button>
+      </section>
+      <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px">
+        <sc-for list="{{tiles}}" as="t" hint-placeholder-count="5"><div style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:18px 20px;display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#6B7280;font-weight:600">{{t.label}}</span><span style="font-size:30px;font-weight:700;color:var(--navy);line-height:1.1">{{t.value}}</span><span style="font-size:12px;color:#6B7280">{{t.note}}</span></div></sc-for>
+      </section>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:24px;align-items:start">
+        <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--navy)">Lượt đăng ký theo môn</h2>
+          <sc-if value="{{noData}}" hint-placeholder-val="{{false}}"><span style="font-size:14px;color:#6B7280">Không có dữ liệu.</span></sc-if>
+          <sc-for list="{{byMon}}" as="b" hint-placeholder-count="5"><div title="{{b.label}}: {{b.v}} lượt đăng ký" style="display:flex;align-items:center;gap:12px;font-size:13px"><span style="flex:0 0 190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{b.label}}</span><span style="flex:1;height:14px;border-radius:999px;background:#EEF0F5;overflow:hidden"><span style="display:block;height:100%;width:{{b.w}}%;background:var(--primary);border-radius:999px"></span></span><strong style="flex:0 0 40px;text-align:right">{{b.v}}</strong></div></sc-for>
+        </section>
+        <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px 24px;display:flex;flex-direction:column;gap:14px">
+          <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--navy)">Tỷ lệ lấp đầy theo lớp</h2>
+          <sc-if value="{{noData}}" hint-placeholder-val="{{false}}"><span style="font-size:14px;color:#6B7280">Không có dữ liệu.</span></sc-if>
+          <sc-for list="{{byCls}}" as="b" hint-placeholder-count="5"><div title="{{b.id}}: lấp đầy {{b.pct}}%" style="display:flex;align-items:center;gap:12px;font-size:13px"><span style="flex:0 0 110px;font-family:ui-monospace,Menlo,monospace;font-size:12px">{{b.id}}</span><span style="flex:1;height:14px;border-radius:999px;background:#EEF0F5;overflow:hidden"><span style="display:block;height:100%;width:{{b.pct}}%;background:{{b.color}};border-radius:999px"></span></span><strong style="flex:0 0 46px;text-align:right">{{b.pct}}%</strong></div></sc-for>
+          <span style="font-size:12px;color:#6B7280">Xanh &lt; 70% · vàng 70–90% · đỏ &gt; 90%</span>
+        </section>
+      </div>
+      <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);overflow:hidden">
+        <div style="padding:16px 24px;border-bottom:1px solid #E3E6EE"><h2 style="margin:0;font-size:16px;font-weight:700;color:var(--navy)">Chi tiết theo lớp</h2><p style="margin:4px 0 0;font-size:13px;color:#6B7280">Bấm tiêu đề cột để sắp xếp.</p></div>
+        <div class="ui-tscroll" style="overflow-x:auto"><div style="min-width:900px">
+          <div style="display:flex;gap:12px;padding:8px 20px;background:#FAFAFA"><sc-for list="{{heads}}" as="h" hint-placeholder-count="6"><button onClick="{{h.sort}}" style="{{h.style}}">{{h.label}} {{h.arrow}}</button></sc-for></div>
+          <sc-for list="{{tbl}}" as="r" hint-placeholder-count="6"><div class="ui-trow" style="display:flex;gap:12px;padding:12px 20px;border-top:1px solid #EEF0F5;align-items:center;font-size:14px"><span style="flex:0 0 120px;font-weight:600;font-family:ui-monospace,Menlo,monospace;font-size:13px">{{r.id}}</span><span style="flex:1 1 200px">{{r.ten}}</span><span style="flex:1 1 150px">{{r.gv}}</span><span style="flex:0 0 90px">{{r.si}}/{{r.max}}</span><span style="flex:0 0 100px"><strong>{{r.pct}}%</strong></span><span style="flex:0 0 110px"><span style="{{r.chip}}">{{r.stLabel}}</span></span></div></sc-for>
+        </div></div>
+      </section>
+<sc-if value="{{toast}}" hint-placeholder-val="{{false}}"><div role="status" class="ui-toast" style="position:fixed;right:32px;bottom:32px;background:#1F2937;color:#FFFFFF;padding:14px 20px;border-radius:12px;font-size:14px;z-index:60">{{toastText}}</div></sc-if>
+      </div></sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200},"uiState":{"editor":"enum","default":"ready","options":["ready","loading","error"],"section":"Trạng thái dữ liệu"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sem: 's2', ng: 'all', mon: 'all', sortKey: 'pct', sortDir: -1, toast: false, toastText: '' };
+  }
+  renderVals() {
+    const NAVG = (active) => {
+      const base = 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;';
+      const on = base + 'background:var(--primary);color:#FFFFFF;font-weight:600;box-shadow:0 4px 12px rgba(63,81,181,.35);';
+      const off = base + 'color:#C9D0F2;font-weight:500;';
+      const it = (k, label, href, icon, badge) => ({ label, href, icon, style: k === active ? on : off, hasBadge: !!badge, badge: badge || '' });
+      return [
+        { title: 'TỔNG QUAN', items: [it('home', 'Tổng quan', 'PDT-Web-TongQuan.dc.html', 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10')] },
+        { title: 'DANH MỤC', items: [
+          it('hs', 'Hồ sơ SV / GV', 'PDT-Web-HoSo.dc.html', 'M9 11a4 4 0 100-8 4 4 0 000 8zM2 21a7 7 0 0114 0M17 11a3 3 0 100-6M18 21a6 6 0 00-3-5'),
+          it('kv', 'Khoa / viện', 'PDT-Web-KhoaVien.dc.html', 'M4 21V5l8-2 8 2v16M9 21v-5h6v5M8 9h2M14 9h2M8 13h2M14 13h2'),
+          it('nganh', 'Ngành', 'PDT-Web-Nganh.dc.html', 'M2 9l10-5 10 5-10 5L2 9zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5'),
+          it('ctdt', 'Chương trình đào tạo', 'PDT-Web-CTDT.dc.html', 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13'),
+          it('mon', 'Môn học', 'PDT-Web-MonHoc.dc.html', 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5')] },
+        { title: 'TỔ CHỨC ĐÀO TẠO', items: [
+          it('hk', 'Học kỳ', 'PDT-Web-HocKy.dc.html', 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4'),
+          it('lop', 'Lớp học phần', 'PDT-Web-LopHP.dc.html', 'M4 6h16M4 12h10M4 18h7'),
+          it('dk', 'Đăng ký', 'PDT-Web-DangKy.dc.html', 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6'),
+          it('diem', 'Duyệt điểm', 'PDT-Web-DuyetDiem.dc.html', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z', '2')] },
+        { title: 'KHÁC', items: [
+          it('bc', 'Báo cáo', 'PDT-Web-BaoCao.dc.html', 'M4 20V10M10 20V4M16 20v-7M22 20H2'),
+          it('tb', 'Thông báo', 'PDT-Web-ThongBao.dc.html', 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0', '2'),
+          it('nk', 'Nhật ký', 'PDT-Web-NhatKy.dc.html', 'M6 3h9l4 4v14H6V3zM14 3v5h5M9 13h7M9 17h7'),
+          it('out', 'Đăng xuất', 'Web-DangNhap.dc.html', 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9')] }
+      ];
+    };
+
+    const S = this.state;
+    const SEMS = [
+      { id: 's1', ten: 'Học kỳ 1', nam: '2026–2027', bd: '03/08/2026', kt: '30/01/2027', cs1: '10/08/2026', cs2: '20/08/2026', st: 'MO' },
+      { id: 's2', ten: 'Học kỳ 2', nam: '2026–2027', bd: '04/01/2027', kt: '30/05/2027', cs1: '05/01/2027', cs2: '19/01/2027', st: 'MO' },
+      { id: 's3', ten: 'Học kỳ 2', nam: '2025–2026', bd: '05/01/2026', kt: '31/05/2026', cs1: '06/01/2026', cs2: '20/01/2026', st: 'DONG' },
+      { id: 's4', ten: 'Học kỳ 1', nam: '2025–2026', bd: '04/08/2025', kt: '04/01/2026', cs1: '11/08/2025', cs2: '21/08/2025', st: 'DONG' },
+      { id: 's5', ten: 'Học kỳ 1', nam: '2027–2028', bd: '02/08/2027', kt: '02/01/2028', cs1: '09/08/2027', cs2: '19/08/2027', st: 'DONG' }
+    ];
+    const semName = (id) => { const s = SEMS.find((x) => x.id === id); return s.ten + ' · ' + s.nam; };
+    const CLASSES = [
+      { id: 'CNTT101-01', mon: 'CNTT101', ten: 'Lập trình hướng đối tượng', tc: 3, gv: 'Trần Minh Quân', sem: 's1', si: 42, max: 45, st: 'DANG_HOC', bd: '', kt: '', han: '24/01/2027', lich: [[3, 1, 3, 'P.A101'], [7, 1, 3, 'P.A101']] },
+      { id: 'CNTT203-02', mon: 'CNTT203', ten: 'Cơ sở dữ liệu', tc: 3, gv: 'Trần Minh Quân', sem: 's1', si: 38, max: 45, st: 'DANG_HOC', bd: '', kt: '', han: '24/01/2027', lich: [[4, 6, 3, 'P.B203'], [7, 6, 3, 'P.B203']] },
+      { id: 'CNTT305-01', mon: 'CNTT305', ten: 'Mạng máy tính', tc: 3, gv: 'Trần Minh Quân', sem: 's1', si: 36, max: 45, st: 'DANG_HOC', bd: '', kt: '', han: '24/01/2027', lich: [[5, 11, 3, 'P.C105']] },
+      { id: 'CNTT320-01', mon: 'CNTT320', ten: 'Kỹ thuật phần mềm', tc: 3, gv: 'Trần Minh Quân', sem: 's1', si: 34, max: 45, st: 'DANG_HOC', bd: '', kt: '', han: '24/01/2027', lich: [[6, 1, 3, 'P.A204']] },
+      { id: 'CNTT350-01', mon: 'CNTT350', ten: 'Quản lý dự án phần mềm', tc: 2, gv: 'Nguyễn Thị Mai', sem: 's1', si: 18, max: 40, st: 'DANG_HOC', bd: '24/08/2026', kt: '30/09/2026', han: '07/10/2026', lich: [[2, 6, 3, 'P.B101']] },
+      { id: 'MAT201-01', mon: 'MAT201', ten: 'Xác suất thống kê', tc: 3, gv: 'Trần Thị Bình', sem: 's1', si: 45, max: 50, st: 'DANG_HOC', bd: '', kt: '', han: '24/01/2027', lich: [[2, 1, 3, 'P.C201']] },
+      { id: 'CNTT401-01', mon: 'CNTT401', ten: 'Trí tuệ nhân tạo', tc: 3, gv: 'Nguyễn Thị Mai', sem: 's2', si: 40, max: 45, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[2, 1, 3, 'P.A301']] },
+      { id: 'CNTT401-02', mon: 'CNTT401', ten: 'Trí tuệ nhân tạo', tc: 3, gv: 'Nguyễn Thị Mai', sem: 's2', si: 44, max: 45, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[3, 1, 3, 'P.A302']] },
+      { id: 'CNTT401-03', mon: 'CNTT401', ten: 'Trí tuệ nhân tạo', tc: 3, gv: 'Vũ Đức Anh', sem: 's2', si: 12, max: 45, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[5, 6, 3, 'P.B104']] },
+      { id: 'CNTT402-01', mon: 'CNTT402', ten: 'Học máy', tc: 3, gv: 'Vũ Đức Anh', sem: 's2', si: 28, max: 40, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[3, 6, 3, 'P.B104']] },
+      { id: 'CNTT402-02', mon: 'CNTT402', ten: 'Học máy', tc: 3, gv: 'Lê Quốc Bảo', sem: 's2', si: 39, max: 40, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[6, 1, 3, 'P.A105']] },
+      { id: 'MAT102-01', mon: 'MAT102', ten: 'Giải tích 2', tc: 3, gv: 'Trần Thị Bình', sem: 's2', si: 20, max: 50, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[2, 6, 3, 'P.C201']] },
+      { id: 'MAT102-02', mon: 'MAT102', ten: 'Giải tích 2', tc: 3, gv: 'Trần Thị Bình', sem: 's2', si: 35, max: 50, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[4, 1, 3, 'P.C202']] },
+      { id: 'CNTT410-01', mon: 'CNTT410', ten: 'An toàn thông tin', tc: 3, gv: 'Hồ Đắc Hưng', sem: 's2', si: 44, max: 45, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[5, 1, 3, 'P.A205']] },
+      { id: 'CNTT431-01', mon: 'CNTT431', ten: 'Xử lý ảnh', tc: 3, gv: 'Đặng Quốc Việt', sem: 's2', si: 22, max: 40, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[4, 11, 3, 'P.B201']] },
+      { id: 'CNTT415-01', mon: 'CNTT415', ten: 'Công nghệ phần mềm nâng cao', tc: 3, gv: 'Đỗ Văn Hùng', sem: 's2', si: 33, max: 40, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[6, 6, 3, 'P.A204']] },
+      { id: 'CNTT420-01', mon: 'CNTT420', ten: 'Cơ sở dữ liệu nâng cao', tc: 3, gv: 'Phạm Thu Hà', sem: 's2', si: 35, max: 40, st: 'MO', bd: '', kt: '', han: '15/06/2027', lich: [[4, 6, 3, 'P.B203']] },
+      { id: 'CNTT360-01', mon: 'CNTT360', ten: 'Phát triển ứng dụng di động', tc: 3, gv: '', sem: 's2', si: 0, max: 40, st: 'KE_HOACH', bd: '', kt: '', han: '15/06/2027', lich: [[3, 11, 3, 'P.B105']] },
+      { id: 'CNTT370-01', mon: 'CNTT370', ten: 'Điện toán đám mây', tc: 3, gv: 'Phạm Thu Hà', sem: 's2', si: 0, max: 40, st: 'KE_HOACH', bd: '', kt: '', han: '15/06/2027', lich: [] },
+      { id: 'CNTT110-03', mon: 'CNTT110', ten: 'Cấu trúc dữ liệu và giải thuật', tc: 3, gv: 'Trần Minh Quân', sem: 's3', si: 40, max: 40, st: 'DA_DONG', bd: '', kt: '', han: '15/06/2026', chuaKhoa: false, lich: [[6, 1, 3, 'P.A101']] },
+      { id: 'CNTT210-01', mon: 'CNTT210', ten: 'Hệ điều hành', tc: 3, gv: 'Lê Quốc Bảo', sem: 's3', si: 40, max: 45, st: 'DA_DONG', bd: '', kt: '', han: '15/06/2026', chuaKhoa: true, lich: [[5, 1, 3, 'P.A105']] },
+      { id: 'MAT101-02', mon: 'MAT101', ten: 'Giải tích 1', tc: 3, gv: 'Trần Thị Bình', sem: 's3', si: 48, max: 50, st: 'DA_DONG', bd: '', kt: '', han: '15/06/2026', chuaKhoa: true, lich: [[2, 1, 3, 'P.C201']] },
+      { id: 'CNTT240-01', mon: 'CNTT240', ten: 'Kiến trúc máy tính', tc: 3, gv: 'Hồ Đắc Hưng', sem: 's4', si: 44, max: 45, st: 'DA_DONG', bd: '', kt: '', han: '25/01/2026', chuaKhoa: false, lich: [[4, 1, 3, 'P.A205']] }
+    ];
+    const REGS = [
+      ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'CNTT101-01', '12/08/2026', 'DA_DANG_KY', ''], ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'CNTT203-02', '12/08/2026', 'DA_DANG_KY', ''],
+      ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'CNTT305-01', '12/08/2026', 'DA_DANG_KY', ''], ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'CNTT320-01', '12/08/2026', 'DA_DANG_KY', ''],
+      ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'CNTT350-01', '12/08/2026', 'DA_HUY', '14/08/2026 · Phòng đào tạo hủy hộ: lớp gộp'],
+      ['SV2023021', 'Nguyễn Thị Lan', 'CNTT', 'CNTT101-01', '12/08/2026', 'DA_DANG_KY', ''], ['SV2023021', 'Nguyễn Thị Lan', 'CNTT', 'CNTT203-02', '13/08/2026', 'DA_DANG_KY', ''], ['SV2023021', 'Nguyễn Thị Lan', 'CNTT', 'CNTT320-01', '13/08/2026', 'DA_DANG_KY', ''],
+      ['SV2023033', 'Phạm Quang Huy', 'KTPM', 'CNTT101-01', '13/08/2026', 'DA_DANG_KY', ''], ['SV2023033', 'Phạm Quang Huy', 'KTPM', 'CNTT305-01', '13/08/2026', 'DA_DANG_KY', ''], ['SV2023033', 'Phạm Quang Huy', 'KTPM', 'MAT201-01', '14/08/2026', 'DA_DANG_KY', ''],
+      ['SV2023047', 'Lê Minh Châu', 'HTTT', 'CNTT203-02', '14/08/2026', 'DA_DANG_KY', ''], ['SV2023047', 'Lê Minh Châu', 'HTTT', 'MAT201-01', '14/08/2026', 'DA_DANG_KY', ''], ['SV2023047', 'Lê Minh Châu', 'HTTT', 'CNTT350-01', '14/08/2026', 'DA_DANG_KY', ''],
+      ['SV2024005', 'Vũ Ngọc Anh', 'CNTT', 'CNTT320-01', '15/08/2026', 'DA_DANG_KY', ''], ['SV2024005', 'Vũ Ngọc Anh', 'CNTT', 'CNTT350-01', '15/08/2026', 'DA_DANG_KY', ''],
+      ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'CNTT415-01', '06/01/2027', 'DA_DANG_KY', ''], ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'CNTT420-01', '06/01/2027', 'DA_DANG_KY', ''],
+      ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'CNTT431-01', '06/01/2027', 'DA_HUY', '08/01/2027 · Trùng kế hoạch học tập'],
+      ['SV2023021', 'Nguyễn Thị Lan', 'CNTT', 'CNTT401-01', '07/01/2027', 'DA_DANG_KY', ''], ['SV2023021', 'Nguyễn Thị Lan', 'CNTT', 'CNTT402-01', '07/01/2027', 'DA_DANG_KY', ''],
+      ['SV2023033', 'Phạm Quang Huy', 'KTPM', 'CNTT401-03', '08/01/2027', 'DA_DANG_KY', ''], ['SV2023033', 'Phạm Quang Huy', 'KTPM', 'CNTT410-01', '08/01/2027', 'DA_DANG_KY', ''],
+      ['SV2024005', 'Vũ Ngọc Anh', 'CNTT', 'CNTT431-01', '09/01/2027', 'DA_DANG_KY', ''], ['SV2024005', 'Vũ Ngọc Anh', 'CNTT', 'CNTT420-01', '09/01/2027', 'DA_DANG_KY', ''],
+      ['SV2023047', 'Lê Minh Châu', 'HTTT', 'CNTT415-01', '10/01/2027', 'DA_DANG_KY', '']
+    ].map((a) => ({ ma: a[0], ten: a[1], ng: a[2], cls: a[3], ngay: a[4], st: a[5], ly: a[6] }));
+    const NAMES = [['SV2023014', 'Trần Hoàng Nam'], ['SV2023021', 'Nguyễn Thị Lan'], ['SV2023033', 'Phạm Quang Huy'], ['SV2023047', 'Lê Minh Châu'], ['SV2024005', 'Vũ Ngọc Anh'], ['SV2024019', 'Đỗ Thành Đạt'], ['SV2024052', 'Bùi Thu Trang'], ['SV2025003', 'Hoàng Gia Bảo'], ['SV2025007', 'Ngô Bảo Châu'], ['SV2025015', 'Lý Gia Hân']];
+    const KHOA = ['Công nghệ thông tin', 'Kỹ thuật phần mềm', 'Hệ thống thông tin', 'Toán – Tin'];
+    const GV_ALL = [['Trần Minh Quân', 0], ['Lê Quốc Bảo', 0], ['Nguyễn Thị Mai', 0], ['Vũ Đức Anh', 0], ['Đặng Quốc Việt', 0], ['Đỗ Văn Hùng', 1], ['Phạm Thu Hà', 2], ['Hồ Đắc Hưng', 2], ['Trần Thị Bình', 3], ['Phạm Văn Long', 3]].map((a) => ({ ten: a[0], khoa: KHOA[a[1]] }));
+    const MON_KHOA = { CNTT101: 0, CNTT240: 2, CNTT210: 0, CNTT305: 0, CNTT350: 0, CNTT401: 0, CNTT402: 0, CNTT431: 0, CNTT320: 0, CNTT415: 1, CNTT360: 1, CNTT203: 0, CNTT410: 2, CNTT420: 2, CNTT370: 2, CNTT110: 0, MAT101: 3, MAT102: 3, MAT201: 3 };
+    const monKhoa = (code) => (MON_KHOA[code] !== undefined ? KHOA[MON_KHOA[code]] : code.indexOf('MAT') === 0 ? KHOA[3] : KHOA[0]);
+    const NG_MON = {
+      CNTT: ['CNTT101', 'CNTT240', 'CNTT203', 'CNTT210', 'CNTT305', 'CNTT320', 'CNTT350', 'CNTT401', 'CNTT402', 'CNTT410', 'CNTT431', 'CNTT110', 'CNTT415', 'CNTT420', 'MAT101', 'MAT102', 'MAT201'],
+      KTPM: ['CNTT101', 'CNTT240', 'CNTT320', 'CNTT350', 'CNTT360', 'CNTT415', 'CNTT110', 'MAT101', 'MAT102', 'MAT201'],
+      HTTT: ['CNTT101', 'CNTT240', 'CNTT203', 'CNTT370', 'CNTT410', 'CNTT420', 'CNTT110', 'MAT101', 'MAT201']
+    };
+    const NG_OPTS = [{ v: 'all', l: 'Tất cả ngành' }, { v: 'CNTT', l: 'Công nghệ thông tin' }, { v: 'KTPM', l: 'Kỹ thuật phần mềm' }, { v: 'HTTT', l: 'Hệ thống thông tin' }];
+    const inNg = (ng, mon) => ng === 'all' || NG_MON[ng].indexOf(mon) >= 0;
+    const clsChip = (st) => ({ label: CLS_ST[st][0], style: CLS_ST[st][1] });
+    const chip = (bg, fg) => 'font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:' + bg + ';color:' + fg;
+    const CH = { green: chip('#E6F4EA', '#2E7D32'), gray: chip('#ECEFF1', '#455A64'), dgray: chip('#CFD8DC', '#263238'), indigo: chip('#E8EAF6', '#2C3A7A'), yellow: chip('#FFF4D6', '#8A5A00'), red: chip('#FDECEA', '#8C1D18'), teal: chip('#E0F2F1', '#00695C'), orange: chip('#FFF1E6', '#9A3412') };
+    const CLS_ST = { KE_HOACH: ['Kế hoạch', CH.gray], MO: ['Đang mở', CH.green], DANG_HOC: ['Đang học', CH.indigo], DA_DONG: ['Đã đóng', CH.dgray] };
+    const set = (k) => (e) => this.setState({ [k]: e.target.value });
+    const toast = (t) => { this.setState({ toast: true, toastText: t }); setTimeout(() => this.setState({ toast: false }), 2600); };
+    const TODAY = new Date(2027, 0, 12);
+    const pd = (s) => { const a = s.split('/'); return new Date(Number(a[2]), Number(a[1]) - 1, Number(a[0])); };
+    const norm = (t) => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    const hl = (label, q) => { const t = q ? String(q).trim() : ''; const i = t ? norm(label).indexOf(norm(t)) : -1; return i < 0 ? { pre: label, mid: '', post: '' } : { pre: label.slice(0, i), mid: label.slice(i, i + t.length), post: label.slice(i + t.length) }; };
+    const combo = (key, opts, ph, extra, off) => {
+      const sel = opts.find((o) => o.v === S[key]);
+      const def = opts.length && (opts[0].v === 'all' || opts[0].v === '') ? opts[0].v : '';
+      const q = S[key + 'Q'];
+      const typed = q !== null && q !== undefined;
+      const shown = typed ? opts.filter((o) => norm(o.l).indexOf(norm(q)) >= 0) : opts;
+      return { text: typed ? q : (sel ? sel.l : ''), open: !!S[key + 'O'] && !off, off: !!off, none: shown.length === 0, ph, canClear: !off && S[key] !== undefined && S[key] !== def && !!S[key],
+        clear: () => this.setState({ [key]: def, [key + 'Q']: null, [key + 'O']: false, ...(extra ? extra(def) : {}) }),
+        focus: (e) => { this.setState({ [key + 'O']: true, [key + 'Q']: null }); if (e && e.target && e.target.select) e.target.select(); }, blur: () => this.setState({ [key + 'O']: false, [key + 'Q']: null }),
+        change: (e) => this.setState({ [key + 'Q']: e.target.value, [key + 'O']: true }),
+        list: shown.map((o) => ({ l: o.l, ...hl(o.l, typed ? q : ''), style: 'padding:10px 14px;font-size:14px;cursor:pointer;line-height:1.35;' + (o.v === S[key] ? 'background:#E8EAF6;font-weight:600;color:var(--primary-dark)' : 'color:#212121'),
+          pick: () => this.setState({ [key]: o.v, [key + 'Q']: null, [key + 'O']: false, ...(extra ? extra(o.v) : {}) }) })) };
+    };
+    const barColor = (p) => (p > 90 ? '#C62828' : p >= 70 ? '#F9A825' : '#2E7D32');
+    const SHARE = { all: 1, CNTT: 0.6, KTPM: 0.25, HTTT: 0.15 };
+    const inSem = CLASSES.filter((c) => c.sem === S.sem && c.st !== 'KE_HOACH');
+    const monList = Array.from(new Set(inSem.filter((c) => inNg(S.ng, c.mon)).map((c) => c.mon)));
+    const list = inSem.filter((c) => inNg(S.ng, c.mon) && (S.mon === 'all' || c.mon === S.mon)).map((c) => { const si = Math.round(c.si * SHARE[S.ng]); const max = S.ng === 'all' ? c.max : Math.round(c.max * SHARE[S.ng]); const pct = max ? Math.round((si / max) * 100) : 0; return { ...c, si, max, pct, chip: CLS_ST[c.st][1], stLabel: CLS_ST[c.st][0] }; });
+    const luot = list.reduce((n, c) => n + c.si, 0);
+    const tiles = [
+      { label: 'Số sinh viên', value: Math.round(list.reduce((n, c) => n + c.si, 0) / 3.4), note: 'ước tính theo lượt đăng ký' }, { label: 'Số lớp', value: list.length, note: 'đang mở / học / đã đóng' },
+      { label: 'Tổng lượt đăng ký', value: luot, note: 'đang đăng ký' }, { label: 'Lớp đầy', value: list.filter((c) => c.pct >= 100).length, note: 'hết chỗ' }, { label: 'Lớp còn chỗ', value: list.filter((c) => c.pct < 100).length, note: 'đang nhận thêm' }
+    ];
+    const bm = {}; list.forEach((c) => { bm[c.mon] = bm[c.mon] || { label: c.mon + ' · ' + c.ten, v: 0 }; bm[c.mon].v += c.si; });
+    const byMonArr = Object.keys(bm).map((k) => bm[k]).sort((a, b) => b.v - a.v);
+    const maxV = byMonArr.length ? byMonArr[0].v : 1;
+    const byMon = byMonArr.map((b) => ({ ...b, w: maxV ? Math.round((b.v / maxV) * 100) : 0 }));
+    const byCls = list.slice().sort((a, b) => b.pct - a.pct).map((c) => ({ id: c.id, pct: c.pct, color: barColor(c.pct) }));
+    const cols = [['id', 'Mã lớp', '0 0 120px'], ['ten', 'Môn học', '1 1 200px'], ['gv', 'Giáo viên', '1 1 150px'], ['si', 'Sĩ số', '0 0 90px'], ['pct', 'Lấp đầy', '0 0 100px'], ['st', 'Trạng thái', '0 0 110px']];
+    const heads = cols.map(([k, label, w]) => ({ label, arrow: S.sortKey === k ? (S.sortDir > 0 ? '▲' : '▼') : '', sort: () => this.setState({ sortKey: k, sortDir: S.sortKey === k ? -S.sortDir : 1 }),
+      style: 'flex:' + w + ';text-align:left;border:0;background:transparent;font-size:12px;font-weight:600;color:' + (S.sortKey === k ? '#3F51B5' : '#6B7280') + ';text-transform:uppercase;letter-spacing:.03em;cursor:pointer;padding:8px 0;min-height:36px' }));
+    const tbl = list.slice().sort((a, b) => { const x = a[S.sortKey], y = b[S.sortKey]; return (x > y ? 1 : x < y ? -1 : 0) * S.sortDir; });
+
+    const UI = (this.props && this.props.uiState) || 'ready';
+    const uiPending = UI !== 'ready' && !S.uiRetried;
+    return {
+      navGroups: NAVG('bc'),
+      uiLoading: uiPending && UI === 'loading', uiError: uiPending && UI === 'error', uiOk: !uiPending, uiRetry: () => this.setState({ uiRetried: true }),
+      sem: S.sem, setSem: (e) => this.setState({ sem: e.target.value, mon: 'all' }), semOpts: SEMS.map((x) => ({ v: x.id, l: x.ten + ' · ' + x.nam })),
+      ng: S.ng, setNg: (e) => this.setState({ ng: e.target.value, mon: 'all' }), ngOpts: NG_OPTS,
+      monC: combo('mon', [{ v: 'all', l: 'Tất cả môn' }].concat(monList.map((m) => ({ v: m, l: m + ' · ' + inSem.find((c) => c.mon === m).ten }))), ''),
+      tiles, byMon, byCls, noData: list.length === 0, heads, tbl, exportX: () => toast('Đã xuất báo cáo đào tạo ra Excel (' + list.length + ' lớp).'), toast: S.toast, toastText: S.toastText
+    };
+  }
+}
+</script>
+</body>
+</html>

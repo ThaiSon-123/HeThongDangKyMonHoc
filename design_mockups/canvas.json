@@ -1,0 +1,852 @@
+{
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "App-ChiTietLop.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "App · Chi tiết lớp",
+   "w": 390,
+   "x": 4450,
+   "y": 5260
+  },
+  "App-ChonLop.dc.html": {
+   "h": 844,
+   "title": "App · Điểm danh 1/3 — Chọn lớp",
+   "w": 390,
+   "x": 470,
+   "y": 2620
+  },
+  "App-DangNhap.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "App · Đăng nhập",
+   "w": 390,
+   "x": 3040,
+   "y": 3940
+  },
+  "App-DanhSachBuoi.dc.html": {
+   "h": 844,
+   "title": "App · Điểm danh 2/3 — Các buổi",
+   "w": 390,
+   "x": 940,
+   "y": 2620
+  },
+  "App-DiemDanh.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "App · Điểm danh 3/3 — Danh sách SV",
+   "w": 390,
+   "x": 1410,
+   "y": 2620
+  },
+  "App-HoSo.dc.html": {
+   "h": 844,
+   "title": "App · Hồ sơ",
+   "w": 390,
+   "x": 3510,
+   "y": 5260
+  },
+  "App-Lop.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "App · Lớp phụ trách",
+   "w": 390,
+   "x": 3980,
+   "y": 5260
+  },
+  "App-NhapDiem.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "App · Nhập điểm",
+   "w": 390,
+   "x": 1880,
+   "y": 2620
+  },
+  "App-QuenMatKhau.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "App · Quên mật khẩu (3 bước)",
+   "w": 390,
+   "x": 3510,
+   "y": 3940
+  },
+  "App-TKB.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "App · Thời khóa biểu",
+   "w": 390,
+   "x": 2350,
+   "y": 2620
+  },
+  "App-ThongBao.dc.html": {
+   "h": 844,
+   "is_interactive": true,
+   "title": "App · Thông báo và soạn",
+   "w": 390,
+   "x": 3040,
+   "y": 5260
+  },
+  "App-TongQuan.dc.html": {
+   "h": 844,
+   "title": "App · Tổng quan",
+   "w": 390,
+   "x": 0,
+   "y": 2620
+  },
+  "Main.dc.html": {
+   "expand": "fill",
+   "h": 900,
+   "title": "Web · Tổng quan GV",
+   "w": 1440,
+   "x": 0,
+   "y": 0
+  },
+  "Web-DangNhap.dc.html": {
+   "expand": "fill",
+   "h": 800,
+   "is_interactive": true,
+   "title": "Web · Đăng nhập",
+   "w": 1440,
+   "x": 0,
+   "y": 3940
+  },
+  "Web-DiemDanh.dc.html": {
+   "expand": "fill",
+   "h": 1000,
+   "is_interactive": true,
+   "title": "Web · Điểm danh (chọn lớp → buổi → SV)",
+   "w": 1440,
+   "x": 0,
+   "y": 1260
+  },
+  "Web-HoSo.dc.html": {
+   "expand": "fill",
+   "h": 900,
+   "is_interactive": true,
+   "title": "Web · Hồ sơ và đổi mật khẩu",
+   "w": 1440,
+   "x": 1520,
+   "y": 5260
+  },
+  "Web-Lop.dc.html": {
+   "expand": "fill",
+   "h": 900,
+   "is_interactive": true,
+   "title": "Web · Lớp phụ trách",
+   "w": 1440,
+   "x": 1520,
+   "y": 0
+  },
+  "Web-NhapDiem.dc.html": {
+   "expand": "fill",
+   "h": 1000,
+   "is_interactive": true,
+   "title": "Web · Nhập điểm (chọn lớp → lưới)",
+   "w": 1440,
+   "x": 1520,
+   "y": 1260
+  },
+  "Web-QuenMatKhau.dc.html": {
+   "expand": "fill",
+   "h": 800,
+   "is_interactive": true,
+   "title": "Web · Quên mật khẩu (3 bước)",
+   "w": 1440,
+   "x": 1520,
+   "y": 3940
+  },
+  "Web-TKB.dc.html": {
+   "expand": "fill",
+   "h": 900,
+   "is_interactive": true,
+   "title": "Web · Thời khóa biểu",
+   "w": 1440,
+   "x": 3040,
+   "y": 0
+  },
+  "Web-ThongBao.dc.html": {
+   "expand": "fill",
+   "h": 900,
+   "is_interactive": true,
+   "title": "Web · Thông báo (hộp thư, đã gửi, soạn)",
+   "w": 1440,
+   "x": 0,
+   "y": 5260
+  },
+  "SV-Web-TongQuan.dc.html": {
+   "x": 0,
+   "y": 6700,
+   "w": 1440,
+   "h": 900,
+   "title": "SV · Web · Tổng quan",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-DangKy.dc.html": {
+   "x": 1520,
+   "y": 6700,
+   "w": 1440,
+   "h": 1000,
+   "title": "SV · Web · Đăng ký môn học",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-TKBTuDong.dc.html": {
+   "x": 3040,
+   "y": 6700,
+   "w": 1440,
+   "h": 900,
+   "title": "SV · Web · Tạo TKB tự động",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-TKB.dc.html": {
+   "x": 0,
+   "y": 8000,
+   "w": 1440,
+   "h": 900,
+   "title": "SV · Web · Thời khóa biểu",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-CTDT.dc.html": {
+   "x": 1520,
+   "y": 8000,
+   "w": 1440,
+   "h": 1000,
+   "title": "SV · Web · Chương trình đào tạo",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-Diem.dc.html": {
+   "x": 3040,
+   "y": 8000,
+   "w": 1440,
+   "h": 1000,
+   "title": "SV · Web · Điểm",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-DiemDanh.dc.html": {
+   "x": 0,
+   "y": 9300,
+   "w": 1440,
+   "h": 1000,
+   "title": "SV · Web · Điểm danh (học kỳ → lớp → thống kê)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-HocPhi.dc.html": {
+   "x": 1520,
+   "y": 9300,
+   "w": 1440,
+   "h": 900,
+   "title": "SV · Web · Học phí",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-ThongBao.dc.html": {
+   "x": 3040,
+   "y": 9300,
+   "w": 1440,
+   "h": 900,
+   "title": "SV · Web · Thông báo",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-Web-HoSo.dc.html": {
+   "x": 0,
+   "y": 10600,
+   "w": 1440,
+   "h": 900,
+   "title": "SV · Web · Hồ sơ",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-App-TongQuan.dc.html": {
+   "x": 0,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Trang chủ",
+   "is_interactive": true
+  },
+  "SV-App-DangKy.dc.html": {
+   "x": 470,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Đăng ký môn học",
+   "is_interactive": true
+  },
+  "SV-App-TKB.dc.html": {
+   "x": 940,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Thời khóa biểu",
+   "is_interactive": true
+  },
+  "SV-App-HocPhi.dc.html": {
+   "x": 1410,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Học phí",
+   "is_interactive": true
+  },
+  "SV-App-HoSo.dc.html": {
+   "x": 1880,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Hồ sơ",
+   "is_interactive": true
+  },
+  "SV-App-TKBTuDong.dc.html": {
+   "x": 2350,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Tạo TKB tự động",
+   "is_interactive": true
+  },
+  "SV-App-CTDT.dc.html": {
+   "x": 2820,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Chương trình đào tạo",
+   "is_interactive": true
+  },
+  "SV-App-Diem.dc.html": {
+   "x": 3290,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Điểm",
+   "is_interactive": true
+  },
+  "SV-App-DiemDanh.dc.html": {
+   "x": 3760,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Điểm danh",
+   "is_interactive": true
+  },
+  "SV-App-ThongBao.dc.html": {
+   "x": 4230,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Thông báo",
+   "is_interactive": true
+  },
+  "SV-Web-ThanhToan.dc.html": {
+   "x": 1520,
+   "y": 10600,
+   "w": 1440,
+   "h": 900,
+   "title": "SV · Web · Thanh toán học phí (mã QR)",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "SV-App-ThanhToan.dc.html": {
+   "x": 4700,
+   "y": 11800,
+   "w": 390,
+   "h": 844,
+   "title": "SV · App · Thanh toán học phí (mã QR)",
+   "is_interactive": true
+  },
+  "PDT-Web-TongQuan.dc.html": {
+   "x": 0,
+   "y": 13160,
+   "w": 1440,
+   "h": 900,
+   "title": "PĐT · Web · Tổng quan",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-HoSo.dc.html": {
+   "x": 1520,
+   "y": 13160,
+   "w": 1440,
+   "h": 1000,
+   "title": "PĐT · Web · Hồ sơ SV / GV",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-Nganh.dc.html": {
+   "x": 3040,
+   "y": 13160,
+   "w": 1440,
+   "h": 800,
+   "title": "PĐT · Web · Ngành",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-CTDT.dc.html": {
+   "x": 0,
+   "y": 14460,
+   "w": 1440,
+   "h": 1000,
+   "title": "PĐT · Web · CTĐT & gán môn",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-MonHoc.dc.html": {
+   "x": 1520,
+   "y": 14460,
+   "w": 1440,
+   "h": 1000,
+   "title": "PĐT · Web · Môn học & tiên quyết",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-HocKy.dc.html": {
+   "x": 3040,
+   "y": 14460,
+   "w": 1440,
+   "h": 900,
+   "title": "PĐT · Web · Học kỳ & cửa sổ đăng ký",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-LopHP.dc.html": {
+   "x": 0,
+   "y": 15760,
+   "w": 1440,
+   "h": 1100,
+   "title": "PĐT · Web · Lớp học phần & lịch",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-DangKy.dc.html": {
+   "x": 1520,
+   "y": 15760,
+   "w": 1440,
+   "h": 1000,
+   "title": "PĐT · Web · Theo dõi đăng ký & hủy hộ",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-DuyetDiem.dc.html": {
+   "x": 3040,
+   "y": 15760,
+   "w": 1440,
+   "h": 1100,
+   "title": "PĐT · Web · Duyệt điểm",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-BaoCao.dc.html": {
+   "x": 0,
+   "y": 17260,
+   "w": 1440,
+   "h": 1200,
+   "title": "PĐT · Web · Báo cáo đào tạo",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-ThongBao.dc.html": {
+   "x": 1520,
+   "y": 17260,
+   "w": 1440,
+   "h": 900,
+   "title": "PĐT · Web · Thông báo",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-NhatKy.dc.html": {
+   "x": 3040,
+   "y": 17260,
+   "w": 1440,
+   "h": 900,
+   "title": "PĐT · Web · Nhật ký thao tác",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "PDT-Web-KhoaVien.dc.html": {
+   "x": 4560,
+   "y": 13160,
+   "w": 1440,
+   "h": 800,
+   "title": "PĐT · Web · Khoa / viện",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "KT-Web-TongQuan.dc.html": {
+   "x": 0,
+   "y": 18960,
+   "w": 1440,
+   "h": 900,
+   "title": "KT · Web · Tổng quan",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "KT-Web-CauHinh.dc.html": {
+   "x": 1520,
+   "y": 18960,
+   "w": 1440,
+   "h": 1000,
+   "title": "KT · Web · Cấu hình học phí",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "KT-Web-HocPhi.dc.html": {
+   "x": 3040,
+   "y": 18960,
+   "w": 1440,
+   "h": 1100,
+   "title": "KT · Web · Học phí",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "KT-Web-CongNo.dc.html": {
+   "x": 0,
+   "y": 20520,
+   "w": 1440,
+   "h": 900,
+   "title": "KT · Web · Công nợ",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "KT-Web-BaoCao.dc.html": {
+   "x": 1520,
+   "y": 20520,
+   "w": 1440,
+   "h": 1100,
+   "title": "KT · Web · Báo cáo tài chính",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "KT-Web-ThongBao.dc.html": {
+   "x": 3040,
+   "y": 20520,
+   "w": 1440,
+   "h": 900,
+   "title": "KT · Web · Thông báo",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "KT-Web-NhatKy.dc.html": {
+   "x": 0,
+   "y": 22080,
+   "w": 1440,
+   "h": 900,
+   "title": "KT · Web · Nhật ký thao tác",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AD-Web-TongQuan.dc.html": {
+   "x": 0,
+   "y": 23460,
+   "w": 1440,
+   "h": 1000,
+   "title": "QT · Web · Tổng quan",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AD-Web-TaiKhoan.dc.html": {
+   "x": 1520,
+   "y": 23460,
+   "w": 1440,
+   "h": 1000,
+   "title": "QT · Web · Tài khoản",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AD-Web-MaTranQuyen.dc.html": {
+   "x": 3040,
+   "y": 23460,
+   "w": 1440,
+   "h": 1100,
+   "title": "QT · Web · Ma trận quyền",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AD-Web-CauHinh.dc.html": {
+   "x": 0,
+   "y": 25020,
+   "w": 1440,
+   "h": 1200,
+   "title": "QT · Web · Cấu hình hệ thống",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AD-Web-SaoLuu.dc.html": {
+   "x": 1520,
+   "y": 25020,
+   "w": 1440,
+   "h": 900,
+   "title": "QT · Web · Sao lưu",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AD-Web-ThongBao.dc.html": {
+   "x": 3040,
+   "y": 25020,
+   "w": 1440,
+   "h": 900,
+   "title": "QT · Web · Thông báo",
+   "expand": "fill",
+   "is_interactive": true
+  },
+  "AD-Web-NhatKy.dc.html": {
+   "x": 0,
+   "y": 26680,
+   "w": 1440,
+   "h": 900,
+   "title": "QT · Web · Nhật ký",
+   "expand": "fill",
+   "is_interactive": true
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-10-10T09:00:00Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "view": "canvas"
+ },
+ "notes": {
+  "rowA": {
+   "kind": "title1",
+   "maxW": 4400,
+   "text": "Giáo viên · Web — Tổng quan, Lớp phụ trách và Thời khóa biểu",
+   "w": 240,
+   "x": 0,
+   "y": -260
+  },
+  "rowB": {
+   "kind": "title1",
+   "maxW": 2880,
+   "text": "Giáo viên · Web — Điểm danh và Nhập điểm: phải chọn lớp trước, sau đó mới hiện buổi và danh sách SV",
+   "w": 240,
+   "x": 0,
+   "y": 1000
+  },
+  "rowC": {
+   "kind": "title1",
+   "maxW": 2740,
+   "text": "Giáo viên · App — mỗi cấp một màn: Lớp → Buổi → Danh sách SV",
+   "w": 240,
+   "x": 0,
+   "y": 2360
+  },
+  "rowD": {
+   "kind": "title1",
+   "maxW": 3900,
+   "text": "Giáo viên · Đăng nhập và Quên mật khẩu (Web + App)",
+   "w": 240,
+   "x": 0,
+   "y": 3700
+  },
+  "rowE": {
+   "kind": "title1",
+   "maxW": 4840,
+   "text": "Giáo viên · Thông báo, Hồ sơ (Web + App) và Lớp phụ trách trên App",
+   "w": 240,
+   "x": 0,
+   "y": 5020
+  },
+  "svA": {
+   "x": 0,
+   "y": 6440,
+   "text": "Sinh viên · Web — Tổng quan, Đăng ký môn học, Tạo TKB tự động",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "svB": {
+   "x": 0,
+   "y": 7740,
+   "text": "Sinh viên · Web — Thời khóa biểu, Chương trình đào tạo, Điểm",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "svC": {
+   "x": 0,
+   "y": 9040,
+   "text": "Sinh viên · Web — Điểm danh (chọn học kỳ → lớp), Học phí, Thông báo",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "svD": {
+   "x": 0,
+   "y": 10340,
+   "text": "Sinh viên · Web — Hồ sơ và Thanh toán học phí (mã QR)",
+   "kind": "title1",
+   "maxW": 2960,
+   "w": 240
+  },
+  "svE": {
+   "x": 0,
+   "y": 11540,
+   "text": "Sinh viên · App — 5 tab (Trang chủ, Đăng ký, TKB, Học phí, Hồ sơ) và 5 màn mở từ Trang chủ",
+   "kind": "title1",
+   "maxW": 5090,
+   "w": 240
+  },
+  "pA": {
+   "x": 0,
+   "y": 12900,
+   "text": "Phòng đào tạo · Web — Tổng quan, Hồ sơ SV/GV, Ngành, Khoa / viện",
+   "kind": "title1",
+   "maxW": 6000,
+   "w": 240
+  },
+  "pB": {
+   "x": 0,
+   "y": 14200,
+   "text": "Phòng đào tạo · Web — CTĐT & gán môn, Môn học & tiên quyết, Học kỳ",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "pC": {
+   "x": 0,
+   "y": 15500,
+   "text": "Phòng đào tạo · Web — Lớp học phần & lịch, Theo dõi đăng ký & hủy hộ, Duyệt điểm",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "pD": {
+   "x": 0,
+   "y": 17000,
+   "text": "Phòng đào tạo · Web — Báo cáo, Thông báo, Nhật ký",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "kA": {
+   "x": 0,
+   "y": 18700,
+   "text": "Kế toán · Web — Tổng quan, Cấu hình học phí, Học phí",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "kB": {
+   "x": 0,
+   "y": 20260,
+   "text": "Kế toán · Web — Công nợ, Báo cáo tài chính, Thông báo",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "kC": {
+   "x": 0,
+   "y": 21820,
+   "text": "Kế toán · Web — Nhật ký thao tác",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "aA": {
+   "x": 0,
+   "y": 23200,
+   "text": "Quản trị · Web — Tổng quan, Tài khoản, Ma trận quyền",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "aB": {
+   "x": 0,
+   "y": 24760,
+   "text": "Quản trị · Web — Cấu hình hệ thống, Sao lưu, Thông báo",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  },
+  "aC": {
+   "x": 0,
+   "y": 26420,
+   "text": "Quản trị · Web — Nhật ký toàn hệ thống",
+   "kind": "title1",
+   "maxW": 4480,
+   "w": 240
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Web-Lop.dc.html",
+  "Web-DiemDanh.dc.html",
+  "Web-NhapDiem.dc.html",
+  "App-TongQuan.dc.html",
+  "App-ChonLop.dc.html",
+  "App-DanhSachBuoi.dc.html",
+  "App-DiemDanh.dc.html",
+  "App-NhapDiem.dc.html",
+  "Web-TKB.dc.html",
+  "App-TKB.dc.html",
+  "Web-DangNhap.dc.html",
+  "Web-QuenMatKhau.dc.html",
+  "App-DangNhap.dc.html",
+  "App-QuenMatKhau.dc.html",
+  "Web-ThongBao.dc.html",
+  "Web-HoSo.dc.html",
+  "App-ThongBao.dc.html",
+  "App-HoSo.dc.html",
+  "App-Lop.dc.html",
+  "App-ChiTietLop.dc.html",
+  "SV-Web-TongQuan.dc.html",
+  "SV-Web-DangKy.dc.html",
+  "SV-Web-TKBTuDong.dc.html",
+  "SV-Web-TKB.dc.html",
+  "SV-Web-CTDT.dc.html",
+  "SV-Web-Diem.dc.html",
+  "SV-Web-DiemDanh.dc.html",
+  "SV-Web-HocPhi.dc.html",
+  "SV-Web-ThongBao.dc.html",
+  "SV-Web-HoSo.dc.html",
+  "SV-App-TongQuan.dc.html",
+  "SV-App-DangKy.dc.html",
+  "SV-App-TKB.dc.html",
+  "SV-App-HocPhi.dc.html",
+  "SV-App-HoSo.dc.html",
+  "SV-App-TKBTuDong.dc.html",
+  "SV-App-CTDT.dc.html",
+  "SV-App-Diem.dc.html",
+  "SV-App-DiemDanh.dc.html",
+  "SV-App-ThongBao.dc.html",
+  "SV-Web-ThanhToan.dc.html",
+  "SV-App-ThanhToan.dc.html",
+  "PDT-Web-TongQuan.dc.html",
+  "PDT-Web-HoSo.dc.html",
+  "PDT-Web-Nganh.dc.html",
+  "PDT-Web-CTDT.dc.html",
+  "PDT-Web-MonHoc.dc.html",
+  "PDT-Web-HocKy.dc.html",
+  "PDT-Web-LopHP.dc.html",
+  "PDT-Web-DangKy.dc.html",
+  "PDT-Web-DuyetDiem.dc.html",
+  "PDT-Web-BaoCao.dc.html",
+  "PDT-Web-ThongBao.dc.html",
+  "PDT-Web-NhatKy.dc.html",
+  "PDT-Web-KhoaVien.dc.html",
+  "KT-Web-TongQuan.dc.html",
+  "KT-Web-CauHinh.dc.html",
+  "KT-Web-HocPhi.dc.html",
+  "KT-Web-CongNo.dc.html",
+  "KT-Web-BaoCao.dc.html",
+  "KT-Web-ThongBao.dc.html",
+  "KT-Web-NhatKy.dc.html",
+  "AD-Web-TongQuan.dc.html",
+  "AD-Web-TaiKhoan.dc.html",
+  "AD-Web-MaTranQuyen.dc.html",
+  "AD-Web-CauHinh.dc.html",
+  "AD-Web-SaoLuu.dc.html",
+  "AD-Web-ThongBao.dc.html",
+  "AD-Web-NhatKy.dc.html"
+ ],
+ "pages": [],
+ "title": "Đăng ký Môn học — UI Giáo viên"
+}

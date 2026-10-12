@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Hồ sơ SV/GV — Phòng đào tạo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:var(--bg)}
+a{text-decoration:none}
+button,select,input,textarea{font-family:inherit}
+
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1000px;background:var(--bg)">
+  <nav class="np" aria-label="Điều hướng phòng đào tạo" style="flex:1 1 260px;max-width:260px;min-width:220px;background:linear-gradient(180deg,var(--navy) 0%,#26357A 100%);padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)">
+        <div style="flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">ĐK</div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-weight:700;font-size:15px;color:#FFFFFF">Đăng ký môn học</span>
+          <span style="font-size:12px;color:#AEB8E6">Cổng phòng đào tạo</span>
+        </div>
+      </div>
+      <sc-for list="{{navGroups}}" as="grp" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:0 12px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8E9AD6">{{grp.title}}</div>
+          <sc-for list="{{grp.items}}" as="item" hint-placeholder-count="2">
+            <a href="{{item.href}}" style="{{item.style}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+              <span style="flex:1">{{item.label}}</span>
+              <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{false}}">
+                <span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--accent);color:#FFFFFF;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{item.badge}}</span>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.12)">
+      <a href="#" aria-label="Tài khoản" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">LH</a>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+        <span style="font-weight:600;font-size:14px;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lê Thị Hương</span>
+        <span style="font-size:12px;color:#AEB8E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Phòng đào tạo · pdt01</span>
+      </div>
+      <a href="Web-DangNhap.dc.html" aria-label="Đăng xuất" style="flex:0 0 auto;width:44px;height:44px;border-radius:12px;color:#C9D0F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"></path></svg></a>
+    </div>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header class="np" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:32px 32px 4px;color:var(--navy);flex-wrap:wrap">
+      <div>
+        <div class="ui-bc" aria-label="Đường dẫn"><a href="PDT-Web-TongQuan.dc.html">Phòng đào tạo</a><span aria-hidden="true">›</span><span style="color:#5B6488;font-weight:600">Hồ sơ sinh viên / giáo viên</span></div><h1 style="margin:0;font-size:28px;font-weight:700">Hồ sơ sinh viên / giáo viên</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:#5B6488">Tạo và quản lý hồ sơ sinh viên, giáo viên</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        
+        <a href="PDT-Web-ThongBao.dc.html" aria-label="Thông báo, có tin chưa đọc" style="position:relative;width:44px;height:44px;border-radius:12px;border:0;background:#FFFFFF;color:var(--navy);box-shadow:0 2px 10px rgba(31,42,92,.1);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0"></path></svg><span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid #FFFFFF"></span></a>
+      </div>
+    </header>
+
+    <main style="padding:32px;display:flex;flex-direction:column;gap:24px">
+      <sc-if value="{{uiLoading}}" hint-placeholder-val="{{false}}"><div aria-busy="true" aria-label="Đang tải dữ liệu" style="display:flex;flex-direction:column;gap:20px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div></div><div style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:14px"><div class="ui-skel" style="height:20px;width:220px;border-radius:8px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div></div></div></sc-if>
+      <sc-if value="{{uiError}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center"><span style="width:56px;height:56px;border-radius:50%;background:#FDECEA;color:#C62828;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">!</span><span style="font-size:18px;font-weight:700;color:var(--navy)">Không tải được dữ liệu</span><span style="font-size:14px;color:#6B7280;max-width:420px;line-height:1.5">Kết nối bị gián đoạn hoặc máy chủ đang bận. Hãy thử lại sau ít giây.</span><button onClick="{{uiRetry}}" style="min-height:44px;padding:0 24px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Thử lại</button></div></sc-if>
+      <sc-if value="{{uiOk}}" hint-placeholder-val="{{true}}"><div style="display:flex;flex-direction:column;gap:24px">
+      <sc-if value="{{hasMissing}}" hint-placeholder-val="{{true}}">
+        <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:16px 24px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-weight:700;font-size:15px;color:var(--navy)">Tài khoản chưa có hồ sơ</span><span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:#FFF1E6;color:#9A3412">{{missingCount}} tài khoản</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <sc-for list="{{missing}}" as="m" hint-placeholder-count="3"><button onClick="{{m.pick}}" style="min-height:44px;padding:0 14px;border-radius:12px;border:1px dashed var(--accent);background:#FFF8F3;color:#9A3412;font-size:13px;font-weight:600;cursor:pointer">{{m.u}} · {{m.role}} — Tạo hồ sơ</button></sc-for>
+          </div>
+        </section>
+      </sc-if>
+      <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);overflow:hidden">
+        <div style="padding:16px 24px 0;display:flex;flex-direction:column;gap:14px">
+          <div role="tablist" style="display:flex;gap:4px;border-bottom:1px solid #E3E6EE"><sc-for list="{{tabs}}" as="t" hint-placeholder-count="2"><button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button></sc-for></div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding-bottom:16px">
+            <label style="flex:1 1 260px;max-width:380px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Tìm theo mã / họ tên<input type="text" value="{{q}}" onChange="{{setQ}}" placeholder="Nhập mã hoặc tên" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label>
+            <label style="flex:0 1 220px;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">{{filterLabel}}<select value="{{fil}}" onChange="{{setFil}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{filOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+            <span style="flex:1"></span>
+            <button onClick="{{openNew}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">+ Tạo hồ sơ</button>
+          </div>
+        </div>
+        <sc-if value="{{isSv}}" hint-placeholder-val="{{true}}"><div class="ui-tscroll" style="overflow-x:auto"><div style="min-width:860px"><div class="ui-thead" style="display:grid;grid-template-columns:110px minmax(180px,1fr) 110px 80px minmax(170px,1fr) 70px 100px;column-gap:16px;align-items:center;padding:12px 20px;background:#FAFAFA;font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.03em"><span style="min-width:0">Mã SV</span><span style="min-width:0">Họ tên</span><span style="min-width:0">Ngành</span><span style="min-width:0">Khóa</span><span style="min-width:0">CTĐT</span><span style="min-width:0">GPA</span><span style="min-width:0">TC tích lũy</span></div><sc-for list="{{svRows}}" as="r" hint-placeholder-count="4"><div class="ui-trow" style="display:grid;grid-template-columns:110px minmax(180px,1fr) 110px 80px minmax(170px,1fr) 70px 100px;column-gap:16px;align-items:center;padding:12px 20px;border-top:1px solid #EEF0F5;font-size:14px;"><span style="min-width:0"><span style="font-weight:600;font-family:ui-monospace,Menlo,monospace">{{r.ma}}</span></span><span style="min-width:0"><span style="font-weight:600">{{r.ten}}</span></span><span style="min-width:0">{{r.nganh}}</span><span style="min-width:0">{{r.khoa}}</span><span style="min-width:0"><span style="color:#374151">{{r.ctdt}}</span></span><span style="min-width:0">{{r.gpa}}</span><span style="min-width:0">{{r.tc}}</span></div></sc-for></div></div></sc-if>
+        <sc-if value="{{isGv}}" hint-placeholder-val="{{false}}"><div class="ui-tscroll" style="overflow-x:auto"><div style="min-width:860px"><div class="ui-thead" style="display:grid;grid-template-columns:110px minmax(180px,1fr) minmax(200px,1fr) 120px minmax(220px,1fr);column-gap:16px;align-items:center;padding:12px 20px;background:#FAFAFA;font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.03em"><span style="min-width:0">Mã GV</span><span style="min-width:0">Họ tên</span><span style="min-width:0">Khoa / viện</span><span style="min-width:0">Học vị</span><span style="min-width:0">Email</span></div><sc-for list="{{gvRows}}" as="r" hint-placeholder-count="4"><div class="ui-trow" style="display:grid;grid-template-columns:110px minmax(180px,1fr) minmax(200px,1fr) 120px minmax(220px,1fr);column-gap:16px;align-items:center;padding:12px 20px;border-top:1px solid #EEF0F5;font-size:14px;"><span style="min-width:0"><span style="font-weight:600;font-family:ui-monospace,Menlo,monospace">{{r.ma}}</span></span><span style="min-width:0"><span style="font-weight:600">{{r.ten}}</span></span><span style="min-width:0">{{r.khoa}}</span><span style="min-width:0">{{r.hocvi}}</span><span style="min-width:0"><span style="color:#374151">{{r.mail}}</span></span></div></sc-for></div></div></sc-if>
+        <sc-if value="{{noRows}}" hint-placeholder-val="{{false}}"><div style="padding:40px 24px;text-align:center;color:#6B7280;font-size:14px">{{noText}}</div></sc-if><div class="ui-trow" style="padding:12px 20px;border-top:1px solid #EEF0F5;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:#6B7280"><span>{{total}} bản ghi</span><span>Trang 1/1 · 25 dòng/trang</span></div>
+      </section>
+
+<sc-if value="{{dlg}}" hint-placeholder-val="{{false}}"><div class="ui-overlay" style="position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(17,24,39,.45);display:flex;align-items:center;justify-content:center;padding:24px;z-index:50;overflow:auto"><div role="dialog" aria-modal="true" aria-label="Tạo hồ sơ" style="background:#FFFFFF;border-radius:16px;width:100%;max-width:640px;box-shadow:0 20px 50px rgba(17,24,39,.3);padding:24px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:18px;font-weight:700;color:var(--navy)">Tạo hồ sơ</h2>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Tài khoản (đã có, chưa có hồ sơ)<select value="{{tk}}" onChange="{{setTk}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{tkOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select><span style="font-size:12px;font-weight:400;color:#6B7280">Chỉ hiện tài khoản chưa có hồ sơ.</span></label>
+        <sc-if value="{{isSv}}" hint-placeholder-val="{{true}}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Mã sinh viên<input type="text" value="{{ma}}" onChange="{{setMa}}" placeholder="VD: SV2025020" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Họ tên<input type="text" value="{{ten}}" onChange="{{setTen}}" placeholder="Họ và tên" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Ngành<select value="{{ng}}" onChange="{{setNg}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{ngOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Khóa nhập học<select value="{{kh}}" onChange="{{setKh}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{khOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">CTĐT<div style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;display:flex;align-items:center;background:{{ctdtBg}};color:{{ctdtColor}}" title="Sau khi gán, CTĐT cố định và không sửa được.">{{ctdtText}}</div><span style="font-size:12px;font-weight:400;color:#6B7280">CTĐT được chọn theo ngành và khóa. Sau khi lưu sẽ không sửa được.</span></label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Email<input type="text" value="{{mail}}" onChange="{{setMail}}" placeholder="ten@truong.edu.vn" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Số điện thoại<input type="text" value="{{sdt}}" onChange="{{setSdt}}" placeholder="09xx xxx xxx" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label></div>
+        </sc-if>
+        <sc-if value="{{isGv}}" hint-placeholder-val="{{false}}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Mã giáo viên<input type="text" value="{{ma}}" onChange="{{setMa}}" placeholder="VD: GV008" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Họ tên<input type="text" value="{{ten}}" onChange="{{setTen}}" placeholder="Họ và tên" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Khoa / viện<select value="{{khoaGv}}" onChange="{{setKhoaGv}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{khoaOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Học vị<select value="{{hv}}" onChange="{{setHv}}" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"><sc-for list="{{hvOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Email<input type="text" value="{{mail}}" onChange="{{setMail}}" placeholder="ten@truong.edu.vn" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151;min-width:0">Số điện thoại<input type="text" value="{{sdt}}" onChange="{{setSdt}}" placeholder="09xx xxx xxx" style="width:100%;box-sizing:border-box;min-height:44px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:14px;background:#FFFFFF;color:#212121;"></label>
+          </div>
+        </sc-if>
+        <sc-if value="{{hasErr}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FDECEA;color:#8C1D18;border:1px solid #F3B8B3;border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5">{{err}}</div></sc-if>
+      </div><div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:4px"><button onClick="{{closeDlg}}" style="min-height:44px;padding:0 18px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#212121;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Hủy</button><button onClick="{{save}}" style="min-height:44px;padding:0 20px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap">Lưu hồ sơ</button></div></div></div></sc-if>
+      <sc-if value="{{toast}}" hint-placeholder-val="{{false}}"><div role="status" class="ui-toast" style="position:fixed;right:32px;bottom:32px;background:#1F2937;color:#FFFFFF;padding:14px 20px;border-radius:12px;font-size:14px;z-index:60">{{toastText}}</div></sc-if>
+      </div></sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000},"uiState":{"editor":"enum","default":"ready","options":["ready","loading","error"],"section":"Trạng thái dữ liệu"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'sv', q: '', fil: 'all', dlg: false, tk: '', ma: '', ten: '', ng: '', kh: '', mail: '', sdt: '', khoaGv: 'Công nghệ thông tin', hv: 'Thạc sĩ', err: '', created: [], done: [], toast: false, toastText: '' };
+  }
+  renderVals() {
+    const NAVG = (active) => {
+      const base = 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;';
+      const on = base + 'background:var(--primary);color:#FFFFFF;font-weight:600;box-shadow:0 4px 12px rgba(63,81,181,.35);';
+      const off = base + 'color:#C9D0F2;font-weight:500;';
+      const it = (k, label, href, icon, badge) => ({ label, href, icon, style: k === active ? on : off, hasBadge: !!badge, badge: badge || '' });
+      return [
+        { title: 'TỔNG QUAN', items: [it('home', 'Tổng quan', 'PDT-Web-TongQuan.dc.html', 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10')] },
+        { title: 'DANH MỤC', items: [
+          it('hs', 'Hồ sơ SV / GV', 'PDT-Web-HoSo.dc.html', 'M9 11a4 4 0 100-8 4 4 0 000 8zM2 21a7 7 0 0114 0M17 11a3 3 0 100-6M18 21a6 6 0 00-3-5'),
+          it('kv', 'Khoa / viện', 'PDT-Web-KhoaVien.dc.html', 'M4 21V5l8-2 8 2v16M9 21v-5h6v5M8 9h2M14 9h2M8 13h2M14 13h2'),
+          it('nganh', 'Ngành', 'PDT-Web-Nganh.dc.html', 'M2 9l10-5 10 5-10 5L2 9zM6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5'),
+          it('ctdt', 'Chương trình đào tạo', 'PDT-Web-CTDT.dc.html', 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13'),
+          it('mon', 'Môn học', 'PDT-Web-MonHoc.dc.html', 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5')] },
+        { title: 'TỔ CHỨC ĐÀO TẠO', items: [
+          it('hk', 'Học kỳ', 'PDT-Web-HocKy.dc.html', 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4'),
+          it('lop', 'Lớp học phần', 'PDT-Web-LopHP.dc.html', 'M4 6h16M4 12h10M4 18h7'),
+          it('dk', 'Đăng ký', 'PDT-Web-DangKy.dc.html', 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6'),
+          it('diem', 'Duyệt điểm', 'PDT-Web-DuyetDiem.dc.html', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z', '2')] },
+        { title: 'KHÁC', items: [
+          it('bc', 'Báo cáo', 'PDT-Web-BaoCao.dc.html', 'M4 20V10M10 20V4M16 20v-7M22 20H2'),
+          it('tb', 'Thông báo', 'PDT-Web-ThongBao.dc.html', 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0', '2'),
+          it('nk', 'Nhật ký', 'PDT-Web-NhatKy.dc.html', 'M6 3h9l4 4v14H6V3zM14 3v5h5M9 13h7M9 17h7'),
+          it('out', 'Đăng xuất', 'Web-DangNhap.dc.html', 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9')] }
+      ];
+    };
+
+    const S = this.state;
+    const chip = (bg, fg) => 'font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap;background:' + bg + ';color:' + fg;
+    const CH = { green: chip('#E6F4EA', '#2E7D32'), gray: chip('#ECEFF1', '#455A64'), dgray: chip('#CFD8DC', '#263238'), indigo: chip('#E8EAF6', '#2C3A7A'), yellow: chip('#FFF4D6', '#8A5A00'), red: chip('#FDECEA', '#8C1D18'), teal: chip('#E0F2F1', '#00695C'), orange: chip('#FFF1E6', '#9A3412') };
+    const CLS_ST = { KE_HOACH: ['Kế hoạch', CH.gray], MO: ['Đang mở', CH.green], DANG_HOC: ['Đang học', CH.indigo], DA_DONG: ['Đã đóng', CH.dgray] };
+    const set = (k) => (e) => this.setState({ [k]: e.target.value });
+    const toast = (t) => { this.setState({ toast: true, toastText: t }); setTimeout(() => this.setState({ toast: false }), 2600); };
+    const TODAY = new Date(2027, 0, 12);
+    const pd = (s) => { const a = s.split('/'); return new Date(Number(a[2]), Number(a[1]) - 1, Number(a[0])); };
+    const norm = (t) => String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    const hl = (label, q) => { const t = q ? String(q).trim() : ''; const i = t ? norm(label).indexOf(norm(t)) : -1; return i < 0 ? { pre: label, mid: '', post: '' } : { pre: label.slice(0, i), mid: label.slice(i, i + t.length), post: label.slice(i + t.length) }; };
+    const combo = (key, opts, ph, extra, off) => {
+      const sel = opts.find((o) => o.v === S[key]);
+      const def = opts.length && (opts[0].v === 'all' || opts[0].v === '') ? opts[0].v : '';
+      const q = S[key + 'Q'];
+      const typed = q !== null && q !== undefined;
+      const shown = typed ? opts.filter((o) => norm(o.l).indexOf(norm(q)) >= 0) : opts;
+      return { text: typed ? q : (sel ? sel.l : ''), open: !!S[key + 'O'] && !off, off: !!off, none: shown.length === 0, ph, canClear: !off && S[key] !== undefined && S[key] !== def && !!S[key],
+        clear: () => this.setState({ [key]: def, [key + 'Q']: null, [key + 'O']: false, ...(extra ? extra(def) : {}) }),
+        focus: (e) => { this.setState({ [key + 'O']: true, [key + 'Q']: null }); if (e && e.target && e.target.select) e.target.select(); }, blur: () => this.setState({ [key + 'O']: false, [key + 'Q']: null }),
+        change: (e) => this.setState({ [key + 'Q']: e.target.value, [key + 'O']: true }),
+        list: shown.map((o) => ({ l: o.l, ...hl(o.l, typed ? q : ''), style: 'padding:10px 14px;font-size:14px;cursor:pointer;line-height:1.35;' + (o.v === S[key] ? 'background:#E8EAF6;font-weight:600;color:var(--primary-dark)' : 'color:#212121'),
+          pick: () => this.setState({ [key]: o.v, [key + 'Q']: null, [key + 'O']: false, ...(extra ? extra(o.v) : {}) }) })) };
+    };
+    const barColor = (p) => (p > 90 ? '#C62828' : p >= 70 ? '#F9A825' : '#2E7D32');
+    const SVS = [
+      ['SV2023014', 'Trần Hoàng Nam', 'CNTT', 'K2023', 'CTDT-CNTT-K2023', '3.21', 96], ['SV2023021', 'Nguyễn Thị Lan', 'CNTT', 'K2023', 'CTDT-CNTT-K2023', '3.58', 102],
+      ['SV2023033', 'Phạm Quang Huy', 'KTPM', 'K2023', 'CTDT-KTPM-K2023', '2.87', 90], ['SV2023047', 'Lê Minh Châu', 'HTTT', 'K2023', 'CTDT-HTTT-K2023', '3.05', 94],
+      ['SV2024005', 'Vũ Ngọc Anh', 'CNTT', 'K2024', 'CTDT-CNTT-K2024', '3.40', 62], ['SV2024019', 'Đỗ Thành Đạt', 'KTPM', 'K2024', 'CTDT-KTPM-K2024', '2.45', 58],
+      ['SV2024052', 'Bùi Thu Trang', 'HTTT', 'K2024', 'CTDT-HTTT-K2024', '3.72', 64], ['SV2025003', 'Hoàng Gia Bảo', 'CNTT', 'K2025', 'CTDT-CNTT-K2025', '3.10', 30]
+    ].map((a) => ({ ma: a[0], ten: a[1], nganh: a[2], khoa: a[3], ctdt: a[4], gpa: a[5], tc: a[6] }));
+    const GVS = [
+      ['GV001', 'Trần Minh Quân', 'Công nghệ thông tin', 'Thạc sĩ', 'quan.tm@truong.edu.vn'], ['GV002', 'Phạm Thu Hà', 'Hệ thống thông tin', 'Tiến sĩ', 'ha.pt@truong.edu.vn'],
+      ['GV003', 'Lê Quốc Bảo', 'Công nghệ thông tin', 'Tiến sĩ', 'bao.lq@truong.edu.vn'], ['GV004', 'Đỗ Văn Hùng', 'Kỹ thuật phần mềm', 'Thạc sĩ', 'hung.dv@truong.edu.vn'],
+      ['GV005', 'Nguyễn Thị Mai', 'Công nghệ thông tin', 'Phó giáo sư', 'mai.nt@truong.edu.vn'], ['GV006', 'Vũ Đức Anh', 'Công nghệ thông tin', 'Tiến sĩ', 'anh.vd@truong.edu.vn'],
+      ['GV007', 'Hồ Đắc Hưng', 'Hệ thống thông tin', 'Thạc sĩ', 'hung.hd@truong.edu.vn'], ['GV008', 'Trần Thị Bình', 'Toán – Tin', 'Tiến sĩ', 'binh.tt@truong.edu.vn'], ['GV009', 'Đặng Quốc Việt', 'Công nghệ thông tin', 'Thạc sĩ', 'viet.dq@truong.edu.vn'], ['GV010', 'Phạm Văn Long', 'Toán – Tin', 'Thạc sĩ', 'long.pv@truong.edu.vn']
+    ].map((a) => ({ ma: a[0], ten: a[1], khoa: a[2], hocvi: a[3], mail: a[4] }));
+    const MISSING = [{ u: 'sv2025011', role: 'SV' }, { u: 'sv2025012', role: 'SV' }, { u: 'gv.nguyenvd', role: 'GV' }];
+    const NGANH = ['CNTT', 'KTPM', 'HTTT'];
+    const NO_CTDT = { 'HTTT-K2025': true };
+    const isSv = S.tab === 'sv';
+    const q = S.q.trim().toLowerCase();
+    const svAll = SVS.concat(S.created.filter((c) => c.kind === 'sv'));
+    const gvAll = GVS.concat(S.created.filter((c) => c.kind === 'gv'));
+    const svRows = svAll.filter((r) => (S.fil === 'all' || r.nganh === S.fil) && (!q || r.ma.toLowerCase().indexOf(q) >= 0 || r.ten.toLowerCase().indexOf(q) >= 0));
+    const gvRows = gvAll.filter((r) => (S.fil === 'all' || r.khoa === S.fil) && (!q || r.ma.toLowerCase().indexOf(q) >= 0 || r.ten.toLowerCase().indexOf(q) >= 0));
+    const missing = MISSING.filter((m) => S.done.indexOf(m.u) < 0).map((m) => ({ ...m, pick: () => this.setState({ dlg: true, tab: m.role === 'SV' ? 'sv' : 'gv', tk: m.u, err: '', ma: '', ten: '' }) }));
+    const tb = 'min-height:48px;padding:0 18px;border:0;background:transparent;font-size:14px;cursor:pointer;margin-bottom:-1px;';
+    const tabs = [['sv', 'Sinh viên (' + svAll.length + ')'], ['gv', 'Giáo viên (' + gvAll.length + ')']].map(([id, label]) => ({ label, on: S.tab === id, pick: () => this.setState({ tab: id, fil: 'all', q: '' }), style: tb + (S.tab === id ? 'font-weight:600;color:var(--primary);border-bottom:2px solid var(--primary)' : 'font-weight:500;color:#6B7280;border-bottom:2px solid transparent') }));
+    const khoaList = ['Công nghệ thông tin', 'Kỹ thuật phần mềm', 'Hệ thống thông tin', 'Toán – Tin'];
+    const filOpts = isSv ? [{ v: 'all', l: 'Tất cả ngành' }].concat(NGANH.map((n) => ({ v: n, l: n }))) : [{ v: 'all', l: 'Tất cả khoa / viện' }].concat(khoaList.map((n) => ({ v: n, l: n })));
+    const tkOpts = [{ v: '', l: '— Chọn tài khoản —' }].concat(MISSING.filter((m) => S.done.indexOf(m.u) < 0 && m.role === (isSv ? 'SV' : 'GV')).map((m) => ({ v: m.u, l: m.u })));
+    const ctdtKey = S.ng && S.kh ? S.ng + '-' + S.kh : '';
+    const ctdtOk = ctdtKey && !NO_CTDT[ctdtKey];
+    const total = isSv ? svRows.length : gvRows.length;
+    const save = () => {
+      const list = isSv ? svAll : gvAll;
+      if (!S.tk) return this.setState({ err: 'Hãy chọn tài khoản cần tạo hồ sơ.' });
+      if (!S.ma.trim() || !S.ten.trim()) return this.setState({ err: 'Mã và họ tên là bắt buộc.' });
+      if (list.some((r) => r.ma.toLowerCase() === S.ma.trim().toLowerCase())) return this.setState({ err: (isSv ? 'Mã sinh viên' : 'Mã giáo viên') + ' này đã tồn tại.' });
+      if (isSv && !ctdtOk) return this.setState({ err: 'Chưa có CTĐT đang hoạt động cho ngành và khóa đã chọn.' });
+      const rec = isSv ? { kind: 'sv', ma: S.ma.trim(), ten: S.ten.trim(), nganh: S.ng, khoa: S.kh, ctdt: 'CTDT-' + ctdtKey, gpa: '—', tc: 0 } : { kind: 'gv', ma: S.ma.trim(), ten: S.ten.trim(), khoa: S.khoaGv, hocvi: S.hv, mail: S.mail || '—' };
+      this.setState({ created: S.created.concat([rec]), done: S.done.concat([S.tk]), dlg: false, ma: '', ten: '', mail: '', sdt: '', tk: '' });
+      toast('Đã tạo hồ sơ ' + rec.ma + '.');
+    };
+
+    const UI = (this.props && this.props.uiState) || 'ready';
+    const uiPending = UI !== 'ready' && !S.uiRetried;
+    return {
+      navGroups: NAVG('hs'),
+      uiLoading: uiPending && UI === 'loading', uiError: uiPending && UI === 'error', uiOk: !uiPending, uiRetry: () => this.setState({ uiRetried: true }),
+      tabs, isSv, isGv: !isSv, svRows, gvRows, q: S.q, setQ: set('q'), fil: S.fil, setFil: set('fil'), filOpts, filterLabel: isSv ? 'Ngành' : 'Khoa / viện',
+      missing, missingCount: missing.length, hasMissing: missing.length > 0, total, noRows: total === 0, noText: 'Không có hồ sơ phù hợp với bộ lọc.',
+      openNew: () => this.setState({ dlg: true, err: '', tk: '' }), closeDlg: () => this.setState({ dlg: false }), dlg: S.dlg, save,
+      tk: S.tk, setTk: set('tk'), tkOpts, ma: S.ma, setMa: set('ma'), ten: S.ten, setTen: set('ten'), mail: S.mail, setMail: set('mail'), sdt: S.sdt, setSdt: set('sdt'),
+      ng: S.ng, setNg: set('ng'), ngOpts: [{ v: '', l: '— Chọn ngành —' }].concat(NGANH.map((n) => ({ v: n, l: n }))), kh: S.kh, setKh: set('kh'), khOpts: [{ v: '', l: '— Chọn khóa —' }].concat(['K2023', 'K2024', 'K2025'].map((n) => ({ v: n, l: n }))),
+      ctdtText: !ctdtKey ? 'Chọn ngành và khóa trước' : ctdtOk ? 'CTDT-' + ctdtKey + ' · đang hoạt động' : 'Chưa có CTĐT hoạt động cho ' + ctdtKey, ctdtBg: ctdtOk ? '#F5F6FF' : '#F1F3F9', ctdtColor: ctdtOk ? '#2C3A7A' : '#757575',
+      khoaGv: S.khoaGv, setKhoaGv: set('khoaGv'), khoaOpts: khoaList.map((n) => ({ v: n, l: n })), hv: S.hv, setHv: set('hv'), hvOpts: ['Thạc sĩ', 'Tiến sĩ', 'Phó giáo sư', 'Giáo sư'].map((n) => ({ v: n, l: n })),
+      hasErr: !!S.err, err: S.err, toast: S.toast, toastText: S.toastText
+    };
+  }
+}
+</script>
+</body>
+</html>

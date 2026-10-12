@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Tạo TKB tự động — sinh viên</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:var(--bg)}
+a{text-decoration:none}
+button,select,input,textarea{font-family:inherit}
+
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:1000px;background:var(--bg)">
+  <nav class="np" aria-label="Điều hướng sinh viên" style="flex:1 1 260px;max-width:260px;min-width:220px;background:linear-gradient(180deg,var(--navy) 0%,#26357A 100%);padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)">
+        <div style="flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">ĐK</div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-weight:700;font-size:15px;color:#FFFFFF">Đăng ký môn học</span>
+          <span style="font-size:12px;color:#AEB8E6">Cổng sinh viên</span>
+        </div>
+      </div>
+      <sc-for list="{{navGroups}}" as="grp" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:0 12px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8E9AD6">{{grp.title}}</div>
+          <sc-for list="{{grp.items}}" as="item" hint-placeholder-count="2">
+            <a href="{{item.href}}" style="{{item.style}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+              <span style="flex:1">{{item.label}}</span>
+              <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{false}}">
+                <span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--accent);color:#FFFFFF;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{item.badge}}</span>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.12)">
+      <a href="SV-Web-HoSo.dc.html" aria-label="Hồ sơ cá nhân" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">HN</a>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+        <span style="font-weight:600;font-size:14px;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Trần Hoàng Nam</span>
+        <span style="font-size:12px;color:#AEB8E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">SV2023014 · CNTT · K2023</span>
+      </div>
+      <a href="Web-DangNhap.dc.html" aria-label="Đăng xuất" style="flex:0 0 auto;width:44px;height:44px;border-radius:12px;color:#C9D0F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"></path></svg></a>
+    </div>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header class="np" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:32px 32px 4px;color:var(--navy);flex-wrap:wrap">
+      <div>
+        <div class="ui-bc" aria-label="Đường dẫn"><a href="SV-Web-TongQuan.dc.html">Sinh viên</a><span aria-hidden="true">›</span><span style="color:#5B6488;font-weight:600">Tạo TKB tự động</span></div><h1 style="margin:0;font-size:28px;font-weight:700">Tạo TKB tự động</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:#5B6488">Lọc môn theo CTĐT, chọn giáo viên mong muốn và ưu tiên cá nhân — hệ thống gợi ý tối đa 3 tổ hợp không trùng lịch</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        
+        <a href="SV-Web-ThongBao.dc.html" aria-label="Thông báo, có tin chưa đọc" style="position:relative;width:44px;height:44px;border-radius:12px;border:0;background:#FFFFFF;color:var(--navy);box-shadow:0 2px 10px rgba(31,42,92,.1);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0"></path></svg><span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid #FFFFFF"></span></a>
+      </div>
+    </header>
+
+    <main style="padding:32px;display:flex;flex-direction:column;gap:24px">
+      <sc-if value="{{uiLoading}}" hint-placeholder-val="{{false}}"><div aria-busy="true" aria-label="Đang tải dữ liệu" style="display:flex;flex-direction:column;gap:20px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div><div class="ui-skel" style="height:104px;border-radius:16px"></div></div><div style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:14px"><div class="ui-skel" style="height:20px;width:220px;border-radius:8px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div><div class="ui-skel" style="height:44px;border-radius:10px"></div></div></div></sc-if>
+      <sc-if value="{{uiError}}" hint-placeholder-val="{{false}}"><div role="alert" style="background:#FFFFFF;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center"><span style="width:56px;height:56px;border-radius:50%;background:#FDECEA;color:#C62828;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">!</span><span style="font-size:18px;font-weight:700;color:var(--navy)">Không tải được dữ liệu</span><span style="font-size:14px;color:#6B7280;max-width:420px;line-height:1.5">Kết nối bị gián đoạn hoặc máy chủ đang bận. Hãy thử lại sau ít giây.</span><button onClick="{{uiRetry}}" style="min-height:44px;padding:0 24px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Thử lại</button></div></sc-if>
+      <sc-if value="{{uiOk}}" hint-placeholder-val="{{true}}"><div style="display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center" aria-label="Các bước">
+        <sc-for list="{{steps}}" as="st" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:8px"><span style="{{st.dot}}">{{st.n}}</span><span style="{{st.text}}">{{st.label}}</span><span style="color:#C4C9D4">›</span></div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{s1}}" hint-placeholder-val="{{true}}">
+        <div style="display:flex;flex-direction:column;gap:24px">
+          <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);overflow:hidden">
+            <div style="padding:16px 24px;border-bottom:1px solid #E3E6EE"><h2 style="margin:0;font-size:16px;font-weight:700;color:var(--navy)">1. Chọn môn muốn học</h2><p style="margin:4px 0 0;font-size:13px;color:#6B7280">Học kỳ 2, 2026–2027 · môn bắt buộc theo học kỳ gợi ý được chọn sẵn</p></div>
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;flex-wrap:wrap;gap:12px 28px;align-items:flex-start">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:13px;font-weight:600;color:#374151">Bộ lọc môn</span>
+                <div role="group" aria-label="Bộ lọc môn" style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{scopes}}" as="f" hint-placeholder-count="3"><button aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}}</button></sc-for></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;flex:0 1 380px">
+                <label for="ky" style="font-size:13px;font-weight:600;color:#374151">Kỳ trong chương trình đào tạo</label>
+                <select id="ky" value="{{ky}}" onChange="{{pickKy}}" disabled="{{kyOff}}" style="{{kyStyle}}"><option value="all">Tất cả các kỳ</option><sc-for list="{{kyOptions}}" as="o" hint-placeholder-count="8"><option value="{{o.v}}">{{o.label}}</option></sc-for></select>
+                <span style="font-size:12px;color:#6B7280">{{kyHint}}</span>
+              </div>
+            </div>
+            <sc-if value="{{noSubj}}" hint-placeholder-val="{{false}}"><div style="padding:32px 16px;text-align:center;color:#6B7280;font-size:14px;border:1px dashed #C4C9D4;border-radius:12px">Không có môn phù hợp với bộ lọc.</div></sc-if>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{subjects}}" as="c" hint-placeholder-count="4">
+                <div style="border:1px solid {{c.border}};border-radius:14px;background:{{c.bg}};overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:14px;padding:0 16px">
+                    <input type="checkbox" aria-label="Chọn môn {{c.name}}" checked="{{c.on}}" onChange="{{c.toggle}}" style="width:20px;height:20px;accent-color:var(--primary);flex:0 0 auto">
+                    <button onClick="{{c.expand}}" aria-expanded="{{c.expanded}}" style="flex:1;min-height:64px;border:0;background:transparent;cursor:pointer;text-align:left;display:flex;align-items:center;gap:14px;flex-wrap:wrap;color:#212121;padding:8px 0">
+                      <span style="{{c.chev}}">›</span>
+                      <span style="flex:0 0 90px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#6B7280">{{c.code}}</span>
+                      <span style="flex:1 1 200px;font-weight:700;font-size:15px">{{c.name}}</span>
+                      <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#E8EAF6;color:var(--primary-dark)">{{c.tc}} TC</span>
+                        <span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:#F1F3F9;color:#374151">{{c.loai}}</span>
+                        <sc-if value="{{c.showKy}}" hint-placeholder-val="{{false}}"><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#E0F2F1;color:#00695C">{{c.kyLabel}}</span></sc-if>
+                        <sc-if value="{{c.lai}}" hint-placeholder-val="{{false}}"><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#FDECEA;color:#8C1D18">Học lại</span></sc-if>
+                        <span style="{{c.gvChipStyle}}">{{c.gvChip}}</span>
+                      </span>
+                    </button>
+                  </div>
+                  <sc-if value="{{c.expanded}}" hint-placeholder-val="{{false}}">
+                    <div style="border-top:1px solid #E3E6EE;background:#FAFAFC;padding:16px 20px 16px 62px;display:flex;flex-direction:column;gap:14px">
+                      <div style="display:flex;flex-direction:column;gap:8px">
+                        <span style="font-size:13px;font-weight:600;color:#374151">Giáo viên mong muốn</span>
+                        <div role="group" aria-label="Giáo viên mong muốn" style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{c.gvBtns}}" as="g" hint-placeholder-count="3"><button aria-pressed="{{g.on}}" onClick="{{g.pick}}" style="{{g.style}}">{{g.label}}</button></sc-for></div>
+                        <span style="font-size:12px;color:#6B7280">{{c.gvHint}}</span>
+                      </div>
+                      <div class="ui-tscroll" style="overflow-x:auto"><div style="min-width:760px">
+                        <div style="display:flex;gap:12px;padding:8px 0;font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.03em"><span style="flex:0 0 120px">Mã lớp</span><span style="flex:1 1 170px">Giáo viên</span><span style="flex:1 1 150px">Lịch học</span><span style="flex:0 0 80px">Phòng</span><span style="flex:1 1 140px">Sĩ số</span></div>
+                        <sc-for list="{{c.classes}}" as="k" hint-placeholder-count="3">
+                          <div class="ui-trow" style="display:flex;gap:12px;padding:10px 0;border-top:1px solid #EEF0F5;align-items:center;font-size:14px;opacity:{{k.op}}">
+                            <span style="flex:0 0 120px;font-weight:600;font-family:ui-monospace,SFMono-Regular,Menlo,monospace">{{k.id}}</span>
+                            <span style="flex:1 1 170px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">{{k.gv}}<sc-if value="{{k.match}}" hint-placeholder-val="{{false}}"><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#E0F2F1;color:#00695C">Đã chọn</span></sc-if></span>
+                            <span style="flex:1 1 150px;color:#374151">{{k.lich}}</span>
+                            <span style="flex:0 0 80px;color:#374151">{{k.room}}</span>
+                            <span style="flex:1 1 140px;display:flex;align-items:center;gap:8px"><span style="flex:1;height:6px;border-radius:999px;background:#E3E6EE;overflow:hidden"><span style="display:block;height:100%;width:{{k.fill}}%;background:{{k.fillColor}}"></span></span><span style="font-size:12px;color:#374151;white-space:nowrap">{{k.si}}/{{k.max}}</span></span>
+                          </div>
+                        </sc-for>
+                      </div></div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            </div>
+          </section>
+
+          <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);overflow:hidden">
+            <div style="padding:16px 24px;border-bottom:1px solid #E3E6EE"><h2 style="margin:0;font-size:16px;font-weight:700;color:var(--navy)">2. Ưu tiên cá nhân</h2></div>
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:22px">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:14px;font-weight:600">Tránh ngày trong tuần</span>
+                <div role="group" aria-label="Tránh ngày" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px"><sc-for list="{{avoidBtns}}" as="d" hint-placeholder-count="7"><button aria-pressed="{{d.on}}" onClick="{{d.toggle}}" style="{{d.style}}">{{d.label}}</button></sc-for></div>
+                <span style="font-size:12px;color:#6B7280">Chọn các thứ bạn KHÔNG muốn xếp lịch học.</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:14px;font-weight:600">Ngày muốn học</span>
+                <div role="group" aria-label="Ngày muốn học" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px"><sc-for list="{{wantBtns}}" as="d" hint-placeholder-count="7"><button aria-pressed="{{d.on}}" onClick="{{d.toggle}}" style="{{d.style}}">{{d.label}}</button></sc-for></div>
+                <span style="font-size:12px;color:#6B7280">Hệ thống sẽ ưu tiên xếp các môn vào ngày bạn chọn (vd: chọn Chủ nhật → các lớp có buổi CN được điểm cao hơn).</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font-size:14px;font-weight:600">Ca học ưu tiên</span>
+                <div role="group" aria-label="Ca học" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"><sc-for list="{{caBtns}}" as="d" hint-placeholder-count="3"><button aria-pressed="{{d.on}}" onClick="{{d.toggle}}" style="{{d.style}}">{{d.label}}</button></sc-for></div>
+              </div>
+            </div>
+          </section>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:13px;color:#6B7280">Đã chọn {{pickedCount}} môn · {{pickedTc}} tín chỉ</span>
+            <button onClick="{{toStep2}}" style="{{suggestStyle}}">Gợi ý tổ hợp</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{s2}}" hint-placeholder-val="{{false}}">
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <div style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:18px 24px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center">
+            <div style="display:flex;flex-direction:column;gap:4px;flex:1 1 420px"><span style="font-size:15px;font-weight:700;color:var(--navy)">Có {{comboCount}} tổ hợp không trùng lịch</span><span style="font-size:13px;color:#374151;line-height:1.5"><strong>{{topTitle}}</strong> được điểm cao nhất vì: {{topWhy}}.</span><span style="font-size:12px;color:#6B7280">Gợi ý chỉ để tham khảo — chưa đăng ký. Điểm tính theo ưu tiên bạn đã chọn.</span></div>
+            <button onClick="{{toStep1}}" style="min-height:48px;padding:0 20px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Đổi môn / ưu tiên</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:20px;align-items:start">
+            <sc-for list="{{combos}}" as="k" hint-placeholder-count="3">
+              <div style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:14px;border:2px solid {{k.border}}">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <span style="display:flex;align-items:center;gap:8px"><span style="font-weight:700;font-size:17px">{{k.title}}</span><sc-if value="{{k.best}}" hint-placeholder-val="{{false}}"><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#FFF1E6;color:#9A3412">Điểm cao nhất</span></sc-if></span>
+                  <span style="font-size:20px;font-weight:700;color:var(--navy)">{{k.score}}<span style="font-size:12px;font-weight:500;color:#6B7280">/100</span></span>
+                </div>
+                <div style="height:8px;border-radius:999px;background:#E3E6EE;overflow:hidden"><div style="width:{{k.bar}}%;height:100%;background:{{k.barColor}}"></div></div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="font-size:13px;font-weight:700;color:#374151">Vì sao có điểm này</span>
+                  <sc-for list="{{k.reasons}}" as="r" hint-placeholder-count="4"><div style="display:flex;gap:10px;align-items:flex-start"><span style="{{r.markStyle}}">{{r.mark}}</span><span style="font-size:13px;color:#374151;line-height:1.5">{{r.text}}</span></div></sc-for>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid #EEF0F5;padding-top:12px">
+                  <sc-for list="{{k.rows}}" as="r" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:#F7F8FC"><span style="font-size:13px;font-weight:600">{{r.name}}</span><span style="font-size:12px;color:#6B7280">{{r.code}} · {{r.lich}}</span></div></sc-for>
+                </div>
+                <span style="font-size:12px;color:#6B7280">Tổng {{k.tc}} tín chỉ</span>
+                <button onClick="{{k.pick}}" style="{{k.btn}}">{{k.btnText}}</button>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;justify-content:flex-end"><button onClick="{{toStep3}}" style="min-height:52px;padding:0 28px;border-radius:12px;border:0;background:var(--primary);color:#FFFFFF;font-weight:600;font-size:15px;cursor:pointer">Đăng ký tổ hợp đã chọn</button></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{s3}}" hint-placeholder-val="{{false}}">
+        <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:24px;display:flex;flex-direction:column;gap:14px">
+          <h2 style="margin:0;font-size:18px;font-weight:700">Kết quả đăng ký</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px">
+            <sc-for list="{{results}}" as="r" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:{{r.bg}}"><span style="flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:{{r.mark}};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700">{{r.icon}}</span><span style="display:flex;flex-direction:column;flex:1"><span style="font-size:14px;font-weight:600">{{r.name}}</span><span style="font-size:12px;color:#4B5563">{{r.msg}}</span></span></div></sc-for>
+          </div>
+          <p style="margin:0;font-size:13px;color:#6B7280">Môn lỗi không làm hủy các môn đã đăng ký thành công. Bạn có thể đăng ký lại môn lỗi ở trang Đăng ký môn học.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a href="SV-Web-DangKy.dc.html" class="ui-click" style="min-height:48px;padding:0 20px;border-radius:12px;background:var(--primary);color:#FFFFFF;display:inline-flex;align-items:center;font-weight:600;font-size:14px">Xem lớp đã đăng ký</a>
+            <button onClick="{{toStep1}}" style="min-height:48px;padding:0 20px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;font-weight:600;font-size:14px;cursor:pointer">Làm lại</button>
+          </div>
+        </section>
+      </sc-if>
+      </div></sc-if>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"startStep":{"editor":"enum","default":"1","options":["1","2","3"],"section":"Bước ban đầu"},"$preview":{"width":1440,"height":1000},"uiState":{"editor":"enum","default":"ready","options":["ready","loading","error"],"section":"Trạng thái dữ liệu"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: Number((props && props.startStep) || 1), picked: { m1: true, m2: true, m3: true, m4: false }, avoid: { 7: true }, want: {}, ca: { sang: true }, combo: '', scope: 'all', chua: false, ky: 'all', open: { m1: true }, gv: {} };
+  }
+  renderVals() {
+    const NAVG = (active) => {
+      const base = 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;';
+      const on = base + 'background:var(--primary);color:#FFFFFF;font-weight:600;box-shadow:0 4px 12px rgba(63,81,181,.35);';
+      const off = base + 'color:#C9D0F2;font-weight:500;';
+      const it = (k, label, href, icon, badge) => ({ label, href, icon, style: k === active ? on : off, hasBadge: !!badge, badge: badge || '' });
+      return [
+        { title: 'TỔNG QUAN', items: [it('home', 'Tổng quan', 'SV-Web-TongQuan.dc.html', 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10')] },
+        { title: 'ĐĂNG KÝ HỌC', items: [
+          it('dk', 'Đăng ký môn học', 'SV-Web-DangKy.dc.html', 'M4 6h16M4 12h10M4 18h7'),
+          it('auto', 'Tạo TKB tự động', 'SV-Web-TKBTuDong.dc.html', 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z'),
+          it('tkb', 'Thời khóa biểu', 'SV-Web-TKB.dc.html', 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4')] },
+        { title: 'HỌC VỤ', items: [
+          it('ctdt', 'Chương trình đào tạo', 'SV-Web-CTDT.dc.html', 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13'),
+          it('diem', 'Điểm', 'SV-Web-Diem.dc.html', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z'),
+          it('dd', 'Điểm danh', 'SV-Web-DiemDanh.dc.html', 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6'),
+          it('hp', 'Học phí', 'SV-Web-HocPhi.dc.html', 'M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 000 4h14v4a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM16 13h3')] },
+        { title: 'KHÁC', items: [
+          it('tb', 'Thông báo', 'SV-Web-ThongBao.dc.html', 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0', '3'),
+          it('hs', 'Hồ sơ', 'SV-Web-HoSo.dc.html', 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'),
+          it('out', 'Đăng xuất', 'Web-DangNhap.dc.html', 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9')] }
+      ];
+    };
+
+    const S = this.state;
+    const SUBJ = [
+      { id: 'm1', code: 'CNTT401', name: 'Trí tuệ nhân tạo', loai: 'Bắt buộc', tc: 3, hk: 8, tt: 'chua' },
+      { id: 'm2', code: 'MAT102', name: 'Giải tích 2 (học lại)', loai: 'Bắt buộc', tc: 3, hk: 2, tt: 'lai' },
+      { id: 'm3', code: 'CNTT402', name: 'Học máy', loai: 'Tự chọn', tc: 3, hk: 6, tt: 'chua' },
+      { id: 'm4', code: 'CNTT410', name: 'An toàn thông tin', loai: 'Tự chọn', tc: 3, hk: 8, tt: 'chua' },
+      { id: 'm5', code: 'CNTT431', name: 'Xử lý ảnh', loai: 'Tự chọn', tc: 3, hk: 8, tt: 'chua' }
+    ];
+    const kyLong = (n) => 'Kỳ ' + n + ' · HK' + (((n - 1) % 2) + 1) + ' ' + (2023 + Math.floor((n - 1) / 2)) + '–' + (2024 + Math.floor((n - 1) / 2));
+    const OPTS = {
+      m1: [{ id: 'CNTT401-01', gv: 'Nguyễn Thị Mai', room: 'P.A301', si: 40, max: 45, thu: 2, a: 1, b: 3 }, { id: 'CNTT401-02', gv: 'Nguyễn Thị Mai', room: 'P.A302', si: 44, max: 45, thu: 3, a: 1, b: 3 }, { id: 'CNTT401-03', gv: 'Vũ Đức Anh', room: 'P.B104', si: 12, max: 45, thu: 5, a: 6, b: 8 }],
+      m2: [{ id: 'MAT102-01', gv: 'Trần Thị Bình', room: 'P.C201', si: 20, max: 50, thu: 2, a: 6, b: 8 }, { id: 'MAT102-02', gv: 'Trần Thị Bình', room: 'P.C202', si: 35, max: 50, thu: 4, a: 1, b: 3 }, { id: 'MAT102-03', gv: 'Phạm Văn Long', room: 'P.C203', si: 18, max: 50, thu: 6, a: 6, b: 8 }],
+      m3: [{ id: 'CNTT402-01', gv: 'Vũ Đức Anh', room: 'P.B104', si: 28, max: 40, thu: 3, a: 6, b: 8 }, { id: 'CNTT402-02', gv: 'Lê Quốc Bảo', room: 'P.A105', si: 39, max: 40, thu: 6, a: 1, b: 3 }],
+      m4: [{ id: 'CNTT410-01', gv: 'Hồ Đắc Hưng', room: 'P.A205', si: 44, max: 45, thu: 5, a: 1, b: 3 }, { id: 'CNTT410-02', gv: 'Hồ Đắc Hưng', room: 'P.A205', si: 36, max: 45, thu: 7, a: 1, b: 3 }],
+      m5: [{ id: 'CNTT431-01', gv: 'Đặng Quốc Việt', room: 'P.B201', si: 22, max: 40, thu: 4, a: 11, b: 13 }, { id: 'CNTT431-02', gv: 'Vũ Đức Anh', room: 'P.B202', si: 30, max: 40, thu: 6, a: 11, b: 13 }]
+    };
+    const COMBOS = [
+      { id: 'k1', pick: { m1: 0, m2: 1, m3: 1, m4: 0, m5: 0 }, extra: [{ needs: ['m1'], text: 'Chiều thứ 5 chỉ còn lớp CNTT401-03 (Trí tuệ nhân tạo, tiết 6–8) nên không được chọn — lớp này vướng lịch học buổi sáng thứ 5 của An toàn thông tin.' }] },
+      { id: 'k2', pick: { m1: 1, m2: 0, m3: 0, m4: 1, m5: 1 }, extra: [{ needs: ['m1', 'm3'], text: 'Thứ 3 học liền hai lớp sáng (CNTT401-02) và chiều (CNTT402-01), nghỉ trưa chỉ hơn 3 tiếng.' }] },
+      { id: 'k3', pick: { m1: 2, m2: 2, m3: 0, m4: 0, m5: 0 }, extra: [{ needs: ['m1', 'm4'], text: 'Chiều thứ 5 bị vướng môn Trí tuệ nhân tạo (CNTT401-03, tiết 6–8) ngay sau buổi sáng An toàn thông tin — lịch thứ 5 và thứ 6 khá dày.' }] }
+    ];
+    const DAYS = [[2, 'T2'], [3, 'T3'], [4, 'T4'], [5, 'T5'], [6, 'T6'], [7, 'T7'], [8, 'CN']];
+    const DAYNAME = (t) => (t === 8 ? 'Chủ nhật' : 'Thứ ' + t);
+    const CAS = [['sang', 'Sáng (tiết 1–5)'], ['chieu', 'Chiều (tiết 6–10)'], ['toi', 'Tối (tiết 11–15)']];
+    const caOf = (a) => (a <= 5 ? 'sang' : a <= 10 ? 'chieu' : 'toi');
+    const caName = { sang: 'sáng', chieu: 'chiều', toi: 'tối' };
+    const list = (arr) => arr.join(', ');
+    const pickedIds = SUBJ.filter((c) => S.picked[c.id]).map((c) => c.id);
+    const pickedTc = SUBJ.filter((c) => S.picked[c.id]).reduce((n, c) => n + c.tc, 0);
+    const avoidDays = DAYS.filter((d) => S.avoid[d[0]]).map((d) => d[0]);
+    const wantDays = DAYS.filter((d) => S.want[d[0]]).map((d) => d[0]);
+    const caSel = CAS.filter((c) => S.ca[c[0]]).map((c) => c[0]);
+    const sb = 'min-height:44px;padding:0 16px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;';
+    const pill = (on) => sb + (on ? 'background:var(--primary);color:#FFFFFF;border:1px solid var(--primary)' : 'background:#FFFFFF;color:#374151;border:1px solid #C4C9D4');
+    const scopes = [['all', 'Tất cả môn đang mở'], ['ctdt', 'Theo CTĐT']].map(([id, label]) => ({ label, on: S.scope === id, pick: () => this.setState({ scope: id, ky: 'all' }), style: pill(S.scope === id) })).concat([{ label: 'Môn chưa học', on: !!S.chua, pick: () => this.setState({ chua: !S.chua }), style: pill(!!S.chua) }]);
+    const kyOptions = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ v: String(n), label: kyLong(n) + ' (' + SUBJ.filter((c) => c.hk === n).length + ' môn mở)' + (n === 8 ? ' · kỳ đang đăng ký' : '') }));
+    const gvb = (on) => sb + 'border:1px solid ' + (on ? '#3F51B5' : '#C4C9D4') + ';background:' + (on ? '#3F51B5' : '#FFFFFF') + ';color:' + (on ? '#FFFFFF' : '#374151');
+    const subjects = SUBJ.filter((c) => (!S.chua || c.tt === 'chua') && (S.scope !== 'ctdt' || S.ky === 'all' || c.hk === Number(S.ky))).sort((a, b) => (S.scope === 'ctdt' ? a.hk - b.hk : 0)).map((c) => {
+      const ex = !!S.open[c.id]; const sel = S.gv[c.id] || ''; const gvs = Array.from(new Set(OPTS[c.id].map((o) => o.gv)));
+      return { ...c, on: !!S.picked[c.id], expanded: ex, border: S.picked[c.id] ? '#3F51B5' : '#E3E6EE', bg: S.picked[c.id] ? '#F5F6FF' : '#FFFFFF',
+        toggle: () => this.setState({ picked: { ...S.picked, [c.id]: !S.picked[c.id] } }),
+        expand: () => this.setState({ open: { ...S.open, [c.id]: !S.open[c.id] } }),
+        chev: 'flex:0 0 auto;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#F1F3F9;color:#374151;font-size:18px;line-height:1;transform:rotate(' + (ex ? '90' : '0') + 'deg)',
+        showKy: S.scope === 'ctdt', kyLabel: kyLong(c.hk), lai: c.tt === 'lai', tagText: (S.scope === 'ctdt' ? ' · Kỳ ' + c.hk : '') + (c.tt === 'lai' ? ' · Học lại' : ''),
+        gvChip: sel ? 'GV: ' + sel : 'Tự chọn giáo viên', gvChipStyle: 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;' + (sel ? 'background:#E0F2F1;color:#00695C' : 'background:#F1F3F9;color:#6B7280'),
+        gvBtns: [{ label: 'Tự động chọn', style: gvb(!sel), on: !sel, pick: () => this.setState({ gv: { ...S.gv, [c.id]: '' } }) }].concat(gvs.map((g) => ({ label: g, style: gvb(sel === g), on: sel === g, pick: () => this.setState({ gv: { ...S.gv, [c.id]: g }, picked: { ...S.picked, [c.id]: true } }) }))),
+        gvHint: sel ? 'Hệ thống chỉ xếp các lớp của GV ' + sel + ' cho môn này; nếu lịch không cho phép, tổ hợp sẽ bị trừ điểm.' : 'Để hệ thống tự chọn lớp phù hợp nhất với ưu tiên của bạn.',
+        classes: OPTS[c.id].map((o) => { const pct = Math.round((o.si / o.max) * 100); return { id: o.id, gv: o.gv, room: o.room, si: o.si, max: o.max, fill: pct, fillColor: pct > 90 ? '#C62828' : pct >= 70 ? '#F9A825' : '#2E7D32', lich: DAYNAME(o.thu) + ' · Tiết ' + o.a + '–' + o.b, match: !!sel && o.gv === sel, op: sel && o.gv !== sel ? '.45' : '1' }; }) };
+    });
+    const pb = (on) => 'min-height:48px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid ' + (on ? '#3F51B5' : '#D5D9E4') + ';background:' + (on ? '#E8EAF6' : '#FFFFFF') + ';color:' + (on ? '#2C3A7A' : '#374151');
+    const avoidBtns = DAYS.map((d) => ({ label: d[1], on: !!S.avoid[d[0]], style: pb(!!S.avoid[d[0]]), toggle: () => this.setState({ avoid: { ...S.avoid, [d[0]]: !S.avoid[d[0]] }, want: { ...S.want, [d[0]]: false } }) }));
+    const wantBtns = DAYS.map((d) => ({ label: d[1], on: !!S.want[d[0]], style: pb(!!S.want[d[0]]), toggle: () => this.setState({ want: { ...S.want, [d[0]]: !S.want[d[0]] }, avoid: { ...S.avoid, [d[0]]: false } }) }));
+    const caBtns = CAS.map((c) => ({ label: c[1], on: !!S.ca[c[0]], style: pb(!!S.ca[c[0]]), toggle: () => this.setState({ ca: { ...S.ca, [c[0]]: !S.ca[c[0]] } }) }));
+    // Chấm điểm tổ hợp theo ưu tiên cá nhân và giải thích lý do
+    const scored = COMBOS.map((k) => {
+      const cls = pickedIds.map((m) => { const o = OPTS[m][k.pick[m] || 0]; const sj = SUBJ.find((x) => x.id === m); return { m, name: sj.name, ...o, ca: caOf(o.a), lich: DAYNAME(o.thu) + ' · Tiết ' + o.a + '–' + o.b }; });
+      let score = 70; const reasons = [];
+      const ok = (t) => reasons.push({ ok: true, text: t });
+      const warn = (t) => reasons.push({ ok: false, text: t });
+      if (avoidDays.length) {
+        const hit = cls.filter((c) => avoidDays.indexOf(c.thu) >= 0);
+        if (!hit.length) ok('Không có buổi nào vào ' + list(avoidDays.map(DAYNAME)) + ' như bạn muốn tránh.');
+        else { score -= 12 * hit.length; warn('Có ' + hit.length + ' buổi rơi vào ngày bạn muốn tránh: ' + list(hit.map((c) => c.id + ' (' + DAYNAME(c.thu) + ')')) + '.'); }
+      }
+      if (wantDays.length) {
+        const hit = cls.filter((c) => wantDays.indexOf(c.thu) >= 0);
+        if (hit.length) { score += 6 * hit.length; ok(hit.length + '/' + cls.length + ' môn có buổi vào ngày bạn muốn học (' + list(wantDays.map(DAYNAME)) + ').'); }
+        else warn('Không có lớp nào vào ngày bạn muốn học (' + list(wantDays.map(DAYNAME)) + ').');
+      }
+      if (caSel.length) {
+        const hit = cls.filter((c) => caSel.indexOf(c.ca) >= 0);
+        if (hit.length === cls.length) { score += 4 * hit.length; ok('Cả ' + cls.length + ' môn học đúng ca bạn ưu tiên (' + list(caSel.map((c) => caName[c])) + ').'); }
+        else if (hit.length) { score += 4 * hit.length; warn('Chỉ ' + hit.length + '/' + cls.length + ' môn học đúng ca ưu tiên; còn lại: ' + list(cls.filter((c) => caSel.indexOf(c.ca) < 0).map((c) => c.id + ' (ca ' + caName[c.ca] + ')')) + '.'); }
+        else warn('Không có môn nào học đúng ca bạn ưu tiên.');
+      }
+      if (pickedIds.some((m) => S.gv[m])) {
+        const good = cls.filter((c) => S.gv[c.m] && S.gv[c.m] === c.gv);
+        const bad = cls.filter((c) => S.gv[c.m] && S.gv[c.m] !== c.gv);
+        if (good.length) { score += 8 * good.length; ok('Đúng giáo viên mong muốn: ' + list(good.map((c) => c.name + ' – ' + c.gv)) + '.'); }
+        if (bad.length) { score -= 10 * bad.length; warn('Chưa xếp được giáo viên mong muốn: ' + list(bad.map((c) => c.name + ' học với ' + c.gv + ' thay vì ' + S.gv[c.m])) + '.'); }
+      }
+      const nDays = new Set(cls.map((c) => c.thu)).size;
+      if (nDays <= 4) { score += 4; ok('Chỉ học ' + nDays + ' ngày/tuần, lịch gọn.'); } else warn('Học ' + nDays + ' ngày/tuần, lịch trải rộng.');
+      ok('Không trùng tiết giữa các môn đã chọn.');
+      k.extra.filter((e) => e.needs.every((n) => pickedIds.indexOf(n) >= 0)).forEach((e) => warn(e.text));
+      score = Math.max(40, Math.min(99, score));
+      return { id: k.id, cls, score, reasons };
+    }).sort((a, b) => b.score - a.score);
+    const combos = scored.map((k, i) => ({
+      id: k.id, title: 'Tổ hợp ' + (i + 1), best: i === 0, score: k.score, bar: k.score, barColor: k.score >= 85 ? '#2E9D5B' : k.score >= 70 ? '#F9A825' : '#C62828',
+      rows: k.cls.map((c) => ({ name: c.name, code: c.id + ' · GV ' + c.gv, lich: c.lich })), tc: pickedTc,
+      reasons: k.reasons.map((r) => ({ text: r.text, mark: r.ok ? '✓' : '!', markStyle: 'flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#FFFFFF;background:' + (r.ok ? '#2E9D5B' : '#E8890C') })),
+      border: S.combo === k.id ? '#3F51B5' : 'transparent', btnText: S.combo === k.id ? 'Đang chọn' : 'Chọn tổ hợp này',
+      btn: 'min-height:48px;border-radius:12px;font-weight:600;font-size:14px;cursor:pointer;' + (S.combo === k.id ? 'border:0;background:#E8EAF6;color:var(--primary-dark)' : 'border:1px solid var(--primary);background:#FFFFFF;color:var(--primary)'),
+      pick: () => this.setState({ combo: k.id })
+    }));
+    const top = scored[0];
+    const topWhy = top ? top.reasons.filter((r) => r.ok).slice(0, 2).map((r) => r.text.replace(/\.$/, '')).join('; ') : '';
+    const chosen = scored.find((k) => k.id === S.combo) || scored[0];
+    const results = chosen ? chosen.cls.map((c, i, a) => i === a.length - 1 && a.length > 1
+      ? { name: c.name + ' · ' + c.id, msg: 'Lớp vừa hết chỗ, hãy chọn lớp khác', bg: '#FDECEA', mark: '#C62828', icon: '✕' }
+      : { name: c.name + ' · ' + c.id, msg: 'Đăng ký thành công', bg: '#E6F4EA', mark: '#2E7D32', icon: '✓' }) : [];
+    const dot = 'width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;';
+    const steps = ['Chọn môn và ưu tiên', 'Xem tổ hợp gợi ý', 'Kết quả đăng ký'].map((label, i) => { const n = i + 1; const st = n < S.step ? 'done' : n === S.step ? 'on' : 'off'; return { n: st === 'done' ? '✓' : String(n), label, dot: dot + (st === 'done' ? 'background:#2E7D32;color:#FFFFFF' : st === 'on' ? 'background:var(--primary);color:#FFFFFF' : 'background:#ECEFF1;color:#6B7280'), text: 'font-size:14px;font-weight:' + (st === 'on' ? '600' : '500') + ';color:' + (st === 'off' ? '#6B7280' : '#212121') }; });
+
+    const UI = (this.props && this.props.uiState) || 'ready';
+    const uiPending = UI !== 'ready' && !S.uiRetried;
+    return {
+      navGroups: NAVG('auto'),
+      uiLoading: uiPending && UI === 'loading', uiError: uiPending && UI === 'error', uiOk: !uiPending, uiRetry: () => this.setState({ uiRetried: true }),
+      steps, subjects, noSubj: subjects.length === 0, scopes, kyOptions, ky: S.ky, pickKy: (e) => this.setState({ ky: e.target.value }), kyOff: S.scope !== 'ctdt',
+      kyHint: S.scope === 'ctdt' ? 'Chỉ hiện môn có kỳ gợi ý đã chọn trong CTĐT của bạn.' : 'Chọn "Theo CTĐT" để lọc theo kỳ trong chương trình đào tạo.',
+      kyStyle: 'min-height:48px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:15px;background:' + (S.scope === 'ctdt' ? '#FFFFFF;color:#212121' : '#F1F3F9;color:#9AA1B2') + ';',
+      avoidBtns, wantBtns, caBtns, pickedCount: pickedIds.length, pickedTc,
+      suggestStyle: 'min-height:52px;padding:0 28px;border-radius:12px;border:0;font-weight:600;font-size:15px;color:#FFFFFF;cursor:' + (pickedIds.length ? 'pointer' : 'not-allowed') + ';background:' + (pickedIds.length ? '#3F51B5' : '#C4C9D4'),
+      s1: S.step === 1, s2: S.step === 2, s3: S.step === 3, combos, comboCount: combos.length, topWhy, topTitle: 'Tổ hợp 1', results,
+      toStep1: () => this.setState({ step: 1 }), toStep2: () => { if (pickedIds.length) this.setState({ step: 2 }); }, toStep3: () => this.setState({ step: 3 })
+    };
+  }
+}
+</script>
+</body>
+</html>

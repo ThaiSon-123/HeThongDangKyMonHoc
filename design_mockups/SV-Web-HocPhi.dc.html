@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Học phí — sinh viên</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:var(--bg)}
+a{text-decoration:none}
+button,select,input,textarea{font-family:inherit}
+
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:900px;background:var(--bg)">
+  <nav class="np" aria-label="Điều hướng sinh viên" style="flex:1 1 260px;max-width:260px;min-width:220px;background:linear-gradient(180deg,var(--navy) 0%,#26357A 100%);padding:20px 14px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:12px;padding:6px 8px 16px;border-bottom:1px solid rgba(255,255,255,.12)">
+        <div style="flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:#FFFFFF;color:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">ĐK</div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <span style="font-weight:700;font-size:15px;color:#FFFFFF">Đăng ký môn học</span>
+          <span style="font-size:12px;color:#AEB8E6">Cổng sinh viên</span>
+        </div>
+      </div>
+      <sc-for list="{{navGroups}}" as="grp" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div style="padding:0 12px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;color:#8E9AD6">{{grp.title}}</div>
+          <sc-for list="{{grp.items}}" as="item" hint-placeholder-count="2">
+            <a href="{{item.href}}" style="{{item.style}}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{item.icon}}"></path></svg>
+              <span style="flex:1">{{item.label}}</span>
+              <sc-if value="{{item.hasBadge}}" hint-placeholder-val="{{false}}">
+                <span style="min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:var(--accent);color:#FFFFFF;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center">{{item.badge}}</span>
+              </sc-if>
+            </a>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 6px 0;border-top:1px solid rgba(255,255,255,.12)">
+      <a href="SV-Web-HoSo.dc.html" aria-label="Hồ sơ cá nhân" style="flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--accent);color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">HN</a>
+      <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+        <span style="font-weight:600;font-size:14px;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Trần Hoàng Nam</span>
+        <span style="font-size:12px;color:#AEB8E6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">SV2023014 · CNTT · K2023</span>
+      </div>
+      <a href="Web-DangNhap.dc.html" aria-label="Đăng xuất" style="flex:0 0 auto;width:44px;height:44px;border-radius:12px;color:#C9D0F2;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"></path></svg></a>
+    </div>
+  </nav>
+
+  <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column">
+    <header class="np" style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:32px 32px 4px;color:var(--navy);flex-wrap:wrap">
+      <div>
+        <div class="ui-bc" aria-label="Đường dẫn"><a href="SV-Web-TongQuan.dc.html">Sinh viên</a><span aria-hidden="true">›</span><span style="color:#5B6488;font-weight:600">Học phí</span></div><h1 style="margin:0;font-size:28px;font-weight:700">Học phí</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:#5B6488">Tổng hợp học phí, miễn giảm, đã nộp và công nợ theo học kỳ</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        
+        <a href="SV-Web-ThongBao.dc.html" aria-label="Thông báo, có tin chưa đọc" style="position:relative;width:44px;height:44px;border-radius:12px;border:0;background:#FFFFFF;color:var(--navy);box-shadow:0 2px 10px rgba(31,42,92,.1);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0"></path></svg><span style="position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:2px solid #FFFFFF"></span></a>
+      </div>
+    </header>
+
+    <main style="padding:32px;display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:340px">
+        <label for="hk" style="font-size:13px;font-weight:600;color:#374151">Học kỳ</label>
+        <select id="hk" value="{{sem}}" onChange="{{pickSem}}" style="min-height:48px;border-radius:8px;border:1px solid #9AA1B2;padding:0 12px;font-size:15px;background:#FFFFFF">
+          <option value="cur">Học kỳ 1, 2026–2027</option>
+          <option value="old">Học kỳ 2, 2025–2026</option>
+        </select>
+      </div>
+
+      <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:center;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font-size:13px;color:#6B7280">Trạng thái học phí</span>
+          <span style="{{d.chip}}">{{d.label}}</span>
+          <sc-if value="{{d.canPay}}" hint-placeholder-val="{{false}}"><a href="SV-Web-ThanhToan.dc.html" class="ui-click" style="margin-top:6px;min-height:48px;padding:0 22px;border-radius:12px;background:var(--accent);color:#FFFFFF;display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;box-shadow:0 4px 12px rgba(217,72,15,.3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 000 4h14v4a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM16 13h3"></path></svg>Thanh toán học phí</a></sc-if>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1 1 320px;max-width:520px">
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:600">Đã nộp</span><span style="color:#374151">{{d.thu}} / {{d.phai}}</span></div>
+          <div style="height:10px;border-radius:999px;background:#E3E6EE;overflow:hidden"><div style="width:{{d.pct}}%;height:100%;background:linear-gradient(90deg,var(--primary),#2E9D5B)"></div></div>
+          <span style="font-size:12px;color:#6B7280">{{d.han}}</span>
+        </div>
+      </section>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px">
+        <sc-for list="{{cards}}" as="c" hint-placeholder-count="5">
+          <div style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:16px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:13px;color:#6B7280">{{c.label}}</span>
+            <span style="font-size:22px;font-weight:700;color:{{c.color}}">{{c.value}}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+        <section style="flex:3 1 520px;min-width:0;background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:1px solid #E3E6EE"><h2 style="margin:0;font-size:16px;font-weight:700;color:var(--navy)">Chi tiết học phí từng môn</h2></div>
+          <div class="ui-tscroll" style="overflow-x:auto"><div style="min-width:560px">
+            <div style="display:flex;gap:12px;padding:10px 20px;background:#FAFAFA;font-size:12px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.03em"><span style="flex:3 1 220px">Môn học</span><span style="flex:1 1 80px;text-align:center">TC LT</span><span style="flex:1 1 80px;text-align:center">TC TH</span><span style="flex:1 1 120px;text-align:right">Thành tiền</span></div>
+            <sc-for list="{{items}}" as="i" hint-placeholder-count="4">
+              <div class="ui-trow" style="display:flex;gap:12px;padding:12px 20px;border-top:1px solid #EEF0F5;font-size:14px;align-items:center"><span style="flex:3 1 220px;font-weight:600">{{i.name}}<br><span style="font-weight:400;font-size:12px;color:#6B7280">{{i.code}}</span></span><span style="flex:1 1 80px;text-align:center">{{i.lt}}</span><span style="flex:1 1 80px;text-align:center">{{i.th}}</span><span style="flex:1 1 120px;text-align:right;font-weight:600">{{i.amount}}</span></div>
+            </sc-for>
+          </div></div>
+        </section>
+
+        <section style="flex:2 1 340px;min-width:0;background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:20px;display:flex;flex-direction:column;gap:12px">
+          <h2 style="margin:0;font-size:16px;font-weight:700;color:var(--navy)">Giao dịch</h2>
+          <sc-if value="{{noPay}}" hint-placeholder-val="{{false}}"><span style="font-size:14px;color:#6B7280">Chưa có giao dịch nào.</span></sc-if>
+          <sc-for list="{{payments}}" as="p" hint-placeholder-count="2">
+            <div style="display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:12px;background:#F7F8FC">
+              <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600">{{p.kind}} · {{p.amount}}</span><span style="font-size:12px;color:#6B7280">{{p.date}} · {{p.method}}</span></span>
+              <span style="font-size:12px;color:#6B7280;white-space:nowrap">{{p.code}}</span>
+            </div>
+          </sc-for>
+          <span style="font-size:12px;color:#6B7280;line-height:1.5">Thanh toán trực tiếp tại phòng Kế toán.</span>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { sem: 'cur' };
+  }
+  renderVals() {
+    const NAVG = (active) => {
+      const base = 'display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:12px;font-size:14px;';
+      const on = base + 'background:var(--primary);color:#FFFFFF;font-weight:600;box-shadow:0 4px 12px rgba(63,81,181,.35);';
+      const off = base + 'color:#C9D0F2;font-weight:500;';
+      const it = (k, label, href, icon, badge) => ({ label, href, icon, style: k === active ? on : off, hasBadge: !!badge, badge: badge || '' });
+      return [
+        { title: 'TỔNG QUAN', items: [it('home', 'Tổng quan', 'SV-Web-TongQuan.dc.html', 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10')] },
+        { title: 'ĐĂNG KÝ HỌC', items: [
+          it('dk', 'Đăng ký môn học', 'SV-Web-DangKy.dc.html', 'M4 6h16M4 12h10M4 18h7'),
+          it('auto', 'Tạo TKB tự động', 'SV-Web-TKBTuDong.dc.html', 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z'),
+          it('tkb', 'Thời khóa biểu', 'SV-Web-TKB.dc.html', 'M4 5h16v15H4V5zM4 10h16M9 3v4M15 3v4')] },
+        { title: 'HỌC VỤ', items: [
+          it('ctdt', 'Chương trình đào tạo', 'SV-Web-CTDT.dc.html', 'M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2V5zM4 19a2 2 0 012-2h13'),
+          it('diem', 'Điểm', 'SV-Web-Diem.dc.html', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z'),
+          it('dd', 'Điểm danh', 'SV-Web-DiemDanh.dc.html', 'M12 21a9 9 0 100-18 9 9 0 000 18zM8 12l3 3 5-6'),
+          it('hp', 'Học phí', 'SV-Web-HocPhi.dc.html', 'M3 7a2 2 0 012-2h13a2 2 0 012 2v2H5a2 2 0 000 4h14v4a2 2 0 01-2 2H5a2 2 0 01-2-2V7zM16 13h3')] },
+        { title: 'KHÁC', items: [
+          it('tb', 'Thông báo', 'SV-Web-ThongBao.dc.html', 'M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zM10 20a2 2 0 004 0', '3'),
+          it('hs', 'Hồ sơ', 'SV-Web-HoSo.dc.html', 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0'),
+          it('out', 'Đăng xuất', 'Web-DangNhap.dc.html', 'M9 4H5v16h4M16 8l4 4-4 4M20 12H9')] }
+      ];
+    };
+
+    const S = this.state;
+    const DATA = {
+      cur: { label: 'Còn nợ', chipBg: 'background:#FDECEA;color:#C62828', tong: 6000000, giam: 0, phai: 6000000, thu: 1680000, hoan: 0, han: 'Hạn đóng: 31/10/2026 · còn 21 ngày',
+        items: [['Lập trình hướng đối tượng', 'CNTT101-01', 2, 1, 1500000], ['Cơ sở dữ liệu', 'CNTT203-02', 2, 1, 1500000], ['Mạng máy tính', 'CNTT305-01', 2, 1, 1500000], ['Kỹ thuật phần mềm', 'CNTT320-01', 3, 0, 1500000]],
+        pays: [['Thu', 1680000, '05/09/2026', 'Chuyển khoản', 'BL-000123']] },
+      old: { label: 'Đã đóng đủ', chipBg: 'background:#E6F4EA;color:#2E7D32', tong: 6300000, giam: 630000, phai: 5670000, thu: 5670000, hoan: 0, han: 'Hạn đóng: 28/02/2026 · đã hoàn tất',
+        items: [['Cấu trúc dữ liệu và giải thuật', 'CNTT110-02', 2, 1, 1350000], ['Hệ điều hành', 'CNTT210-01', 2, 1, 1350000], ['Giải tích 2', 'MAT102-01', 3, 0, 1350000], ['Giáo dục thể chất', 'PED101-04', 0, 2, 900000], ['Xác suất thống kê', 'MAT201-02', 3, 0, 1350000]],
+        pays: [['Thu', 3000000, '10/02/2026', 'Tiền mặt', 'BL-000045'], ['Thu', 2670000, '28/02/2026', 'Chuyển khoản', 'BL-000071']] }
+    };
+    const v = (n) => n.toLocaleString('vi-VN') + ' ₫';
+    const x = DATA[S.sem];
+    const d = { label: x.label, chip: 'display:inline-block;align-self:flex-start;font-size:13px;font-weight:700;padding:6px 14px;border-radius:999px;' + x.chipBg, thu: v(x.thu), phai: v(x.phai), pct: Math.min(100, Math.round((x.thu / x.phai) * 100)), han: x.han, canPay: x.phai - x.thu > 0 };
+    const cards = [
+      { label: 'Tổng tiền học phí', value: v(x.tong), color: '#212121' },
+      { label: 'Miễn giảm / học bổng', value: v(x.giam), color: '#2E7D32' },
+      { label: 'Phải nộp', value: v(x.phai), color: '#212121' },
+      { label: 'Đã thu', value: v(x.thu), color: '#3F51B5' },
+      { label: x.hoan > 0 ? 'Cần hoàn lại' : 'Còn nợ', value: v(x.hoan > 0 ? x.hoan : Math.max(0, x.phai - x.thu)), color: x.phai - x.thu > 0 ? '#C62828' : '#2E7D32' }
+    ];
+    const items = x.items.map((i) => ({ name: i[0], code: i[1], lt: i[2], th: i[3], amount: v(i[4]) }));
+    const payments = x.pays.map((p) => ({ kind: p[0], amount: v(p[1]), date: p[2], method: p[3], code: p[4] }));
+
+    return {
+      navGroups: NAVG('hp'),
+      sem: S.sem, pickSem: (e) => this.setState({ sem: e.target.value }), d, cards, items, payments, noPay: payments.length === 0
+    };
+  }
+}
+</script>
+</body>
+</html>

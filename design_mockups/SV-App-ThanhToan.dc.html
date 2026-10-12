@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thanh toán học phí (app sinh viên)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,sans-serif;color:#212121;background:var(--bg)}
+a{text-decoration:none}
+button,select,input,textarea{font-family:inherit}
+
+/*ui-polish*/
+:root{--primary:#3F51B5;--primary-dark:#2C3A7A;--navy:#1F2A5C;--accent:#D9480F;--bg:#F4F5FA;--surface:#FFFFFF;--success:#2E7D32;--danger:#C62828;--warning:#F9A825;--text:#212121;--muted:#6B7280;--radius:12px;--ease:cubic-bezier(.2,.7,.2,1)}
+button,a,[role=tab],[role=switch],input,select,textarea{transition:filter .15s var(--ease),box-shadow .15s var(--ease),background-color .15s var(--ease),border-color .15s var(--ease),transform .1s var(--ease)}
+button:not(:disabled):hover{filter:brightness(.94)}
+button:not(:disabled):active{transform:scale(.97)}
+button:disabled{cursor:not-allowed}
+nav a:hover{background:rgba(255,255,255,.1)}
+.ui-trow:hover,.ui-click:hover{filter:brightness(.97)}
+[role=option]:hover{background:#F1F3F9}
+[role=option].ui-active{background:#E8EAF6!important}
+:focus-visible{outline:3px solid #8C9BEA;outline-offset:2px}
+input:focus,select:focus,textarea:focus{border-color:var(--primary)!important;box-shadow:0 0 0 3px rgba(63,81,181,.18)}
+[data-ui-invalid]{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(198,40,40,.15)!important}
+.ui-tscroll{max-height:640px;overflow-y:auto}
+.ui-thead{position:sticky;top:0;z-index:2}
+.ui-skel{background:linear-gradient(90deg,#ECEFF5 0%,#F7F8FC 50%,#ECEFF5 100%);background-size:200% 100%;animation:ui-shimmer 1.3s linear infinite}
+.ui-bc{display:flex;align-items:center;gap:6px;font-size:12px;color:#8A93B8;margin-bottom:6px}
+.ui-bc a{color:#8A93B8}.ui-bc a:hover{color:var(--primary);text-decoration:underline}
+@keyframes ui-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ui-fade{from{opacity:0}to{opacity:1}}
+@keyframes ui-slide{from{transform:translateX(36px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-pop{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-toast{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes ui-page{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ui-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ui-shake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ui-overlay{animation:ui-fade .18s var(--ease)}
+aside[role=dialog]{animation:ui-slide .25s var(--ease)}
+div[role=dialog]{animation:ui-pop .2s var(--ease)}
+div[role=dialog] [role=alert]{animation:ui-shake .3s var(--ease)}
+[role=listbox]{animation:ui-pop .15s var(--ease)}
+.ui-toast{animation:ui-toast .25s var(--ease)}
+main{animation:ui-page .3s var(--ease)}
+.ui-approot{animation:ui-page .3s var(--ease)}
+.ui-sheet{animation:ui-sheet .22s var(--ease)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/*end-ui-polish*/
+</style>
+<script>/*ui-polish-js*/
+(function(){
+  if (window.__uiPolish) return; window.__uiPolish = 1;
+  function qs(s, r){ return (r || document).querySelector(s); }
+  function qsa(s, r){ return [].slice.call((r || document).querySelectorAll(s)); }
+  function norm(t){ return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
+  // ---- phím tắt: Esc đóng hộp thoại / ngăn chi tiết / danh sách; mũi tên + Enter trong ô gõ để tìm
+  document.addEventListener('keydown', function(e){
+    var ae = document.activeElement, lb = qs('[role=listbox]');
+    if (e.key === 'Escape') {
+      if (lb && ae && ae.tagName === 'INPUT') { ae.blur(); return; }
+      var sheet = qs('.ui-sheet-ov'); if (sheet) { sheet.remove(); return; }
+      var ds = qsa('[role=dialog]'); if (!ds.length) return;
+      var btns = qsa('button', ds[ds.length - 1]);
+      var c = btns.filter(function(b){ return b.getAttribute('aria-label') === 'Đóng'; })[0] || btns.filter(function(b){ return /^(Hủy|Đóng|Không hủy)/.test((b.textContent || '').trim()); })[0];
+      if (c) { c.click(); e.preventDefault(); }
+      return;
+    }
+    if (lb && ae && ae.tagName === 'INPUT' && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter')) {
+      var opts = qsa('[role=option]', lb); if (!opts.length) return;
+      var i = typeof lb.__ui === 'number' ? lb.__ui : -1;
+      if (e.key === 'Enter') { if (i >= 0 && opts[i]) { opts[i].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); e.preventDefault(); } return; }
+      i = e.key === 'ArrowDown' ? Math.min(opts.length - 1, i + 1) : Math.max(0, i - 1);
+      lb.__ui = i; opts.forEach(function(o, k){ o.classList.toggle('ui-active', k === i); });
+      if (opts[i].scrollIntoView) opts[i].scrollIntoView({ block: 'nearest' });
+      e.preventDefault();
+    }
+  }, true);
+  document.addEventListener('input', function(){ var lb = qs('[role=listbox]'); if (lb) lb.__ui = -1; }, true);
+  // ---- tự đặt con trỏ vào ô đầu tiên khi mở hộp thoại; đánh dấu ô liên quan tới thông báo lỗi
+  function scan(){
+    qsa('div[role=dialog]').forEach(function(d){
+      if (!d.getAttribute('data-ui-seen')) {
+        d.setAttribute('data-ui-seen', '1');
+        var f = qs('input:not([type=checkbox]):not([disabled]),select:not([disabled]),textarea', d);
+        if (f) setTimeout(function(){ try { f.focus(); } catch (x) {} }, 80);
+      }
+      var al = qs('[role=alert]', d), msg = al ? norm(al.textContent) : '';
+      qsa('input:not([type=checkbox]),select,textarea', d).forEach(function(c){
+        var t = '', l = c.closest('label');
+        if (l) { t = l.firstChild && l.firstChild.nodeType === 3 ? l.firstChild.textContent : (qs('span', l) ? qs('span', l).textContent : ''); }
+        else { var p = c.parentElement; for (var n = 0; n < 3 && p && !t; n++, p = p.parentElement) { var f = p.firstElementChild; if (f && f.tagName === 'SPAN' && f !== c) t = f.textContent; } }
+        var k = norm(t).replace(/\(.*?\)/g, '').trim();
+        if (msg && k.length >= 3 && msg.indexOf(k) >= 0) c.setAttribute('data-ui-invalid', '1'); else c.removeAttribute('data-ui-invalid');
+      });
+    });
+  }
+  try { new MutationObserver(function(){ scan(); }).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (x) {}
+  // ---- bản App: danh sách chọn mở dạng bảng trượt từ dưới lên
+  function setVal(sel, v){ var d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value'); d.set.call(sel, v); sel.dispatchEvent(new Event('change', { bubbles: true })); }
+  function openSheet(sel){
+    var ov = document.createElement('div'); ov.className = 'ui-sheet-ov';
+    ov.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:100;background:rgba(17,24,39,.45);display:flex;align-items:flex-end;animation:ui-fade .18s';
+    ov.addEventListener('click', function(ev){ if (ev.target === ov) ov.remove(); });
+    var sh = document.createElement('div'); sh.className = 'ui-sheet'; sh.setAttribute('role', 'listbox');
+    sh.style.cssText = 'width:100%;max-height:72%;overflow:auto;background:#FFFFFF;border-radius:20px 20px 0 0;padding:10px 0 24px;box-shadow:0 -8px 30px rgba(17,24,39,.25);font-family:inherit';
+    var grip = document.createElement('div'); grip.style.cssText = 'width:40px;height:4px;border-radius:999px;background:#D5D9E4;margin:0 auto 10px'; sh.appendChild(grip);
+    var lab = sel.closest('label'); var t = sel.getAttribute('aria-label') || (lab && lab.firstChild && lab.firstChild.nodeType === 3 ? lab.firstChild.textContent.trim() : '') || 'Chọn';
+    var h = document.createElement('div'); h.textContent = t; h.style.cssText = 'padding:4px 20px 10px;font-size:15px;font-weight:700;color:#1F2A5C'; sh.appendChild(h);
+    [].forEach.call(sel.options, function(o){
+      var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'option'); b.textContent = o.text;
+      var on = o.value === sel.value;
+      b.style.cssText = 'display:block;width:100%;text-align:left;min-height:52px;padding:0 20px;border:0;background:' + (on ? '#E8EAF6' : 'transparent') + ';color:' + (on ? '#2C3A7A' : '#212121') + ';font-size:16px;font-weight:' + (on ? '600' : '400') + ';cursor:pointer;font-family:inherit';
+      b.addEventListener('click', function(){ setVal(sel, o.value); ov.remove(); });
+      sh.appendChild(b);
+    });
+    ov.appendChild(sh); document.body.appendChild(ov);
+  }
+  document.addEventListener('mousedown', function(e){
+    var t = e.target; if (!t || t.tagName !== 'SELECT' || t.disabled) return;
+    if (!qs('.ui-approot') && document.documentElement.clientWidth > 520) return;
+    e.preventDefault(); openSheet(t);
+  }, true);
+})();
+/*end-ui-polish-js*/</script>
+</helmet>
+<div class="ui-approot" style="position:relative;width:390px;height:844px;box-sizing:border-box;display:flex;flex-direction:column;background:var(--bg);overflow:hidden">
+  <header style="flex:0 0 auto;position:relative;overflow:hidden;background:linear-gradient(160deg,var(--navy) 0%,var(--primary-dark) 100%);color:#FFFFFF;border-radius:0 0 24px 24px;padding:14px 16px 18px 4px;display:flex;align-items:center;gap:4px"><span aria-hidden="true" style="position:absolute;right:-50px;top:-70px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.07)"></span><a href="SV-App-HocPhi.dc.html" aria-label="Quay lại" style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;color:#FFFFFF;flex:0 0 auto"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a><div style="position:relative;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Thanh toán học phí</span><span style="font-size:12px;opacity:.88">Chuyển khoản bằng mã QR</span></div></header>
+
+  <div style="flex:1 1 auto;overflow:auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:14px">
+    <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:14px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><div style="font-size:12px;color:#6B7280">Học kỳ 1, 2026–2027</div><div style="font-size:14px;font-weight:600">Công nợ hiện tại</div></div><div style="font-size:20px;font-weight:700;color:#C62828">{{conNo}}</div></div>
+      <div role="group" aria-label="Hình thức thanh toán" style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{modes}}" as="m" hint-placeholder-count="2"><button aria-pressed="{{m.on}}" onClick="{{m.pick}}" style="{{m.style}}"><span>{{m.label}}</span><span style="font-size:13px;font-weight:500;color:#6B7280">{{m.hint}}</span></button></sc-for>
+      </div>
+      <sc-if value="{{isPart}}" hint-placeholder-val="{{false}}">
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#374151">Số tiền muốn thanh toán (₫)
+          <input type="text" inputmode="numeric" value="{{custom}}" onChange="{{setCustom}}" placeholder="Ví dụ: 2000000" style="{{amtStyle}}">
+          <sc-if value="{{errAmt}}" hint-placeholder-val="{{false}}"><span style="font-size:12px;font-weight:500;color:#C62828">Số tiền phải lớn hơn 0 và không vượt quá {{conNo}}.</span></sc-if>
+        </label>
+      </sc-if>
+    </section>
+    <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <h2 style="margin:0;font-size:15px;font-weight:700;color:var(--navy);align-self:flex-start">Quét mã QR để chuyển khoản</h2>
+      <sc-if value="{{hasQr}}" hint-placeholder-val="{{true}}">
+        <div style="padding:10px;border-radius:14px;background:#FFFFFF;border:1px solid #E3E6EE"><svg viewBox="-2 -2 29 29" width="200" height="200" role="img" aria-label="Mã QR chuyển khoản học phí" shape-rendering="crispEdges"><rect x="-2" y="-2" width="29" height="29" fill="#FFFFFF"></rect><path d="{{qr}}" fill="#1F2A5C"></path></svg></div>
+        <span style="font-size:12px;color:#6B7280">Mã QR minh họa — mã thật do ngân hàng cung cấp</span>
+      </sc-if>
+      <sc-if value="{{noQr}}" hint-placeholder-val="{{false}}"><div style="width:200px;height:200px;border-radius:14px;border:2px dashed #C4C9D4;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;color:#6B7280;font-size:13px">Nhập số tiền hợp lệ để tạo mã QR</div></sc-if>
+      <button style="width:100%;min-height:48px;border-radius:12px;border:1px solid #9AA1B2;background:#FFFFFF;color:#374151;font-weight:600;font-size:14px">Lưu mã QR vào máy</button>
+    </section>
+    <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:6px 14px;display:flex;flex-direction:column">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+        <div class="ui-trow" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #EEF0F5">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;color:#6B7280">{{r.k}}</span><span style="font-size:14px;font-weight:700;word-break:break-word">{{r.v}}</span></div>
+          <button onClick="{{r.copy}}" style="flex:0 0 auto;min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--primary);background:#FFFFFF;color:var(--primary);font-weight:600;font-size:13px">Sao chép</button>
+        </div>
+      </sc-for>
+    </section>
+    <section style="background:#FFFFFF;border:0;border-radius:16px;box-shadow:0 2px 10px rgba(31,42,92,.08);padding:14px;display:flex;flex-direction:column;gap:10px">
+      <h2 style="margin:0;font-size:15px;font-weight:700;color:var(--navy)">Các bước thanh toán</h2>
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="4"><div style="display:flex;gap:10px;align-items:flex-start"><span style="flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:#E8EAF6;color:var(--primary-dark);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{s.n}}</span><span style="font-size:13px;color:#374151;line-height:1.5;padding-top:2px">{{s.t}}</span></div></sc-for>
+      <div style="background:#FFF4D6;color:#6B4700;border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.55">Học phí chỉ được cập nhật sau khi <strong>Phòng Kế toán xác nhận</strong> đã nhận tiền (thường trong 1–2 ngày làm việc). Hãy giữ nguyên nội dung chuyển khoản.</div>
+    </section>
+    <sc-if value="{{toast}}" hint-placeholder-val="{{false}}"><div role="status" class="ui-toast" style="position:absolute;left:16px;right:16px;bottom:24px;background:#1F2937;color:#FFFFFF;padding:12px 16px;border-radius:12px;font-size:13px">{{toastText}}</div></sc-if>
+  </div>
+
+  
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'all', custom: '', toast: false, toastText: '' };
+  }
+  renderVals() {
+
+    const S = this.state;
+    const CON_NO = 4320000;
+    const v = (n) => n.toLocaleString('vi-VN') + ' ₫';
+    const digits = (S.custom || '').replace(/[^0-9]/g, '');
+    const customVal = digits ? parseInt(digits, 10) : 0;
+    const bad = S.mode === 'part' && (customVal <= 0 || customVal > CON_NO);
+    const amount = S.mode === 'all' ? CON_NO : (bad ? 0 : customVal);
+    const NOIDUNG = 'HOCPHI SV2023014 HK1-2627';
+    const N = 25;
+    const seed = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+    const prng = (a) => () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const R = prng(seed('HOCPHI|SV2023014|' + amount));
+    const finder = (x, y) => {
+      const ox = x < 8 ? 0 : x >= N - 8 ? N - 7 : -1; const oy = y < 8 ? 0 : y >= N - 8 ? N - 7 : -1;
+      if (ox < 0 || oy < 0 || (x >= 8 && y >= 8) || (x < 8 && y >= 8 && y < N - 8) || (y < 8 && x >= 8 && x < N - 8)) return null;
+      if (x < 8 && y >= N - 8 && y < N - 8) return null;
+      const lx = x - ox; const ly = y - oy;
+      if (lx < 0 || lx > 6 || ly < 0 || ly > 6) return false;
+      const edge = lx === 0 || lx === 6 || ly === 0 || ly === 6;
+      const core = lx >= 2 && lx <= 4 && ly >= 2 && ly <= 4;
+      return edge || core;
+    };
+    let path = '';
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const f = (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8) ? finder(x, y) : null;
+      const dark = f === null ? R() > 0.5 : f;
+      if (dark) path += 'M' + x + ' ' + y + 'h1v1h-1z';
+    }
+    const rows = [
+      { k: 'Ngân hàng', v: 'Ngân hàng ABC · CN Hà Nội' },
+      { k: 'Số tài khoản', v: '1903 1234 5678' },
+      { k: 'Chủ tài khoản', v: 'TRUONG DAI HOC KHOA HOC' },
+      { k: 'Số tiền', v: amount ? v(amount) : '—' },
+      { k: 'Nội dung chuyển khoản', v: NOIDUNG }
+    ].map((r) => ({ ...r, copy: () => { this.setState({ toast: true, toastText: 'Đã sao chép: ' + r.k }); setTimeout(() => this.setState({ toast: false }), 2000); } }));
+    const modes = [['all', 'Thanh toán toàn bộ', v(CON_NO)], ['part', 'Thanh toán một phần', 'Nhập số tiền']].map(([id, label, hint]) => ({
+      label, hint, on: S.mode === id, pick: () => this.setState({ mode: id }),
+      style: 'min-height:64px;border-radius:14px;padding:10px 16px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:2px;font-size:15px;font-weight:700;color:#212121;border:2px solid ' + (S.mode === id ? '#3F51B5' : '#E3E6EE') + ';background:' + (S.mode === id ? '#F5F6FF' : '#FFFFFF')
+    }));
+    const steps = ['Mở ứng dụng ngân hàng và chọn quét mã QR (hoặc chuyển khoản thủ công).', 'Kiểm tra đúng số tiền và nội dung chuyển khoản như bên cạnh.', 'Xác nhận chuyển khoản trên ứng dụng ngân hàng.', 'Phòng Kế toán đối soát và xác nhận; học phí của bạn sẽ được cập nhật.'].map((t, i) => ({ n: i + 1, t }));
+
+    return {
+
+      amount: amount ? v(amount) : '—', conNo: v(CON_NO), qr: path, hasQr: amount > 0, noQr: amount <= 0, rows, modes, steps,
+      isPart: S.mode === 'part', custom: S.custom, setCustom: (e) => this.setState({ custom: e.target.value }),
+      errAmt: bad && S.custom !== '', amtStyle: 'min-height:52px;border-radius:12px;padding:0 14px;font-size:16px;font-weight:600;border:1px solid ' + (bad && S.custom !== '' ? '#C62828' : '#9AA1B2'),
+      toast: S.toast, toastText: S.toastText
+    };
+  }
+}
+</script>
+</body>
+</html>

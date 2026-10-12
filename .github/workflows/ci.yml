@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main, plan]
+  pull_request:
+
+jobs:
+  # Chạy trước để biết path nào đổi → 2 job dưới tự bỏ qua khi không liên quan.
+  changes:
+    runs-on: ubuntu-latest
+    # paths-filter gọi API liệt kê file của PR → cần pull-requests: read, nếu không lỗi
+    # "Resource not accessible by integration" khi token mặc định của repo bị giới hạn.
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      flutter: ${{ steps.filter.outputs.flutter }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            flutter:
+              - 'dang_ky_mon_hoc/**'
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # Test khóa dòng / UNIQUE functional index phải chạy trên PostgreSQL thật (plan mục 13).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: hpsv
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      TEST_DB: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: hpsv
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: ruff
+        run: ruff check .
+      - name: black
+        run: black --check .
+      - name: mypy
+        run: mypy .
+      - name: pytest
+        run: pytest -q
+
+  flutter:
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dang_ky_mon_hoc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze
+      - run: flutter test
