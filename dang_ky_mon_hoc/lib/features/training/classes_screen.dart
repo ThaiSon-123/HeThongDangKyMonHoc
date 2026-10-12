@@ -311,9 +311,7 @@ class _ClassesScreenState extends ConsumerState<ClassesScreen> {
                 style: const TextStyle(fontSize: 13),
               ),
               Text(
-                r['han_nhap_diem'] == null
-                    ? 'Mặc định'
-                    : formatYmd(r.str('han_nhap_diem')),
+                formatYmd(r.str('han_nhap_diem_hieu_luc')),
                 style: const TextStyle(fontSize: 13),
               ),
               trangThaiChip(r.str('trang_thai')),
@@ -612,6 +610,10 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
               ],
             ),
           ),
+        if (lich.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _WeekGrid(lich, key: const ValueKey('week-grid')),
+        ],
         const SizedBox(height: 18),
         const Text('Hạn nhập điểm', style: sectionTitleStyle),
         const SizedBox(height: 8),
@@ -620,14 +622,109 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
             Expanded(
               child: Text(
                 lop['han_nhap_diem'] == null
-                    ? 'Theo mặc định (sau khi lớp kết thúc)'
-                    : formatYmd(lop.str('han_nhap_diem')),
+                    ? '${formatYmd(lop.str('han_nhap_diem_hieu_luc'))} (mặc định, sau khi lớp kết thúc)'
+                    : formatYmd(lop.str('han_nhap_diem_hieu_luc')),
               ),
             ),
             if (tt != 'DA_DONG') RowButton('Gia hạn nhập điểm', _extend),
           ],
         ),
       ],
+    );
+  }
+}
+
+/// Lưới tuần: cột Thứ 2 → Chủ nhật, hàng tiết 1–15; ô xanh = tiết lớp này có học (kèm phòng).
+class _WeekGrid extends StatelessWidget {
+  const _WeekGrid(this.lich, {super.key});
+
+  final List<Json> lich;
+
+  static const _days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+  /// Phòng nếu `tiet` của `thu` là tiết đầu của một buổi; '' nếu chỉ nằm giữa; null nếu trống.
+  String? _cell(int thu, int tiet) {
+    for (final l in lich) {
+      if (l.num0('thu') == thu &&
+          tiet >= l.num0('tiet_bat_dau') &&
+          tiet <= l.num0('tiet_ket_thuc')) {
+        return tiet == l.num0('tiet_bat_dau') ? l.str('phong') : '';
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget head(String t) => Expanded(
+      child: Center(
+        child: Text(
+          t,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.muted,
+          ),
+        ),
+      ),
+    );
+    return Semantics(
+      label: 'Lưới tuần của lớp',
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const SizedBox(width: 44),
+              for (final d in _days) head(d),
+            ],
+          ),
+          for (var tiet = 1; tiet <= 15; tiet++)
+            Row(
+              children: [
+                SizedBox(
+                  width: 44,
+                  child: Text(
+                    'Tiết $tiet',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ),
+                for (var thu = 2; thu <= 8; thu++)
+                  Expanded(
+                    child: Builder(
+                      builder: (context) {
+                        final c = _cell(thu, tiet);
+                        return Container(
+                          height: 20,
+                          margin: const EdgeInsets.all(1),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: c == null
+                                ? const Color(0xFFF4F5FA)
+                                : const Color(0xFFC5CAE9),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: c == null || c.isEmpty
+                              ? null
+                              : Text(
+                                  c,
+                                  overflow: TextOverflow.clip,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryDark,
+                                  ),
+                                ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }

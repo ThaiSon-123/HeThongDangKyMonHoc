@@ -461,7 +461,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET/POST/DELETE (+PATCH cho `curriculum-courses`) | `/api/curriculum-courses/` · `/api/prerequisites/` | Bản ghi nối: gán sai thì xóa. Tiên quyết chống chu trình (DFS) → `400`. |
 | GET/POST/PATCH | `/api/semesters/` | PDT-06; cửa sổ đăng ký sửa qua `PATCH /api/semesters/{id}/window/`, giới hạn tín chỉ qua `PATCH /api/semesters/{id}/` (PDT-07). |
 | POST | `/api/semesters/{id}/open/` · `/close/` | Mở/đóng học kỳ. |
-| GET/POST/PATCH | `/api/class-sections/` · GET/POST/PATCH/DELETE `/api/schedules/` | PDT-08/09. `class-sections` lọc `?hoc_ky=&mon_hoc=&giao_vien=&trang_thai=&nganh=&khoa=`; ngày lớp phải nằm trong học kỳ; trạng thái và `han_nhap_diem` chỉ đổi qua `open`/`close`/`grade-deadline`. Lớp `DA_DONG` không sửa lớp/lịch; lớp đã mở phải còn ≥ 1 lịch. |
+| GET/POST/PATCH | `/api/class-sections/` · GET/POST/PATCH/DELETE `/api/schedules/` | PDT-08/09. `class-sections` lọc `?hoc_ky=&mon_hoc=&giao_vien=&trang_thai=&nganh=&khoa=`; ngày lớp phải nằm trong học kỳ; trạng thái và `han_nhap_diem` chỉ đổi qua `open`/`close`/`grade-deadline` (hạn mới phải sau hạn hiện tại); response kèm `han_nhap_diem_hieu_luc` (BR-13). Lớp `DA_DONG` không sửa lớp/lịch; lớp đã mở phải còn ≥ 1 lịch. |
 | POST | `/api/class-sections/{id}/open/` · `/close/` | Mở lớp; đóng lớp. |
 | POST | `/api/class-sections/{id}/grade-deadline/` | Gia hạn nhập điểm (BR-13). |
 | POST | `/api/class-sections/{id}/grades/approve/` | **Duyệt cả lớp** `CHINH_THUC` → `KHOA` (PDT-12). |

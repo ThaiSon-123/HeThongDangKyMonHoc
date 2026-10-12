@@ -2,12 +2,14 @@
 kiểm tra lịch (BR-08/09). View chỉ parse + permission + serialize."""
 
 from collections import defaultdict
+from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Exists, OuterRef
 from django.utils import timezone
 
 from apps.attendance.models import AttendanceRequest
+from apps.config.models import SystemConfig
 from apps.grades.models import Grade, TrangThaiDiem
 from apps.profiles.models import TeacherProfile
 from apps.registration.models import Registration, TrangThaiDangKy
@@ -97,6 +99,16 @@ def ngay_bat_dau_lop(lop):
 
 def ngay_ket_thuc_lop(lop):
     return lop.ngay_ket_thuc or lop.hoc_ky.ngay_ket_thuc
+
+
+def han_nhap_diem_hieu_luc(lop, so_ngay=None):
+    """Hạn nhập điểm thực tế (BR-13): `han_nhap_diem` của lớp; NULL thì
+    ngày kết thúc (lớp ?? học kỳ) + `so_ngay_cho_phep_nhap_diem` (mặc định 14)."""
+    if lop.han_nhap_diem:
+        return lop.han_nhap_diem
+    if so_ngay is None:
+        so_ngay = SystemConfig.get_int("so_ngay_cho_phep_nhap_diem", 14)
+    return ngay_ket_thuc_lop(lop) + timedelta(days=so_ngay)
 
 
 def kiem_tra_sua_lop(lop):

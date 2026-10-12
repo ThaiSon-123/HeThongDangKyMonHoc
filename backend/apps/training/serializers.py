@@ -1,8 +1,11 @@
 """Serializer dữ liệu đào tạo. Trạng thái học kỳ/lớp chỉ đổi qua action (mục 6), không PATCH trực tiếp."""
 
+from datetime import date
+
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.config.models import SystemConfig
 from apps.training import services
 from apps.training.models import (
     ClassSection,
@@ -320,6 +323,14 @@ class ClassSectionSerializer(serializers.ModelSerializer):
     ten_hk = serializers.CharField(source="hoc_ky.ten_hk", read_only=True)
     giao_vien_ten = serializers.CharField(source="giao_vien.ho_ten", read_only=True)
     lich_hoc = ScheduleSerializer(many=True, read_only=True)
+    han_nhap_diem_hieu_luc = serializers.SerializerMethodField()
+
+    def get_han_nhap_diem_hieu_luc(self, obj) -> date:
+        # Đọc cấu hình một lần cho cả trang kết quả.
+        so_ngay = self.root.context.setdefault(
+            "so_ngay_nhap_diem", SystemConfig.get_int("so_ngay_cho_phep_nhap_diem", 14)
+        )
+        return services.han_nhap_diem_hieu_luc(obj, so_ngay)
 
     class Meta:
         model = ClassSection
@@ -338,6 +349,7 @@ class ClassSectionSerializer(serializers.ModelSerializer):
             "ngay_bat_dau",
             "ngay_ket_thuc",
             "han_nhap_diem",
+            "han_nhap_diem_hieu_luc",
             "trang_thai",
             "lich_hoc",
         ]

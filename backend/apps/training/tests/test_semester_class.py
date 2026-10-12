@@ -8,6 +8,7 @@ from django.utils import timezone
 from apps.attendance.models import Attendance, AttendanceRequest, AttendanceSession
 from apps.audit.models import AuditLog
 from apps.auth.models import Role
+from apps.config.models import SystemConfig
 from apps.grades.models import Grade, TrangThaiDiem
 from apps.registration.models import Registration
 from apps.training.models import (
@@ -253,6 +254,22 @@ def test_loc_lop_theo_hoc_ky_khoa_nganh(pdt):
     assert pdt.get(f"{CLS}?hoc_ky={lop.hoc_ky_id}").data["count"] == 1
     assert pdt.get(f"{CLS}?khoa={lop_khac.mon_hoc.khoa_id}").data["count"] == 1
     assert [x["id"] for x in pdt.get(f"{CLS}?nganh={ct.nganh_id}").data["results"]] == [lop.id]
+
+
+def test_han_nhap_diem_hieu_luc_mac_dinh_ngay_ket_thuc_cong_so_ngay_cau_hinh(pdt):
+    hk = SemesterFactory(ngay_ket_thuc=date(2026, 6, 30))
+    lop_hoc_ky = ClassSectionFactory(hoc_ky=hk)  # ngày lớp NULL → theo học kỳ
+    lop_rieng = ClassSectionFactory(hoc_ky=hk, ngay_ket_thuc=date(2026, 6, 10))
+    lop_gia_han = ClassSectionFactory(hoc_ky=hk, han_nhap_diem=date(2026, 9, 1))
+
+    def han(lop):
+        return str(pdt.get(f"{CLS}{lop.id}/").data["han_nhap_diem_hieu_luc"])
+
+    assert han(lop_hoc_ky) == "2026-07-14"  # 30/06 + 14 ngày (mặc định)
+    assert han(lop_rieng) == "2026-06-24"
+    assert han(lop_gia_han) == "2026-09-01"  # hạn đã đặt thì dùng hạn đó
+    SystemConfig.objects.create(khoa="so_ngay_cho_phep_nhap_diem", gia_tri="7")
+    assert han(lop_hoc_ky) == "2026-07-07"
 
 
 def test_gia_han_nhap_diem_ghi_audit(pdt):

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'helpers/fake_api.dart';
@@ -57,6 +58,7 @@ Map<String, dynamic> lop({
   'ngay_bat_dau': '2027-01-04',
   'ngay_ket_thuc': '2027-04-30',
   'han_nhap_diem': null,
+  'han_nhap_diem_hieu_luc': '2027-05-14',
   'trang_thai': tt,
   'lich_hoc': lich,
 };
@@ -322,7 +324,7 @@ void main() {
       await openPdt(t, api, '/pdt/classes');
       expect(find.text('CNTT101-01'), findsOneWidget);
       expect(find.text('40/45'), findsOneWidget);
-      expect(find.text('Mặc định'), findsOneWidget);
+      expect(find.text('14/05/2027'), findsOneWidget); // hạn mặc định (BR-13)
 
       await tapText(t, 'Nhập môn lập trình');
       expect(find.text('Lớp chưa có lịch học.'), findsOneWidget);
@@ -341,6 +343,7 @@ void main() {
       });
       expect(find.text('Chủ nhật'), findsOneWidget);
       expect(find.text('Tiết 1–3 · sáng'), findsOneWidget);
+      expect(find.byKey(const ValueKey('week-grid')), findsOneWidget);
 
       await tapText(t, 'Mở lớp');
       await tapText(t, 'Mở lớp', index: 1);
