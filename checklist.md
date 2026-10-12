@@ -93,18 +93,20 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Lưới tuần của lịch lớp và hạn nhập điểm mặc định (`han_nhap_diem_hieu_luc`, BR-13) trong ngăn chi tiết lớp
 - [x] **Milestone:** PĐT tạo đủ dữ liệu cho 1 học kỳ *(đã chạy luồng học kỳ → lớp → lịch → mở lớp trên API thật)*
 
-## 4. PHA 3 — ĐĂNG KÝ (2 tuần) ⭐ critical — làm theo cặp
+## 4. PHA 3 — ĐĂNG KÝ (2 tuần) ⭐ critical — làm theo cặp *(backend + màn hình đã xong; còn nút In)*
 
-- [ ] `registration/services.py`: BR-01 · BR-02 · BR-03 · BR-04 · BR-07
-- [ ] BR-06: `SELECT … FOR UPDATE` + đọc lại sĩ số trong lock; hủy giảm sĩ số, không xuống dưới 0
-- [ ] BR-05: SV hủy (lớp `MO` + trong cửa sổ) · PĐT hủy hộ (lớp `MO`/`DANG_HOC`, bắt buộc `ly_do`, audit log)
-- [ ] Idempotency (mục 8.3): `request_id` UNIQUE DB; gán một lần lúc tạo; replay trả bản ghi cũ; key khác khi đã `DA_DANG_KY` → `409 DA_DANG_KY`
-- [ ] Tính lại học phí sau đăng ký/hủy — **ngoài transaction, không chặn**; lỗi → `warnings[]` (`CHUA_CAU_HINH_GIA`)
-- [ ] `GET /api/courses/available/` · `/registrations/history/` · `/registrations/` (PĐT) · `/registrations/export/`
-- [ ] Thông báo xác nhận đăng ký/hủy (trigger)
-- [ ] Flutter (PĐT): tab *Sinh viên đăng ký* trong ngăn chi tiết lớp (mockup `PDT-Web-LopHP`)
-- [ ] Flutter: SV xem lớp (**gom theo môn, bấm môn để xem các lớp học phần**), đăng ký, hủy, lịch sử, TKB (`/timetable/my/`) — lọc *Theo CTĐT + kỳ* và *Môn chưa học* (kết hợp được) — TKB theo tuần có ngày thật, bản Web có nút **In**
-- [ ] **Milestone:** 2 SV bấm chỗ cuối → chỉ 1 thành công (test trên PostgreSQL thật)
+- [x] `registration/services.py`: BR-01 · BR-02 · BR-03 · BR-04 · BR-07
+- [x] BR-06: `SELECT … FOR UPDATE` + đọc lại sĩ số trong lock; hủy giảm sĩ số, không xuống dưới 0
+- [x] BR-05: SV hủy (lớp `MO` + trong cửa sổ) · PĐT hủy hộ (lớp `MO`/`DANG_HOC`, bắt buộc `ly_do`, audit log)
+- [x] Idempotency (mục 8.3): `request_id` UNIQUE DB; gán một lần lúc tạo; replay trả bản ghi cũ; key khác khi đã `DA_DANG_KY` → `409 DA_DANG_KY`
+- [x] Tính lại học phí sau đăng ký/hủy — **ngoài transaction, không chặn**; lỗi → `warnings[]` (`CHUA_CAU_HINH_GIA`)
+- [x] `GET /api/courses/available/` · `/registrations/history/` · `/registrations/` (PĐT) · `/registrations/export/`
+- [x] Thông báo xác nhận đăng ký/hủy (trigger)
+- [x] Flutter (PĐT): tab *Sinh viên đăng ký* trong ngăn chi tiết lớp (mockup `PDT-Web-LopHP`)
+- [x] Flutter: SV xem lớp (**gom theo môn, bấm môn để xem các lớp học phần**), đăng ký, hủy, lịch sử (`/student/register`); lọc *Theo CTĐT + kỳ* và *Môn chưa học* (kết hợp được); TKB theo tuần có ngày thật (`/student/schedule`, `/timetable/my/`)
+- [ ] Bản Web: nút **In** thời khóa biểu (`window.print()`, A4 ngang) — chưa làm
+- [x] _Bổ sung:_ PĐT theo dõi đăng ký + hủy hộ + xuất Excel (`/pdt/registrations`); `GET /api/curriculums/my/`; `GET /api/timetable/my/` dùng chung SV/GV; `tuition/services.tinh_hoc_phi` (BR-15..17)
+- [x] **Milestone:** 2 SV bấm chỗ cuối → chỉ 1 thành công (test trên PostgreSQL thật)
 
 ## 5. PHA 4 — ĐIỂM DANH (1 tuần)
 
@@ -219,13 +221,13 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 | Mã | Tóm tắt | Pha | ✓ |
 | :--- | :--- | :---: | :---: |
-| BR-01 | Học kỳ `MO` + trong cửa sổ + lớp `MO` | 3 | [ ] |
-| BR-02 | Không vượt sĩ số | 3 | [ ] |
-| BR-03 | Trùng lịch: cùng `thu` + giao tiết (chỉ lịch định kỳ) | 3 | [ ] |
-| BR-04 | Tiên quyết; đã đạt (`diem_chu ≠ F`) → `DA_DAT_MON`; F học lại được; **một môn một lớp/học kỳ** → `DA_DANG_KY_MON` (d) | 3 | [ ] |
-| BR-05 | Hủy: SV (lớp `MO` + cửa sổ) · PĐT (lớp `MO`/`DANG_HOC`) | 3 | [ ] |
-| BR-06 | Transaction + `FOR UPDATE` chống overbook | 3 | [ ] |
-| BR-07 | Tín chỉ 12–24 · cảnh báo GPA < 2.0 → 14 · đọc từ `Semester` (PĐT đặt theo học kỳ) | 3 | [ ] |
+| BR-01 | Học kỳ `MO` + trong cửa sổ + lớp `MO` | 3 | [x] |
+| BR-02 | Không vượt sĩ số | 3 | [x] |
+| BR-03 | Trùng lịch: cùng `thu` + giao tiết (chỉ lịch định kỳ) | 3 | [x] |
+| BR-04 | Tiên quyết; đã đạt (`diem_chu ≠ F`) → `DA_DAT_MON`; F học lại được; **một môn một lớp/học kỳ** → `DA_DANG_KY_MON` (d) | 3 | [x] |
+| BR-05 | Hủy: SV (lớp `MO` + cửa sổ) · PĐT (lớp `MO`/`DANG_HOC`) | 3 | [x] |
+| BR-06 | Transaction + `FOR UPDATE` chống overbook | 3 | [x] |
+| BR-07 | Tín chỉ 12–24 · cảnh báo GPA < 2.0 → 14 · đọc từ `Semester` (PĐT đặt theo học kỳ) | 3 | [x] |
 | BR-08 | 15 tiết/ngày; `thu` 2..8 (8 = Chủ nhật) | 2 | [x] |
 | BR-09 | Bắt buộc `so_tiet_moi_buoi`, không vượt nhóm tiết | 2 | [x] |
 | BR-10 | Tổng kết 10/40/50 + fallback (NULL ≠ 0) | 5 | [ ] |
@@ -256,11 +258,11 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 **PĐT:** [ ] profiles/students · [ ] profiles/teachers · [x] faculties · [x] majors · [x] curriculums · [x] curriculum-courses ·
 [x] courses · [x] prerequisites · [x] semesters (+ open/close/window) · [x] class-sections (+ open/close/grade-deadline) ·
-[x] schedules · [ ] registrations (GET/DELETE/export) · [ ] attendance/sessions (xem) ·
+[x] schedules · [x] registrations (GET/DELETE/export) · [ ] attendance/sessions (xem) ·
 [ ] class-sections/{id}/grades/approve · [ ] reports/training (+ export)
 
-**SV:** [ ] curriculums/my · [ ] courses/available · [ ] auto-schedule/available-courses · [ ] registrations (POST/DELETE) ·
-[ ] registrations/history · [ ] timetable/my · [ ] attendance/my · [ ] attendance/requests (GET/POST) · [ ] grades/my · [ ] tuition/my
+**SV:** [x] curriculums/my · [x] courses/available · [ ] auto-schedule/available-courses · [x] registrations (POST/DELETE) ·
+[x] registrations/history · [x] timetable/my · [ ] attendance/my · [ ] attendance/requests (GET/POST) · [ ] grades/my · [ ] tuition/my
 
 **GV:** [ ] class-sections/my · [ ] class-sections/{id} · [ ] class-sections/{id}/students ·
 [ ] attendance/sessions (GET, sinh sẵn) · [ ] attendance/sessions/{id}/records (GET/PUT) · [ ] attendance/requests (GET/PATCH, chỉ lớp mình) ·
@@ -271,15 +273,15 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 ## 14. TEST BẮT BUỘC (plan mục 13)
 
-- [ ] 2 SV cùng bấm chỗ cuối → 1 thành công; sĩ số không lệch sau hủy / đăng ký lại *(PostgreSQL thật)*
+- [x] 2 SV cùng bấm chỗ cuối → 1 thành công; sĩ số không lệch sau hủy / đăng ký lại *(PostgreSQL thật)*
 - [ ] Replay `Idempotency-Key` (đăng ký, thanh toán); re-activate không đổi `request_id`; key khác khi đã đăng ký → `409 DA_DANG_KY`
 - [ ] Thanh toán đồng thời không vượt `phai_nop`; `SO_TIEN_KHONG_HOP_LE` (vượt `con_no` / `can_hoan` / ≤ 0)
-- [ ] `LOP_CHUA_MO` (lớp `KE_HOACH`/`DANG_HOC`/`DA_DONG`) · `NGOAI_CUA_SO_DANG_KY`
-- [ ] Trùng lịch (cùng `thu` giao tiết); không giao tiết → hợp lệ; thứ 7 + Chủ nhật hợp lệ; `thu = 1`/`9` → 400
-- [ ] BR-04(d): đã đăng ký lớp A của môn X, đăng ký lớp B của X cùng học kỳ → `409 DA_DANG_KY_MON`; hủy A rồi đăng ký B được
-- [ ] BR-04: `THIEU_TIEN_QUYET`; `DA_DAT_MON` (kể cả điểm D); F đăng ký lại được; chu trình tiên quyết → 400
-- [ ] BR-07: vượt tối đa · dưới tối thiểu → 201 + warning · GPA < 2.0 vượt 14 · GPA NULL không bị giới hạn
-- [ ] Hủy: SV khi lớp `DANG_HOC` → `409`; PĐT hủy hộ lớp `DANG_HOC` OK (lý do bắt buộc, sĩ số giảm, học phí tính lại)
+- [x] `LOP_CHUA_MO` (lớp `KE_HOACH`/`DANG_HOC`/`DA_DONG`) · `NGOAI_CUA_SO_DANG_KY`
+- [x] Trùng lịch (cùng `thu` giao tiết); không giao tiết → hợp lệ; thứ 7 + Chủ nhật hợp lệ; `thu = 1`/`9` → 400
+- [x] BR-04(d): đã đăng ký lớp A của môn X, đăng ký lớp B của X cùng học kỳ → `409 DA_DANG_KY_MON`; hủy A rồi đăng ký B được
+- [x] BR-04: `THIEU_TIEN_QUYET`; `DA_DAT_MON` (kể cả điểm D); F đăng ký lại được; chu trình tiên quyết → 400
+- [x] BR-07: vượt tối đa · dưới tối thiểu → 201 + warning · GPA < 2.0 vượt 14 · GPA NULL không bị giới hạn
+- [x] Hủy: SV khi lớp `DANG_HOC` → `409`; PĐT hủy hộ lớp `DANG_HOC` OK (lý do bắt buộc, sĩ số giảm, học phí tính lại)
 - [ ] BR-10: thiếu GK → 20/80; CK NULL vs 0
 - [ ] BR-11: 8.45/6.95/5.45 → B/C/D · biên 8.50/7.00/5.50/4.00 → A/B/C/D · 3.99 → F · `DAT_KHONG_DAT` → P (ngoài GPA) · F trong mẫu GPA
 - [ ] BR-25: học lại môn F chỉ tính lần mới nhất (theo `hoc_ky.ngay_bat_dau`); điểm D cộng tín chỉ tích lũy

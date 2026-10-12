@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/register_screen.dart';
+import '../../features/registration/timetable_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
 
@@ -23,7 +24,12 @@ const studentRoutes = RoleRoutes(
       builder: RegisterScreen.new,
     ),
     RouteDef('/student/auto-schedule', 'Tạo TKB tự động'),
-    RouteDef('/student/schedule', 'Thời khóa biểu'),
+    RouteDef(
+      '/student/schedule',
+      'Thời khóa biểu',
+      subtitle: 'Lịch học theo tuần của các môn đã đăng ký',
+      builder: TimetableScreen.new,
+    ),
     RouteDef('/student/curriculum', 'Chương trình đào tạo'),
     RouteDef('/student/grades', 'Điểm'),
     RouteDef('/student/attendance', 'Điểm danh'),

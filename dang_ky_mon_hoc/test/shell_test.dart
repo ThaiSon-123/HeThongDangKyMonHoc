@@ -56,11 +56,11 @@ void main() {
         tokens: signedIn,
       );
 
-      await t.tap(find.text('Thời khóa biểu').first);
+      await t.tap(find.text('Điểm danh').first);
       await t.pumpAndSettle();
 
-      expect(currentPath(t), '/student/schedule');
-      expect(find.text('Thời khóa biểu — đang phát triển'), findsOneWidget);
+      expect(currentPath(t), '/student/attendance');
+      expect(find.text('Điểm danh — đang phát triển'), findsOneWidget);
       expect(find.text('Cổng sinh viên'), findsOneWidget); // sidebar còn nguyên
     });
 
