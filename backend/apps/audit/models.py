@@ -15,6 +15,7 @@ class HanhDong(models.TextChoices):
 # scope theo tiền tố doi_tuong — bảng mapping chuẩn (plan.md mục 5)
 SCOPE_TRAINING = {
     "User",
+    "Faculty",
     "StudentProfile",
     "TeacherProfile",
     "Major",

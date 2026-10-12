@@ -5,12 +5,24 @@ from rest_framework.routers import DefaultRouter
 
 from apps.auth.views import UserViewSet
 from apps.profiles.views import MeView, StudentProfileViewSet, TeacherProfileViewSet
+from apps.training import views as training
 from core.views import HealthView
 
 router = DefaultRouter()
 router.register("users", UserViewSet, basename="user")
 router.register("profiles/students", StudentProfileViewSet, basename="student-profile")
 router.register("profiles/teachers", TeacherProfileViewSet, basename="teacher-profile")
+router.register("faculties", training.FacultyViewSet, basename="faculty")
+router.register("majors", training.MajorViewSet, basename="major")
+router.register("curriculums", training.CurriculumViewSet, basename="curriculum")
+router.register(
+    "curriculum-courses", training.CurriculumCourseViewSet, basename="curriculum-course"
+)
+router.register("courses", training.CourseViewSet, basename="course")
+router.register("prerequisites", training.PrerequisiteViewSet, basename="prerequisite")
+router.register("semesters", training.SemesterViewSet, basename="semester")
+router.register("class-sections", training.ClassSectionViewSet, basename="class-section")
+router.register("schedules", training.ScheduleViewSet, basename="schedule")
 
 urlpatterns = [
     path("health/", HealthView.as_view()),

@@ -166,6 +166,13 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Backend là nguồn sự thật duy nhất — mọi BR kiểm tra tại API.",
     "VERSION": "3.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Nhiều model cùng có field `trang_thai` → đặt tên enum tường minh để schema không đụng tên.
+    "ENUM_NAME_OVERRIDES": {
+        "TrangThaiDungEnum": "apps.training.models.TrangThaiDung.choices",
+        "TrangThaiMonEnum": "apps.training.models.TrangThaiMon.choices",
+        "TrangThaiHocKyEnum": "apps.training.models.TrangThaiHocKy.choices",
+        "TrangThaiLopEnum": "apps.training.models.TrangThaiLop.choices",
+    },
 }
 
 # --- JWT (plan.md mục 8.2) ---

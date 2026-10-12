@@ -307,7 +307,7 @@ Quy ước: FK người dùng trỏ `User`; SV/GV phân biệt qua `role` + prof
 | **Tuition** | `sinh_vien`, `hoc_ky`, `tong_tin_chi`, `tong_tien`, `trang_thai` ∈ {`CHUA_TINH`, `DA_TINH`} | `UNIQUE(sinh_vien, hoc_ky)`. **Chỉ lưu `tong_*` và `trang_thai`; các giá trị còn lại dẫn xuất (bên dưới).** |
 | **Notification** | `tieu_de`, `noi_dung`, `audience` ∈ {`ROLE`, `CLASS`, `USER`}, `target_refs` (JSON array), `nguoi_gui`, `ngay_gui`, `trang_thai` ∈ {`DA_GUI`, `THU_HOI`} | `ROLE` → mã role; `CLASS` → id `ClassSection`; `USER` → id `User`. Thu hồi → `THU_HOI` (biến khỏi danh sách người nhận). |
 | **NotificationRead** | `notification`, `user`, `da_doc`, `ngay_doc` | `(notification, user)` duy nhất. |
-| **AuditLog** | `user`, `hanh_dong` ∈ {`CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `PHAN_QUYEN`}, `doi_tuong`, `doi_tuong_id` (chuỗi id, không FK), `chi_tiet` (JSON), `thoi_gian`, `ip` | **Scope theo tiền tố `doi_tuong`:** `training` = User/Profile, Major, Curriculum, CurriculumCourse, Course, Prerequisite, Semester, ClassSection, Schedule, Registration, Attendance*, Grade, Notification; `finance` = HocPhanGia, TuitionConfig, Discount, Payment, Tuition; còn lại (SystemConfig, backup) chỉ Admin. |
+| **AuditLog** | `user`, `hanh_dong` ∈ {`CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `PHAN_QUYEN`}, `doi_tuong`, `doi_tuong_id` (chuỗi id, không FK), `chi_tiet` (JSON), `thoi_gian`, `ip` | **Scope theo tiền tố `doi_tuong`:** `training` = User/Profile, Faculty, Major, Curriculum, CurriculumCourse, Course, Prerequisite, Semester, ClassSection, Schedule, Registration, Attendance*, Grade, Notification; `finance` = HocPhanGia, TuitionConfig, Discount, Payment, Tuition; còn lại (SystemConfig, backup) chỉ Admin. |
 | **SystemConfig** | `khoa`, `gia_tri` (chuỗi), `mo_ta` | ADM-05. Khóa: `max_absent_pct`, `so_ngay_cho_phep_nhap_diem`, `backup_retention_days`, `ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan` (thông tin nhận chuyển khoản học phí). |
 
 **Công thức dẫn xuất của Tuition** (tính khi đọc, không lưu):
@@ -457,10 +457,11 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
 | GET/POST/PATCH | `/api/profiles/students/` · `/api/profiles/teachers/` | Hồ sơ (PĐT sửa, Admin đọc). Lọc `?khoa=` (giáo viên), `?nganh=` (sinh viên). |
-| GET/POST/PATCH | `/api/faculties/` · `/api/majors/` · `/api/curriculums/` · `/api/curriculum-courses/` · `/api/courses/` · `/api/prerequisites/` | PDT-02..05. `/api/courses/` lọc `?nganh=` (qua CTĐT) và `?khoa=`; `/api/classes/` lọc thêm `?nganh=`. |
+| GET/POST/PATCH | `/api/faculties/` · `/api/majors/` · `/api/curriculums/` · `/api/courses/` | PDT-02..05. Không xóa, chỉ đổi `trang_thai`. `/api/courses/` lọc `?nganh=` (qua CTĐT) và `?khoa=`; `tong_tin_chi` do server tính (LT + TH). |
+| GET/POST/DELETE (+PATCH cho `curriculum-courses`) | `/api/curriculum-courses/` · `/api/prerequisites/` | Bản ghi nối: gán sai thì xóa. Tiên quyết chống chu trình (DFS) → `400`. |
 | GET/POST/PATCH | `/api/semesters/` | PDT-06; cửa sổ đăng ký sửa qua `PATCH /api/semesters/{id}/window/`, giới hạn tín chỉ qua `PATCH /api/semesters/{id}/` (PDT-07). |
 | POST | `/api/semesters/{id}/open/` · `/close/` | Mở/đóng học kỳ. |
-| GET/POST/PATCH | `/api/class-sections/` · `/api/schedules/` | PDT-08/09. |
+| GET/POST/PATCH | `/api/class-sections/` · GET/POST/PATCH/DELETE `/api/schedules/` | PDT-08/09. `class-sections` lọc `?hoc_ky=&mon_hoc=&giao_vien=&trang_thai=&nganh=&khoa=`; ngày lớp phải nằm trong học kỳ; trạng thái và `han_nhap_diem` chỉ đổi qua `open`/`close`/`grade-deadline`. Lớp `DA_DONG` không sửa lớp/lịch; lớp đã mở phải còn ≥ 1 lịch. |
 | POST | `/api/class-sections/{id}/open/` · `/close/` | Mở lớp; đóng lớp. |
 | POST | `/api/class-sections/{id}/grade-deadline/` | Gia hạn nhập điểm (BR-13). |
 | POST | `/api/class-sections/{id}/grades/approve/` | **Duyệt cả lớp** `CHINH_THUC` → `KHOA` (PDT-12). |
