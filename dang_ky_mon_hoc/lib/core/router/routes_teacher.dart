@@ -5,6 +5,7 @@ import '../../features/grades/teacher_grades_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/timetable_screen.dart';
+import '../../features/teacher/teacher_classes_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
 
@@ -18,7 +19,12 @@ const teacherRoutes = RoleRoutes(
       subtitle: 'Thông tin cá nhân và bảo mật',
       builder: ProfileScreen.new,
     ),
-    RouteDef('/teacher/classes', 'Lớp phụ trách'),
+    RouteDef(
+      '/teacher/classes',
+      'Lớp phụ trách',
+      subtitle: 'Thông tin lớp, lịch học và danh sách sinh viên',
+      builder: TeacherClassesScreen.new,
+    ),
     RouteDef(
       '/teacher/schedule',
       'Thời khóa biểu',

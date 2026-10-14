@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/labeled_dropdown.dart';
@@ -19,6 +20,24 @@ class TeacherGradesScreen extends ConsumerStatefulWidget {
 class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
   late Future<List<Json>> _classes = _load();
   int? _lopId;
+  bool _init = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_init) return;
+    _init = true;
+    // Lối tắt "Nhập điểm" ở màn Lớp phụ trách đi kèm ?lop=<id>: chọn sẵn lớp đó.
+    final id = int.tryParse(
+      GoRouterState.of(context).uri.queryParameters['lop'] ?? '',
+    );
+    if (id == null) return;
+    _classes
+        .then((l) {
+          if (mounted && l.any((c) => c.id == id)) setState(() => _lopId = id);
+        })
+        .catchError((_) {});
+  }
 
   Future<List<Json>> _load() => ref
       .read(trainingApiProvider)

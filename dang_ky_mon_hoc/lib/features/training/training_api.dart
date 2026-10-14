@@ -81,8 +81,18 @@ class TrainingApi {
     }
   }
 
-  Future<Json> get(String path) =>
-      _guard(() async => _json(await _dio.get(path)));
+  Future<Json> get(String path, {Map<String, Object?> query = const {}}) =>
+      _guard(
+        () async => _json(
+          await _dio.get(
+            path,
+            queryParameters: {
+              for (final e in query.entries)
+                if (e.value != null && '${e.value}'.isNotEmpty) e.key: e.value,
+            },
+          ),
+        ),
+      );
 
   Future<Json> create(String path, Json body, {Map<String, String>? headers}) =>
       _guard(

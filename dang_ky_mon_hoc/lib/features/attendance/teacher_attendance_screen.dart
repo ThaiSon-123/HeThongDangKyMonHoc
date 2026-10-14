@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_failure.dart';
 import '../../core/download/save_file_provider.dart';
@@ -51,6 +52,25 @@ class _TeacherAttendanceScreenState
   int _tab = 0;
   Json? _session;
   bool _showAll = false;
+  bool _init = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_init) return;
+    _init = true;
+    // Lối tắt "Điểm danh" ở màn Lớp phụ trách đi kèm ?lop=<id>: chọn sẵn lớp đó.
+    final id = int.tryParse(
+      GoRouterState.of(context).uri.queryParameters['lop'] ?? '',
+    );
+    if (id == null) return;
+    _classes
+        .then((l) {
+          final lop = l.where((c) => c.id == id).firstOrNull;
+          if (mounted && lop != null) _pick(lop);
+        })
+        .catchError((_) {});
+  }
 
   Future<List<Json>> _loadClasses() =>
       ref.read(trainingApiProvider).listAll('/class-sections/my/');
