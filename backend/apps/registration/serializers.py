@@ -158,6 +158,7 @@ class MyCurriculumCourseSerializer(serializers.Serializer):
     loai_mon = serializers.CharField()
     hoc_ky_goi_y = serializers.IntegerField()
     da_dat = serializers.BooleanField()
+    tien_quyet = serializers.ListField(child=serializers.CharField())
 
 
 class MyCurriculumSerializer(serializers.Serializer):

@@ -1,6 +1,6 @@
 # KẾ HOẠCH TRIỂN KHAI & ĐẶC TẢ — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-**Phiên bản:** 3.12 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
+**Phiên bản:** 3.13 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
 
 > **Nền tảng theo vai trò:** **SV + GV = Flutter Web + Flutter App (Android/iOS)**;
 > **Admin + PĐT + KT = chỉ Flutter Web**. Một codebase Flutter; hai entrypoint (mục 10.2).
@@ -477,7 +477,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
-| GET | `/api/curriculums/my/` | CTĐT của mình (SV-03), mỗi môn kèm `da_dat` (BR-04). |
+| GET | `/api/curriculums/my/` | CTĐT của mình (SV-03), mỗi môn kèm `da_dat` (BR-04) và `tien_quyet[]` (mã môn tiên quyết, kể cả môn ngoài CTĐT). Client ghép `grades/my` + `registrations/history` để ra trạng thái *Đã đạt / Chưa đạt (F) / Đang học / Chưa học*. |
 | GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{hoc_ky, ten_hk, trong_cua_so, tin_chi_toi_thieu, tin_chi_toi_da, tin_chi_toi_da_canh_bao, tin_chi_da_dang_ky, bi_canh_bao_hoc_vu}` (lấy từ `Semester` + đăng ký hiện tại). Mỗi lớp kèm `khoi_kien_thuc`, `loai_mon`, `hoc_ky_goi_y` theo CTĐT của SV. |
 | GET | `/api/auto-schedule/available-courses/` | Cùng dạng với `courses/available/` (phân trang + `meta`, kèm `loai_mon`/`hoc_ky_goi_y`) nhưng **không lọc trùng lịch** (SV-06): lớp `MO` của học kỳ, môn thuộc CTĐT, còn chỗ, chưa đăng ký. Client ghép thêm `timetable/my` (lịch đã đăng ký, môn đã đăng ký) và `curriculums/my` (môn đã đạt). |
 | POST | `/api/registrations/` | Đăng ký (BR-01..07). **Bắt buộc** `Idempotency-Key`. |
@@ -928,3 +928,4 @@ Pha 3 làm theo cặp để không trượt nếu một người nghỉ.
 | **v3.10** (2026-10-14) | Pha 9 — báo cáo & xuất Excel: `reports/training`, `reports/finance` (+ `/export/`), GV `class-sections/{id}/` · `students/` · `export/`; `tuition/` lọc thêm `?sinh_vien=` và trả `nganh_ma`; `class-sections/my/` thêm `ten_hk`, `han_nhap_diem_hieu_luc`, `diem_da_duyet`. Làm rõ: "lớp đầy / còn chỗ" chỉ xét lớp đang `MO`; "số sinh viên" đếm SV khác nhau (mockup ghi "ước tính"). Màn Flutter: `/pdt/reports`, `/accountant/reports`, `/teacher/classes` (App: chi tiết lớp 3 tab, lịch dạy cá nhân ở TKB). |
 | **v3.11** (2026-10-14) | Pha 10 — hoàn thiện: `admin/permissions` (có nhóm), `admin/config` (6 khóa, kiểm tra theo khóa, trả người sửa gần nhất), `admin/backups` (+ job `backup_daily` thật bằng `pg_dump`, dọn file quá `backup_retention_days`); `health?full=1`; giới hạn ghi chung 120/phút/user thật sự được áp dụng (trước đó chỉ khai báo); PĐT xuất Excel lớp (theo ma trận mục 9). Test: bảng quyền theo endpoint (mọi endpoint trong Swagger phải khai báo vai trò), phạm vi dữ liệu GV/SV, E2E đăng ký → điểm danh → điểm → học phí, cấu hình `prod`; kịch bản `locustfile.py` (đăng ký đồng thời). Flutter: `/admin/permissions`, `/admin/config`, `/admin/backups`. |
 | **v3.12** (2026-10-14) | Pha 8 — TKB tự động: `GET /api/auto-schedule/available-courses/` + `AutoScheduleService` (Dart thuần) + màn `/student/auto-schedule` (3 bước, đăng ký tuần tự từng môn, nghỉ giữa các lần để không vượt 30/phút). **Sửa lỗi:** CORS chưa cho phép header `Idempotency-Key` ở preflight nên trình duyệt (Flutter Web) chặn mọi POST đăng ký / thu tiền — thêm vào `CORS_ALLOW_HEADERS` + test. |
+| **v3.13** (2026-10-14) | Màn **Chương trình đào tạo** của SV (`/student/curriculum`, SV-03) và 5 màn **Tổng quan** (`/student`, `/teacher`, `/pdt`, `/accountant`, `/admin`), chỉ ghép từ endpoint sẵn có (không thêm endpoint tổng hợp, design 13#7); `curriculums/my` trả thêm `tien_quyet[]`. Tổng quan Admin dùng `health?full=1` cho thẻ sức khỏe (Máy chủ · DB · Redis · worker); chưa có bảng "tác vụ chạy nền gần đây" vì hệ thống không lưu lịch sử chạy job. |

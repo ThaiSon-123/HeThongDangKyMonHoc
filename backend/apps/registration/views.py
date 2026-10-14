@@ -27,7 +27,7 @@ from apps.registration.serializers import (
     RegistrationSerializer,
     TimetableSerializer,
 )
-from apps.training.models import ClassSection, CurriculumCourse, TrangThaiHocKy
+from apps.training.models import ClassSection, CurriculumCourse, Prerequisite, TrangThaiHocKy
 from apps.training.services import chon_hoc_ky
 from core.export import XLSX, xlsx_response
 from core.mixins import write_audit
@@ -272,6 +272,11 @@ class MyCurriculumView(APIView):
         if ctdt is None:
             raise NotFound("Chưa được gán chương trình đào tạo.")
         da_dat = services.mon_da_dat_ids(request.user)
+        tien_quyet = {}
+        for p in Prerequisite.objects.filter(mon_hoc__mon_ctdt__ctdt=ctdt).select_related(
+            "mon_tien_quyet"
+        ):
+            tien_quyet.setdefault(p.mon_hoc_id, []).append(p.mon_tien_quyet.ma_mon)
         mon = [
             {
                 "mon_hoc": c.mon_hoc_id,
@@ -282,6 +287,7 @@ class MyCurriculumView(APIView):
                 "loai_mon": c.loai_mon,
                 "hoc_ky_goi_y": c.hoc_ky_goi_y,
                 "da_dat": c.mon_hoc_id in da_dat,
+                "tien_quyet": sorted(tien_quyet.get(c.mon_hoc_id, [])),
             }
             for c in CurriculumCourse.objects.filter(ctdt=ctdt).select_related("mon_hoc")
         ]

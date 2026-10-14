@@ -66,8 +66,8 @@ Mật khẩu chung: `Demo@12345`
 | Giáo viên | `gv1` … `gv3` |
 | Sinh viên | `sv01` … `sv10` |
 
-Các màn đã làm và pha còn lại: xem `checklist.md` (màn tổng quan `/pdt`, `/accountant`, `/teacher`, `/admin`
-và TKB tự động của SV hiện còn "đang phát triển").
+Tiến độ từng pha và việc còn lại: xem `checklist.md` (đã có đủ màn của 5 vai trò, kể cả Tổng quan, CTĐT,
+TKB tự động, báo cáo, sao lưu; còn việc vận hành triển khai ở mục 15).
 
 ## 3. Chạy kiểm tra
 

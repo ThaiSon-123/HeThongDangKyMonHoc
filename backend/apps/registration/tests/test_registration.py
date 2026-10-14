@@ -507,6 +507,20 @@ def test_ctdt_cua_toi_danh_dau_mon_da_dat(sv_api, sv):
     assert flags == {da.ma_mon: True, chua.ma_mon: False}
 
 
+def test_ctdt_cua_toi_kem_mon_tien_quyet(sv_api, sv):
+    nen, sau, khac = CourseFactory(), CourseFactory(), CourseFactory()
+    for mon in (nen, sau):
+        CurriculumCourse.objects.create(ctdt=sv.ctdt, mon_hoc=mon)
+    Prerequisite.objects.create(mon_hoc=sau, mon_tien_quyet=nen)
+    Prerequisite.objects.create(
+        mon_hoc=sau, mon_tien_quyet=khac
+    )  # môn ngoài CTĐT vẫn là tiên quyết
+
+    res = sv_api.get("/api/curriculums/my/")
+    tq = {m["ma_mon"]: m["tien_quyet"] for m in res.data["mon"]}
+    assert tq == {nen.ma_mon: [], sau.ma_mon: sorted([nen.ma_mon, khac.ma_mon])}
+
+
 def test_ctdt_cua_toi_404_khi_chua_gan_ctdt(login_as):
     sv = StudentProfileFactory()  # ctdt NULL
     assert login_as(sv.user).get("/api/curriculums/my/").status_code == 404

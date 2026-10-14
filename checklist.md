@@ -1,6 +1,6 @@
 # CHECKLIST TRIỂN KHAI — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-> **Nguồn:** `plan.md` v3.12 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
+> **Nguồn:** `plan.md` v3.13 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
 > mỗi dòng trỏ về mục/BR trong plan. Có chỗ lệch giữa hai file ⇒ plan thắng, sửa checklist.
 > **Cách dùng:** tick `[x]` khi xong; mỗi pha phải đạt **Milestone + DoD** (mục 10) mới sang pha sau.
 > **Thời lượng:** ~10–11 tuần cho đội 4–5 người (plan mục 12).
@@ -172,7 +172,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] GV-04: `class-sections/{id}/` (chỉ lớp mình, `403` lớp khác) + `class-sections/{id}/students/`; `class-sections/my/` thêm `ten_hk`, `han_nhap_diem_hieu_luc`, `diem_da_duyet`; `tuition/` lọc `?sinh_vien=`, trả `nganh_ma`
 - [x] Flutter: PĐT `/pdt/reports` (thẻ, 2 biểu đồ, bảng sắp xếp được, Xuất Excel) · KT `/accountant/reports` (4 thẻ, theo ngành, bảng từng SV, Xuất Excel) · GV `/teacher/classes` (danh sách lớp, chi tiết 4 tab / App 3 tab, Xuất Excel, lối tắt `?lop=` sang Điểm danh / Nhập điểm)
 - [x] **Milestone:** báo cáo đúng (tổng khớp từng SV), tải được file *(đã chạy trên API thật + giao diện Web/App so với mockup)*
-- [x] _Hạn chế:_ PĐT xuất Excel lớp bằng API (Pha 10) nhưng giao diện PĐT chưa có nút (đã có tab đăng ký + xuất đăng ký); tổng quan `/pdt`, `/accountant`, `/teacher` (banner, thẻ tổng) chưa làm — không nằm trong phạm vi Pha 9
+- [x] _Hạn chế:_ PĐT xuất Excel lớp bằng API (Pha 10) nhưng giao diện PĐT chưa có nút (đã có tab đăng ký + xuất đăng ký)
 
 **Pha 10 — Hoàn thiện (1 tuần)**
 - [x] Backup: `POST/GET /admin/backups/` (tạo chạy nền + liệt kê `BACKUP_DIR`, không restore) · job `backup_daily` (`pg_dump -Fc`, ghi `.partial` rồi đổi tên, dọn quá `backup_retention_days`) · image có `postgresql-client-16`, volume `backups` dùng chung web/worker *(đã chạy thật trên Docker; thử restore tay vào DB tạm: đủ 43 bảng, 18 tài khoản)*
@@ -182,7 +182,8 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] E2E (backend, qua API): đăng ký → điểm danh → điểm → duyệt → học phí/thu tiền · load test `locustfile.py` đăng ký đồng thời (lớp 3 chỗ, ~8 000 yêu cầu, ~440 req/s, 0 lỗi, sĩ số cuối đúng 3/3)
 - [x] Flutter Admin: `/admin/permissions` · `/admin/config` · `/admin/backups` (mockup `AD-Web-*`)
 - [x] Build: `flutter build web -t lib/main.dart` và `flutter build apk -t lib/main_app.dart` (release 54 MB; cần `kotlin.incremental=false` vì dự án ở ổ D: còn pub-cache ở ổ C:); bản App **không chứa** màn Admin/PĐT/KT (chỉ còn hàm tiện ích `failureText`)
-- [ ] Flutter `integration_test` (cần thiết bị/emulator) và rà responsive toàn bộ Web + App — mới kiểm các màn thêm ở Pha 9–10 ở cỡ Web và App
+- [x] **Màn còn thiếu đã làm:** `/student/curriculum` (SV-03: tiến độ, phân bổ theo khối, môn theo học kỳ với trạng thái cá nhân + tiên quyết) và 5 màn Tổng quan (SV · GV · PĐT · KT · Admin) theo mockup; thông tin lấy từ endpoint sẵn có
+- [ ] Flutter `integration_test` (cần thiết bị/emulator) và rà responsive toàn bộ Web + App — mới kiểm các màn thêm ở Pha 8–10 ở cỡ Web và App
 - [ ] **Milestone:** production-ready — còn các việc vận hành mục 15 (HTTPS/certbot, `pg_dump` trước migrate, log tập trung, không publish cổng `web`)
 
 ---
