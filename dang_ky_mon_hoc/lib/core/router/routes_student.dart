@@ -4,6 +4,7 @@ import '../../features/attendance/student_attendance_screen.dart';
 import '../../features/grades/student_grades_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/registration/auto_schedule_screen.dart';
 import '../../features/registration/register_screen.dart';
 import '../../features/registration/timetable_screen.dart';
 import '../../features/tuition/student_tuition_screen.dart';
@@ -27,7 +28,12 @@ const studentRoutes = RoleRoutes(
           'Lớp học phần được gom theo môn — bấm vào môn để xem các lớp đang mở',
       builder: RegisterScreen.new,
     ),
-    RouteDef('/student/auto-schedule', 'Tạo TKB tự động'),
+    RouteDef(
+      '/student/auto-schedule',
+      'Tạo TKB tự động',
+      subtitle: 'Chọn môn, giáo viên mong muốn và ưu tiên cá nhân — hệ thống gợi ý tối đa 3 thời khóa biểu không trùng lịch',
+      builder: AutoScheduleScreen.new,
+    ),
     RouteDef(
       '/student/schedule',
       'Thời khóa biểu',

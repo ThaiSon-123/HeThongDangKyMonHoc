@@ -60,7 +60,11 @@ void main() {
       await t.pumpAndSettle();
 
       expect(currentPath(t), '/student/auto-schedule');
-      expect(find.text('Tạo TKB tự động — đang phát triển'), findsOneWidget);
+      // Màn thật đã thay trang "đang phát triển": tiêu đề trang nằm ở header (ngoài mục menu).
+      expect(
+        find.text('Tạo TKB tự động'),
+        findsNWidgets(3),
+      ); // menu + breadcrumb + tiêu đề
       expect(find.text('Cổng sinh viên'), findsOneWidget); // sidebar còn nguyên
     });
 
