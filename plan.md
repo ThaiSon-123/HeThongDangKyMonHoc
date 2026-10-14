@@ -434,9 +434,10 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/auth/change-password/` | Mọi vai trò | Body `{old_password, new_password}` → `204`; blacklist refresh cũ (client phải đăng nhập lại). |
 | GET/PATCH | `/api/profiles/me/` | Mọi vai trò | Xem hồ sơ; sửa `email`, `sdt` (không sửa trường học vụ). |
 | GET | `/api/health/` · `/api/schema/` · `/api/docs/` | Public | Health, OpenAPI, Swagger. |
-| GET | `/api/notifications/` | Mọi vai trò | Thông báo của mình. |
+| GET | `/api/notifications/` | Mọi vai trò | Thông báo của mình (kèm `chua_doc`); `?da_doc=false` chỉ chưa đọc; `?gui=true` thông báo mình đã gửi (kể cả đã thu hồi). |
 | PATCH | `/api/notifications/{id}/read/` · POST `/api/notifications/read-all/` | Mọi vai trò | Đánh dấu đã đọc. |
 | POST | `/api/notifications/` | PĐT/GV/KT/Admin | Gửi (GV chỉ `CLASS` lớp mình). |
+| GET | `/api/notifications/recipients/?search=&role=` | PĐT/KT/Admin | Tra người nhận để gửi riêng (`USER`), tối đa 20. |
 | DELETE | `/api/notifications/{id}/` | Admin / người gửi | Thu hồi. |
 
 **Admin**
@@ -448,7 +449,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/users/{id}/reset-password/` | Admin đặt mật khẩu mới (body `{new_password}`, áp chính sách mật khẩu) → `204`, thu hồi refresh cũ. |
 | GET | `/api/admin/permissions/` | Ma trận quyền (**chỉ đọc**, ADM-04). |
 | GET/PATCH | `/api/admin/config/` | `SystemConfig` (ADM-05). |
-| GET | `/api/admin/audit-logs/` | Admin/PĐT/KT; `?scope=` server tự lọc theo role (ADM-06). |
+| GET | `/api/admin/audit-logs/` | Admin/PĐT/KT; phạm vi do role quyết định (Admin tất cả, PĐT `training`, KT `finance`), `?scope=` chỉ thu hẹp thêm. Lọc `?hanh_dong=&doi_tuong=&nguoi_thuc_hien=&tu_ngay=&den_ngay=&search=`. |
 | GET | `/api/admin/backups/` | Danh sách file trong `BACKUP_DIR` (tên, kích thước, thời gian). |
 | POST | `/api/admin/backups/` | Tạo backup (chạy nền). Không có restore. |
 
@@ -466,6 +467,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/class-sections/{id}/open/` · `/close/` | Mở lớp; đóng lớp. |
 | POST | `/api/class-sections/{id}/grade-deadline/` | Gia hạn nhập điểm (BR-13). |
 | POST | `/api/class-sections/{id}/grades/approve/` | **Duyệt cả lớp** `CHINH_THUC` → `KHOA` (PDT-12). |
+| GET | `/api/grade-sheets/` | Lớp `DANG_HOC`/`DA_DONG` kèm số dòng điểm `NHAP_TAM/CHINH_THUC/KHOA` để duyệt. Lọc `?hoc_ky=&trang_thai=&search=`. |
 | GET | `/api/registrations/` · `/api/registrations/export/` | Theo dõi; xuất Excel (PDT-10). |
 | DELETE | `/api/registrations/{id}/` | Hủy hộ (PDT-11, BR-05), body `ly_do`. |
 | GET | `/api/attendance/sessions/` | Xem điểm danh theo lớp (PDT-10). |
@@ -485,7 +487,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET | `/api/attendance/my/` | Điểm danh + tỷ lệ vắng của mình; mỗi lớp kèm `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep` (BR-20). |
 | GET/POST | `/api/attendance/requests/` | SV gửi / xem yêu cầu của mình; GV xem yêu cầu của lớp mình. POST dạng `multipart/form-data` (kèm tệp `minh_chung` tùy chọn); response GET có đường dẫn `minh_chung` (`GET /api/attendance/requests/{id}/minh-chung/`, chỉ GV lớp đó và SV chủ yêu cầu tải được). |
 | GET | `/api/grades/my/` | Điểm `KHOA` + GPA; kèm `thong_ke[]` theo học kỳ: `so_mon`, `tin_chi_hoc`, `tin_chi_dat`, `diem_tb`, `gpa`, `xep_loai` (BR-25g). |
-| GET | `/api/tuition/my/` | Học phí (kèm giá trị dẫn xuất, `chi_tiet[]` từng môn, `payments[]` giao dịch, `thanh_toan{ngan_hang, so_tai_khoan, chu_tai_khoan, noi_dung_ck}` để SV chuyển khoản/quét QR). |
+| GET | `/api/tuition/my/` | Học phí (kèm giá trị dẫn xuất, `chi_tiet[]` từng môn, `payments[]` giao dịch, `thanh_toan{ngan_hang, so_tai_khoan, chu_tai_khoan, noi_dung_ck}` để SV chuyển khoản/quét QR; `noi_dung_ck` = `HOCPHI <ma_sv> HK<id học kỳ>`). |
 
 **Giáo viên**
 
@@ -496,7 +498,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET/PUT | `/api/attendance/sessions/{id}/records/` | Xem / **lưu cả lớp** (GV-07/08): PUT phải gửi đúng danh sách SV đang đăng ký; GET kèm tỷ lệ vắng + cờ cảnh báo từng SV (BR-20). PĐT xem được, không PUT. |
 | PATCH | `/api/attendance/requests/{id}/` | GV (lớp mình) duyệt / từ chối yêu cầu sửa điểm danh của SV (GV-08). |
 | GET | `/api/attendance/sessions/?lop_hoc_phan=` | Danh sách buổi sinh sẵn của lớp + tổng số buổi (GV-06, GV-09). Không có endpoint tạo buổi. |
-| GET/PUT | `/api/class-sections/{id}/grades/` | Xem / **nhập cả lớp** (upsert `NHAP_TAM`, GV-10). PĐT dùng PUT này để nhập hộ khi quá hạn. |
+| GET/PUT | `/api/class-sections/{id}/grades/` | Xem / **nhập cả lớp** (upsert `NHAP_TAM`, GV-10); PUT nhận danh sách một phần (SV nào gửi mới ghi). GET kèm cờ `co_the_nhap/khoa/mo_khoa/duyet`, `han_nhap_diem`. PĐT dùng PUT này để nhập hộ (lưu thẳng `CHINH_THUC`). Tổng kết: QT NULL coi như 0 (BR-10). |
 | POST | `/api/class-sections/{id}/grades/lock/` | Body `{action: "lock" \| "unlock"}` cả lớp (BR-14). |
 | GET | `/api/class-sections/{id}/export/` | Excel (GV-12). |
 
@@ -505,7 +507,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
 | GET/POST/PATCH | `/api/tuition/config/` · `/api/tuition/pricing/` · `/api/tuition/discounts/` | KT-01..05. |
-| GET | `/api/tuition/` · `/api/tuition/debts/` | Danh sách; công nợ (gồm `can_hoan`). |
+| GET | `/api/tuition/` · `/api/tuition/{id}/` · `/api/tuition/debts/` · `/api/tuition/students/` | Danh sách (lọc `?hoc_ky=&nganh=&lop_hoc_phan=&search=&hien_thi=`); chi tiết từng môn + giao dịch; công nợ (gồm `can_hoan`, cờ `qua_han`, lọc `?qua_han=1`); tra SV (chỉ mã SV, họ tên, ngành) để lập miễn giảm. |
 | POST | `/api/tuition/calculate/` | Tính lại hàng loạt theo `?hoc_ky=` (KT-06). |
 | POST | `/api/tuition/payments/` | Ghi `THU`/`HOAN` (BR-26). Hỗ trợ `Idempotency-Key`. |
 | GET | `/api/tuition/payments/{id}/receipt/` | Biên lai Excel (KT-10). |
@@ -582,6 +584,8 @@ Cảnh báo không chặn trả ở `warnings: [{code, message}]` của response
 | Báo cáo đào tạo / xuất đăng ký | ✗ | ✓ | ✗ | ✗ | ✗ |
 | Báo cáo tài chính / xuất | ✗ | ✗ | ✗ | ✗ | ✓ |
 | Xuất danh sách lớp | ✗ | ✓ | ✗ | *(lớp mình)* | ✗ |
+
+KT được **đọc** (GET) học kỳ, ngành, lớp học phần để chọn khi lập giá / thu phí (không sửa).
 
 KT xem học phí cần tên SV/ngành/lớp: serializer học phí của KT trả tối thiểu `ma_sv`, `ho_ten`, `nganh` (không lộ sdt/email/GPA).
 

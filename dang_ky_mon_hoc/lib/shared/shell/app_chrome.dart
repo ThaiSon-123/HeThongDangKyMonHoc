@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import 'bell_badge.dart';
+
 import 'package:go_router/go_router.dart';
 
 import '../../core/router/role_routes.dart';
@@ -167,17 +170,19 @@ class _BellButton extends StatelessWidget {
       label: 'Thông báo',
       child: InkResponse(
         onTap: onTap,
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color(0x24FFFFFF),
-          ),
-          child: const Icon(
-            Icons.notifications_none_outlined,
-            color: Colors.white,
-            size: 22,
+        child: BellBadge(
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0x24FFFFFF),
+            ),
+            child: const Icon(
+              Icons.notifications_none_outlined,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
         ),
       ),

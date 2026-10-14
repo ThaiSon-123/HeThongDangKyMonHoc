@@ -40,7 +40,7 @@ from apps.training.serializers import (
 from core.exceptions import business_error
 from core.mixins import AuditLogMixin
 from core.pagination import StandardPagination
-from core.permissions import IsGiaoVien, IsPhongDaoTao
+from core.permissions import IsGiaoVien, IsPhongDaoTao, PdtWriteKtRead
 
 
 class _PdtViewSet(AuditLogMixin):
@@ -71,6 +71,7 @@ class FacultyViewSet(_PdtViewSet):
 
 
 class MajorViewSet(_PdtViewSet):
+    permission_classes = [PdtWriteKtRead]  # KT chỉ đọc
     audit_model = "Major"
     queryset = Major.objects.select_related("khoa").annotate(
         so_ctdt=Count("ctdts", filter=Q(ctdts__trang_thai=TrangThaiDung.HOAT_DONG))
@@ -129,6 +130,7 @@ class PrerequisiteViewSet(_CoXoaViewSet):
 
 
 class SemesterViewSet(_PdtViewSet):
+    permission_classes = [PdtWriteKtRead]  # KT chỉ đọc
     audit_model = "Semester"
     queryset = Semester.objects.all()
     serializer_class = SemesterSerializer
@@ -179,6 +181,7 @@ class ClassSectionFilter(django_filters.FilterSet):
 
 
 class ClassSectionViewSet(_PdtViewSet):
+    permission_classes = [PdtWriteKtRead]  # KT chỉ đọc
     audit_model = "ClassSection"
     queryset = ClassSection.objects.select_related(
         "mon_hoc", "hoc_ky", "giao_vien"
@@ -191,6 +194,13 @@ class ClassSectionViewSet(_PdtViewSet):
     def perform_update(self, serializer):
         lop = super().perform_update(serializer)
         services.dong_bo_buoi_diem_danh(lop)  # ngày bắt đầu/kết thúc có thể đã đổi (BR-20)
+        doi = {"ngay_bat_dau", "ngay_ket_thuc", "giao_vien"} & set(serializer.validated_data)
+        if doi:
+            services.bao_doi_lich(
+                lop,
+                self.request.user,
+                "Phòng đào tạo đã cập nhật thời gian hoặc giáo viên của lớp.",
+            )
         return lop
 
     def _doi_trang_thai(self, ham):
@@ -231,6 +241,11 @@ class ClassSectionViewSet(_PdtViewSet):
         return Response(self.get_serializer(lop).data)
 
 
+def _mo_ta(lich):
+    thu = "Chủ nhật" if lich.thu == 8 else f"Thứ {lich.thu}"
+    return f"{thu}, tiết {lich.tiet_bat_dau}–{lich.tiet_ket_thuc}, phòng {lich.phong}"
+
+
 class ScheduleViewSet(_CoXoaViewSet):
     audit_model = "Schedule"
     queryset = Schedule.objects.select_related("lop_hoc_phan")
@@ -242,11 +257,17 @@ class ScheduleViewSet(_CoXoaViewSet):
     def perform_create(self, serializer):
         lich = super().perform_create(serializer)
         services.dong_bo_buoi_diem_danh(lich.lop_hoc_phan)  # BR-20
+        services.bao_doi_lich(
+            lich.lop_hoc_phan, self.request.user, f"Thêm buổi học {_mo_ta(lich)}."
+        )
         return lich
 
     def perform_update(self, serializer):
         lich = super().perform_update(serializer)
         services.dong_bo_buoi_diem_danh(lich.lop_hoc_phan)
+        services.bao_doi_lich(
+            lich.lop_hoc_phan, self.request.user, f"Buổi học đổi thành {_mo_ta(lich)}."
+        )
         return lich
 
     def perform_destroy(self, instance):
@@ -256,13 +277,15 @@ class ScheduleViewSet(_CoXoaViewSet):
             raise business_error(
                 "TRANG_THAI_KHONG_HOP_LE", "Lớp đã mở phải còn ít nhất một lịch học."
             )
+        mo_ta = _mo_ta(instance)
         super().perform_destroy(instance)
         services.dong_bo_buoi_diem_danh(lop)
+        services.bao_doi_lich(lop, self.request.user, f"Bỏ buổi học {mo_ta}.")
 
 
 class MyClassSectionsView(APIView):
-    """`GET /api/class-sections/my/` (GV-03): lớp tôi phụ trách. Mặc định học kỳ hiện tại; truyền
-    `?hoc_ky=` để xem học kỳ khác; không xác định được học kỳ thì trả mọi lớp."""
+    """`GET /api/class-sections/my/` (GV-03): lớp tôi phụ trách, mới nhất trước. Lọc `?hoc_ky=`,
+    `?trang_thai=`."""
 
     permission_classes = [IsGiaoVien]
 
@@ -285,8 +308,6 @@ class MyClassSectionsView(APIView):
         hoc_ky_id = request.query_params.get("hoc_ky")
         if hoc_ky_id:
             qs = qs.filter(hoc_ky=services.chon_hoc_ky(hoc_ky_id))
-        elif (hoc_ky := services.hoc_ky_mac_dinh()) is not None:
-            qs = qs.filter(hoc_ky=hoc_ky)
         if request.query_params.get("trang_thai"):
             qs = qs.filter(trang_thai=request.query_params["trang_thai"])
         paginator = StandardPagination()

@@ -104,7 +104,9 @@ class _TeacherAttendanceScreenState
         return ListErrorCard(
           onRetry: () {
             final next = _loadClasses();
-            setState(() => _classes = next);
+            setState(() {
+              _classes = next;
+            });
           },
         );
       }
@@ -545,7 +547,9 @@ class _RosterState extends ConsumerState<_Roster> {
         return ListErrorCard(
           onRetry: () {
             final next = _fetch();
-            setState(() => _future = next);
+            setState(() {
+              _future = next;
+            });
           },
         );
       }

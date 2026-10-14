@@ -28,9 +28,16 @@ def pdt(login_as):
     + ["semesters", "class-sections", "schedules"],
 )
 def test_chi_pdt_duoc_truy_cap(login_as, url):
+    # Kế toán đọc được học kỳ / ngành / lớp học phần (để lập giá, thu phí); ghi thì không.
+    kt_doc = {"semesters", "majors", "class-sections"}
     for role in (Role.ADMIN, Role.SINH_VIEN, Role.GIAO_VIEN, Role.KE_TOAN):
-        res = login_as(UserFactory(role=role)).get(f"/api/{url}/")
-        assert res.status_code == 403 and res.data["error"]["code"] == "KHONG_CO_QUYEN"
+        api = login_as(UserFactory(role=role))
+        res = api.get(f"/api/{url}/")
+        if role == Role.KE_TOAN and url in kt_doc:
+            assert res.status_code == 200
+            assert api.post(f"/api/{url}/", {}).status_code == 403
+        else:
+            assert res.status_code == 403 and res.data["error"]["code"] == "KHONG_CO_QUYEN"
 
 
 def test_khoa_tao_sua_ghi_audit_va_khong_xoa(pdt):

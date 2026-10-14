@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../features/attendance/student_attendance_screen.dart';
+import '../../features/grades/student_grades_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/register_screen.dart';
 import '../../features/registration/timetable_screen.dart';
+import '../../features/tuition/student_tuition_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
 
@@ -32,16 +35,37 @@ const studentRoutes = RoleRoutes(
       builder: TimetableScreen.new,
     ),
     RouteDef('/student/curriculum', 'Chương trình đào tạo'),
-    RouteDef('/student/grades', 'Điểm'),
+    RouteDef(
+      '/student/grades',
+      'Điểm',
+      subtitle: 'Chỉ hiển thị điểm đã được Phòng đào tạo duyệt',
+      builder: StudentGradesScreen.new,
+    ),
     RouteDef(
       '/student/attendance',
       'Điểm danh',
       subtitle: 'Tỷ lệ vắng, từng buổi học và yêu cầu sửa điểm danh',
       builder: StudentAttendanceScreen.new,
     ),
-    RouteDef('/student/tuition', 'Học phí'),
-    RouteDef('/student/tuition/pay', 'Thanh toán học phí'),
-    RouteDef('/student/notifications', 'Thông báo'),
+    RouteDef(
+      '/student/tuition',
+      'Học phí',
+      subtitle: 'Tổng hợp học phí, miễn giảm, đã nộp và công nợ',
+      builder: StudentTuitionScreen.new,
+    ),
+    RouteDef(
+      '/student/tuition/pay',
+      'Thanh toán học phí',
+      subtitle:
+          'Chuyển khoản bằng mã QR — Phòng Kế toán xác nhận sau khi nhận tiền',
+      builder: StudentPayScreen.new,
+    ),
+    RouteDef(
+      '/student/notifications',
+      'Thông báo',
+      subtitle: 'Nhận thông báo từ nhà trường, giáo viên và hệ thống',
+      builder: NotificationsScreen.new,
+    ),
   ],
   brandSub: 'Cổng sinh viên',
   groups: [

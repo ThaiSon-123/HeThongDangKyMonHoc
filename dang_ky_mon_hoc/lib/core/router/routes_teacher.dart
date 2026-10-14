@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../features/attendance/teacher_attendance_screen.dart';
+import '../../features/grades/teacher_grades_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/timetable_screen.dart';
 import '../auth/auth_user.dart';
@@ -29,8 +31,18 @@ const teacherRoutes = RoleRoutes(
       subtitle: 'Chọn lớp, điểm danh cả lớp và duyệt yêu cầu sửa của sinh viên',
       builder: TeacherAttendanceScreen.new,
     ),
-    RouteDef('/teacher/grades', 'Nhập điểm'),
-    RouteDef('/teacher/notifications', 'Thông báo'),
+    RouteDef(
+      '/teacher/grades',
+      'Nhập điểm',
+      subtitle: 'Nhập điểm cả lớp, xem trước tổng kết, khóa điểm',
+      builder: TeacherGradesScreen.new,
+    ),
+    RouteDef(
+      '/teacher/notifications',
+      'Thông báo',
+      subtitle: 'Nhận thông báo và gửi cho các lớp bạn phụ trách',
+      builder: NotificationsScreen.new,
+    ),
   ],
   brandSub: 'Cổng giáo viên',
   groups: [

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../features/admin/accounts/accounts_screen.dart';
+import '../../features/notifications/audit_log_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
+
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
 
@@ -21,8 +24,19 @@ const adminRoutes = RoleRoutes(
     RouteDef('/admin/permissions', 'Ma trận quyền'),
     RouteDef('/admin/config', 'Cấu hình'),
     RouteDef('/admin/backups', 'Sao lưu'),
-    RouteDef('/admin/logs', 'Nhật ký'),
-    RouteDef('/admin/notifications', 'Thông báo'),
+    RouteDef(
+      '/admin/logs',
+      'Nhật ký thao tác',
+      subtitle:
+          'Lịch sử thao tác của toàn hệ thống — bấm một dòng để xem chi tiết',
+      builder: AuditLogScreen.new,
+    ),
+    RouteDef(
+      '/admin/notifications',
+      'Thông báo',
+      subtitle: 'Nhận thông báo và soạn gửi theo vai trò, lớp hoặc từng người',
+      builder: NotificationsScreen.new,
+    ),
   ],
   brandSub: 'Quản trị',
   groups: [
