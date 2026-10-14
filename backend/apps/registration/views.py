@@ -204,9 +204,10 @@ class RegistrationViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 
 class AvailableCoursesView(APIView):
-    """`GET /api/courses/available/` (SV-04)."""
+    """`GET /api/courses/available/` (SV-04): đã lọc cả trùng lịch."""
 
     permission_classes = [IsSinhVien]
+    loc_trung_lich = True
 
     @extend_schema(
         parameters=[
@@ -222,7 +223,7 @@ class AvailableCoursesView(APIView):
         ho_so = services.ho_so_sinh_vien(user)
         hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
         lop = services.lop_co_the_dang_ky(
-            user, ho_so, hoc_ky, request.query_params.get("search", "")
+            user, ho_so, hoc_ky, request.query_params.get("search", ""), self.loc_trung_lich
         )
         paginator = StandardPagination()
         page = paginator.paginate_queryset(lop, request, view=self)
@@ -250,6 +251,13 @@ class AvailableCoursesView(APIView):
             "bi_canh_bao_hoc_vu": services.tran_tin_chi(ho_so, hoc_ky) < hoc_ky.tin_chi_toi_da,
         }
         return res
+
+
+class AutoScheduleCoursesView(AvailableCoursesView):
+    """`GET /api/auto-schedule/available-courses/` (SV-06): toàn bộ lớp mở của CTĐT, còn chỗ, chưa đăng ký
+    — **không lọc trùng lịch** (client tự ghép TKB; đăng ký thật vẫn kiểm BR-01..07 ở server)."""
+
+    loc_trung_lich = False
 
 
 class MyCurriculumView(APIView):

@@ -129,3 +129,16 @@ def test_gioi_han_ghi_chung_chi_dem_thao_tac_ghi_theo_nguoi_dung(login_as, monke
     for _ in range(5):
         assert a.get("/api/admin/config/").status_code == 200
     assert b.patch("/api/admin/config/", {"max_absent_pct": 20}, format="json").status_code == 200
+
+
+# ---- CORS: trình duyệt phải được phép gửi Idempotency-Key ----------------------------
+def test_preflight_cho_phep_header_idempotency_key(client):
+    res = client.options(
+        "/api/registrations/",
+        HTTP_ORIGIN="http://localhost:5111",
+        HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+        HTTP_ACCESS_CONTROL_REQUEST_HEADERS="authorization,content-type,idempotency-key",
+    )
+    assert res.status_code == 200
+    cho_phep = res["access-control-allow-headers"].lower()
+    assert "idempotency-key" in cho_phep and "authorization" in cho_phep

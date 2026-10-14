@@ -1,6 +1,6 @@
 # CHECKLIST TRIỂN KHAI — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-> **Nguồn:** `plan.md` v3.11 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
+> **Nguồn:** `plan.md` v3.12 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
 > mỗi dòng trỏ về mục/BR trong plan. Có chỗ lệch giữa hai file ⇒ plan thắng, sửa checklist.
 > **Cách dùng:** tick `[x]` khi xong; mỗi pha phải đạt **Milestone + DoD** (mục 10) mới sang pha sau.
 > **Thời lượng:** ~10–11 tuần cho đội 4–5 người (plan mục 12).
@@ -159,11 +159,13 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 ## 9. PHA 8–10
 
-**Pha 8 — TKB tự động (tùy chọn, 1 tuần)**
-- [ ] `GET /auto-schedule/available-courses/` (không lọc trùng lịch)
-- [ ] `AutoScheduleService` (pure Dart, greedy, tối đa 3 tổ hợp, test độc lập) + màn hình gợi ý → xác nhận → đăng ký
-- [ ] Bước chọn môn: bộ lọc *Theo CTĐT + kỳ* và *Môn chưa học* (kết hợp được) (ghép `curriculums/my`) + chọn *giáo viên mong muốn* từng môn (điểm +8 / −10)
-- [ ] **Milestone:** gợi ý được ≤ 3 tổ hợp hợp lệ
+**Pha 8 — TKB tự động (tùy chọn, 1 tuần) ✅**
+- [x] `GET /auto-schedule/available-courses/` (không lọc trùng lịch; còn lọc CTĐT / còn chỗ / chưa đăng ký)
+- [x] `AutoScheduleService` (Dart thuần, beam search, tối đa 3 tổ hợp, 13 test độc lập) + màn gợi ý → chọn → xác nhận → đăng ký tuần tự từng môn (`/student/auto-schedule`, Web + App)
+- [x] Bước chọn môn: bộ lọc *Theo CTĐT + kỳ* và *Môn chưa học* (kết hợp được) + chọn *giáo viên mong muốn* từng môn (+8 / −10); ưu tiên tránh ngày / ngày muốn học / ca học; đổi lớp từng môn trong tổ hợp
+- [x] **Milestone:** gợi ý được ≤ 3 tổ hợp hợp lệ *(đã chạy trên API thật với tài khoản demo)*
+- [x] _Sửa lỗi phát hiện khi chạy thật:_ CORS chặn header `Idempotency-Key` → mọi POST đăng ký / thu tiền từ trình duyệt bị chặn; đã thêm vào `CORS_ALLOW_HEADERS` + test preflight
+- [x] _Hạn chế:_ "học lại" chưa có dữ liệu để gắn nhãn; chưa có lưới tuần thu nhỏ trong thẻ tổ hợp (mockup không có)
 
 **Pha 9 — Báo cáo & Excel (0.5–1 tuần) ✅**
 - [x] `core/export.py` (`openpyxl`, nhiều sheet, endpoint `…/export/`) · `reports/training` + `reports/finance` (+ `/export/`) · GV `class-sections/{id}/export/` (đã có từ trước: xuất đăng ký, biên lai)
@@ -271,7 +273,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 [x] schedules · [x] registrations (GET/DELETE/export) · [x] attendance/sessions (xem) ·
 [x] class-sections/{id}/grades/approve · [x] reports/training (+ export)
 
-**SV:** [x] curriculums/my · [x] courses/available · [ ] auto-schedule/available-courses · [x] registrations (POST/DELETE) ·
+**SV:** [x] curriculums/my · [x] courses/available · [x] auto-schedule/available-courses · [x] registrations (POST/DELETE) ·
 [x] registrations/history · [x] timetable/my · [x] attendance/my · [x] attendance/requests (GET/POST) · [x] grades/my · [x] tuition/my
 
 **GV:** [x] class-sections/my · [x] class-sections/{id} · [x] class-sections/{id}/students ·

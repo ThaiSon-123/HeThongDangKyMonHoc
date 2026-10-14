@@ -466,6 +466,32 @@ def test_available_chi_sv(login_as):
     assert res.status_code == 403
 
 
+def test_tkb_tu_dong_tra_ca_lop_trung_lich_nhung_van_loc_ctdt_cho_trong_da_dang_ky(
+    sv_api, sv, hk, login_as
+):
+    def trong_ctdt(mon):
+        CurriculumCourse.objects.create(ctdt=sv.ctdt, mon_hoc=mon)
+        return mon
+
+    da_dk = tao_lop(hk, mon=trong_ctdt(CourseFactory()), thu=5)
+    trung = tao_lop(hk, mon=trong_ctdt(CourseFactory()), thu=5, tiet=2)  # trùng lớp đã đăng ký
+    tu_do = tao_lop(hk, mon=trong_ctdt(CourseFactory()), thu=6)
+    ngoai_ctdt = tao_lop(hk, thu=3)
+    day = tao_lop(hk, mon=trong_ctdt(CourseFactory()), thu=4, si_so_toi_da=1, si_so_hien_tai=1)
+    dang_ky(sv_api, da_dk)
+
+    url = "/api/auto-schedule/available-courses/"
+    res = sv_api.get(url)
+    assert res.status_code == 200
+    ids = {r["id"] for r in res.data["results"]}
+    assert ids == {trung.id, tu_do.id}  # khác /courses/available/: lớp trùng lịch vẫn có mặt
+    assert {ngoai_ctdt.id, day.id, da_dk.id}.isdisjoint(ids)
+    thuong = {r["id"] for r in sv_api.get("/api/courses/available/").data["results"]}
+    assert trung.id not in thuong  # đối chứng: endpoint thường đã lọc trùng lịch
+    assert res.data["meta"]["tin_chi_da_dang_ky"] == 3  # client cần meta để tính trần tín chỉ
+    assert login_as(UserFactory(role=Role.GIAO_VIEN)).get(url).status_code == 403
+
+
 # ------------------------------------------------------------------ CTĐT của tôi, TKB
 
 

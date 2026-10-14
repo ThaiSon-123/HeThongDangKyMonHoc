@@ -4,6 +4,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from corsheaders.defaults import default_headers
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
@@ -134,6 +136,9 @@ MEDIA_ROOT = Path(env("MEDIA_DIR", str(BASE_DIR / "media")))
 # django-cors-headers không hỗ trợ wildcard port ("localhost:*") → dev dùng regex (dev.py), prod liệt kê origin.
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_CREDENTIALS = True
+# Đăng ký môn và thu tiền gửi `Idempotency-Key` (plan 8.3): không cho phép ở preflight thì trình duyệt
+# (Flutter Web) chặn mọi POST đó, dù gọi bằng curl/test vẫn chạy bình thường.
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
 
 # --- DRF ---

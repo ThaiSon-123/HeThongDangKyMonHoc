@@ -117,6 +117,7 @@ QUYEN = {
     ("DELETE", "/api/schedules/{id}/"): "P",
     # --- sinh viên
     ("GET", "/api/courses/available/"): "S",
+    ("GET", "/api/auto-schedule/available-courses/"): "S",
     ("POST", "/api/registrations/"): "S",
     ("GET", "/api/registrations/history/"): "S",
     ("GET", "/api/timetable/my/"): "SG",

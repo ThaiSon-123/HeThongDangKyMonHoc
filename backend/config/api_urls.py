@@ -78,6 +78,7 @@ urlpatterns = [
     path("grade-sheets/", grades.GradeSheetListView.as_view()),
     path("class-sections/my/", training.MyClassSectionsView.as_view()),
     path("courses/available/", registration.AvailableCoursesView.as_view()),
+    path("auto-schedule/available-courses/", registration.AutoScheduleCoursesView.as_view()),
     path("curriculums/my/", registration.MyCurriculumView.as_view()),
     path("timetable/my/", registration.MyTimetableView.as_view()),
     path("attendance/my/", attendance.MyAttendanceView.as_view()),

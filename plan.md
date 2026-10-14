@@ -1,6 +1,6 @@
 # KẾ HOẠCH TRIỂN KHAI & ĐẶC TẢ — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-**Phiên bản:** 3.11 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
+**Phiên bản:** 3.12 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
 
 > **Nền tảng theo vai trò:** **SV + GV = Flutter Web + Flutter App (Android/iOS)**;
 > **Admin + PĐT + KT = chỉ Flutter Web**. Một codebase Flutter; hai entrypoint (mục 10.2).
@@ -372,7 +372,7 @@ SV chọn môn + ưu tiên → AutoScheduleService (pure Dart, client) → tối
 ```
 Gợi ý ≠ đăng ký. **Chọn môn** dùng cùng bộ lọc với SV-04 (*Tất cả môn đang mở / Theo CTĐT* + kỳ trong CTĐT, kết hợp được với nút *Môn chưa học*) và cùng cách gom *môn → các lớp học phần*; SV có thể chọn **giáo viên mong muốn** cho từng môn (mặc định *Tự động chọn*). MVP greedy: môn bắt buộc theo `hoc_ky_goi_y` trước, mỗi môn chọn lớp đầu tiên không trùng
 lịch. **Ưu tiên cá nhân** (client): *tránh ngày* (T2–CN), *ngày muốn học*, *ca học ưu tiên* (sáng 1–5 / chiều 6–10 / tối 11–15). Điểm tổ hợp (40–99) = 70 − 12 cho mỗi buổi rơi vào ngày tránh + 6 cho mỗi môn vào ngày muốn học + 4 cho mỗi môn đúng ca ưu tiên + 4 nếu học ≤ 4 ngày/tuần + 8 cho mỗi môn xếp đúng giáo viên mong muốn − 10 cho mỗi môn không xếp được giáo viên đó; mỗi tổ hợp kèm **danh sách lý do** (điều kiện đạt/không đạt và chỗ bị vướng lịch) để SV hiểu vì sao điểm cao hoặc thấp. Dữ liệu từ `GET /api/auto-schedule/available-courses/` (toàn bộ lớp mở,
-**không lọc trùng lịch** — khác `/api/courses/available/`). Không có endpoint suggest phía server.
+**không lọc trùng lịch** — khác `/api/courses/available/`). Thuật toán (`auto_schedule_service.dart`): *beam search* qua các môn (bắt buộc theo `hoc_ky_goi_y` trước), mỗi môn thử tối đa 6 lớp không trùng lịch với lớp đã đăng ký + lớp đã xếp (BR-03) và không vượt trần tín chỉ (BR-07, gồm cả tín chỉ đã đăng ký); môn không lớp nào vừa thì bỏ qua và nêu lý do. SV có thể đổi lớp từng môn (chỉ các lớp không trùng) và điểm được chấm lại. Môn đã đăng ký (BR-04d) và môn đã đạt không đưa vào. Không có endpoint suggest phía server.
 
 ### 7.3. PĐT chuẩn bị dữ liệu
 Ngành → CTĐT → Môn + tiên quyết → `CurriculumCourse` → Học kỳ + cửa sổ → Lớp HP + lịch → mở học kỳ, mở lớp.
@@ -479,7 +479,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | :--- | :--- | :--- |
 | GET | `/api/curriculums/my/` | CTĐT của mình (SV-03), mỗi môn kèm `da_dat` (BR-04). |
 | GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{hoc_ky, ten_hk, trong_cua_so, tin_chi_toi_thieu, tin_chi_toi_da, tin_chi_toi_da_canh_bao, tin_chi_da_dang_ky, bi_canh_bao_hoc_vu}` (lấy từ `Semester` + đăng ký hiện tại). Mỗi lớp kèm `khoi_kien_thuc`, `loai_mon`, `hoc_ky_goi_y` theo CTĐT của SV. |
-| GET | `/api/auto-schedule/available-courses/` | Toàn bộ lớp mở, **không lọc** (SV-06). |
+| GET | `/api/auto-schedule/available-courses/` | Cùng dạng với `courses/available/` (phân trang + `meta`, kèm `loai_mon`/`hoc_ky_goi_y`) nhưng **không lọc trùng lịch** (SV-06): lớp `MO` của học kỳ, môn thuộc CTĐT, còn chỗ, chưa đăng ký. Client ghép thêm `timetable/my` (lịch đã đăng ký, môn đã đăng ký) và `curriculums/my` (môn đã đạt). |
 | POST | `/api/registrations/` | Đăng ký (BR-01..07). **Bắt buộc** `Idempotency-Key`. |
 | DELETE | `/api/registrations/{id}/` | Hủy (BR-05). |
 | GET | `/api/registrations/history/` | Lịch sử (SV-09). |
@@ -927,3 +927,4 @@ Pha 3 làm theo cặp để không trượt nếu một người nghỉ.
 | **v3.9** (2026-10-11) | Điểm danh: "Đi trễ" là lựa chọn thứ hai trong nhóm 4 nút (không còn công tắc riêng), vì đi trễ nghĩa là có mặt; BR-19 ghi rõ `di_tre` chỉ hợp lệ khi `CO_MAT`. |
 | **v3.10** (2026-10-14) | Pha 9 — báo cáo & xuất Excel: `reports/training`, `reports/finance` (+ `/export/`), GV `class-sections/{id}/` · `students/` · `export/`; `tuition/` lọc thêm `?sinh_vien=` và trả `nganh_ma`; `class-sections/my/` thêm `ten_hk`, `han_nhap_diem_hieu_luc`, `diem_da_duyet`. Làm rõ: "lớp đầy / còn chỗ" chỉ xét lớp đang `MO`; "số sinh viên" đếm SV khác nhau (mockup ghi "ước tính"). Màn Flutter: `/pdt/reports`, `/accountant/reports`, `/teacher/classes` (App: chi tiết lớp 3 tab, lịch dạy cá nhân ở TKB). |
 | **v3.11** (2026-10-14) | Pha 10 — hoàn thiện: `admin/permissions` (có nhóm), `admin/config` (6 khóa, kiểm tra theo khóa, trả người sửa gần nhất), `admin/backups` (+ job `backup_daily` thật bằng `pg_dump`, dọn file quá `backup_retention_days`); `health?full=1`; giới hạn ghi chung 120/phút/user thật sự được áp dụng (trước đó chỉ khai báo); PĐT xuất Excel lớp (theo ma trận mục 9). Test: bảng quyền theo endpoint (mọi endpoint trong Swagger phải khai báo vai trò), phạm vi dữ liệu GV/SV, E2E đăng ký → điểm danh → điểm → học phí, cấu hình `prod`; kịch bản `locustfile.py` (đăng ký đồng thời). Flutter: `/admin/permissions`, `/admin/config`, `/admin/backups`. |
+| **v3.12** (2026-10-14) | Pha 8 — TKB tự động: `GET /api/auto-schedule/available-courses/` + `AutoScheduleService` (Dart thuần) + màn `/student/auto-schedule` (3 bước, đăng ký tuần tự từng môn, nghỉ giữa các lần để không vượt 30/phút). **Sửa lỗi:** CORS chưa cho phép header `Idempotency-Key` ở preflight nên trình duyệt (Flutter Web) chặn mọi POST đăng ký / thu tiền — thêm vào `CORS_ALLOW_HEADERS` + test. |
