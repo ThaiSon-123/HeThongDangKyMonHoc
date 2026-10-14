@@ -5,6 +5,10 @@ x-backend: &backend
   env_file: .env
   environment:
     DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
+    BACKUP_DIR: /backups
+  # worker ghi file sao lưu, web đọc danh sách → dùng chung một volume.
+  volumes:
+    - backups:/backups
   depends_on:
     db:
       condition: service_healthy
@@ -40,6 +44,7 @@ services:
     command: celery -A config worker --loglevel=info
     environment:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
+      BACKUP_DIR: /backups
       RUN_MIGRATE: "0"
 
   beat:
@@ -97,5 +102,6 @@ services:
 
 volumes:
   pgdata:
+  backups:
   staticfiles:
   media:

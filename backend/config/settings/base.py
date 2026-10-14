@@ -153,12 +153,15 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
-    "DEFAULT_THROTTLE_CLASSES": ("rest_framework.throttling.ScopedRateThrottle",),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.ScopedRateThrottle",
+        "core.throttles.WriteThrottle",
+    ),
     "DEFAULT_THROTTLE_RATES": {
         "login": env("RATE_LOGIN", "10/min"),
         # forgot_password: 3 lần/15 phút/email — DRF không parse được "15min", xem apps/auth/throttles.py
         "registration": "30/min",
-        "write": "120/min",
+        "write": env("RATE_WRITE", "120/min"),
     },
 }
 SPECTACULAR_SETTINGS = {

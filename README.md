@@ -66,8 +66,8 @@ Mật khẩu chung: `Demo@12345`
 | Giáo viên | `gv1` … `gv3` |
 | Sinh viên | `sv01` … `sv10` |
 
-Hiện các màn đã làm: đăng nhập, quên/đặt lại mật khẩu, hồ sơ SV/GV, Admin → Tài khoản. Màn còn lại hiện
-"đang phát triển" (làm theo từng pha trong `checklist.md`).
+Các màn đã làm và pha còn lại: xem `checklist.md` (màn tổng quan `/pdt`, `/accountant`, `/teacher`, `/admin`
+và TKB tự động của SV hiện còn "đang phát triển").
 
 ## 3. Chạy kiểm tra
 
@@ -90,3 +90,26 @@ flutter analyze ; flutter test
 ```
 
 CI (GitHub Actions) chạy đúng các bước trên cho mỗi PR.
+
+## 4. Sao lưu, khôi phục và load test
+
+- **Sao lưu:** Admin → *Sao lưu* (hoặc tự động 02:00 mỗi ngày). File `hpsv_YYYYMMDD_HHMMSS.dump` nằm trong volume
+  `backups` (`/backups` trong container), giữ `backup_retention_days` ngày (Admin → *Cấu hình*).
+- **Khôi phục (làm tay, giao diện không có nút này):**
+
+  ```bash
+  cd backend
+  docker compose exec worker sh -c 'pg_restore -c -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" /backups/<tên-file>.dump'
+  ```
+
+- **Load test đăng ký đồng thời** (cần backend + `seed_demo`; tạo một lớp `MO` ít chỗ rồi chạy):
+
+  ```bash
+  cd backend
+  pip install locust
+  LOCUST_CLASS_ID=<id lớp> locust -f locustfile.py --host http://localhost:8010 -u 10 -r 10 -t 30s --headless
+  ```
+
+  Đạt khi không có lỗi 5xx và sĩ số cuối không vượt chỗ tối đa (script tự kiểm, thoát mã 1 nếu vượt).
+  Lưu ý: đăng nhập giới hạn 10 lần/phút/IP nên đợi ~1 phút giữa hai lần chạy.
+- **Build:** `flutter build web -t lib/main.dart` (Web, đủ 5 vai trò) · `flutter build apk -t lib/main_app.dart` (App, SV/GV).

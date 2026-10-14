@@ -1,6 +1,6 @@
 # KẾ HOẠCH TRIỂN KHAI & ĐẶC TẢ — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-**Phiên bản:** 3.10 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
+**Phiên bản:** 3.11 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
 
 > **Nền tảng theo vai trò:** **SV + GV = Flutter Web + Flutter App (Android/iOS)**;
 > **Admin + PĐT + KT = chỉ Flutter Web**. Một codebase Flutter; hai entrypoint (mục 10.2).
@@ -433,7 +433,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/auth/reset-password/` | Public | Body `{token, new_password}` → `204`; blacklist mọi refresh cũ. Token sai/hết hạn → `400` field `token`. |
 | POST | `/api/auth/change-password/` | Mọi vai trò | Body `{old_password, new_password}` → `204`; blacklist refresh cũ (client phải đăng nhập lại). |
 | GET/PATCH | `/api/profiles/me/` | Mọi vai trò | Xem hồ sơ; sửa `email`, `sdt` (không sửa trường học vụ). |
-| GET | `/api/health/` · `/api/schema/` · `/api/docs/` | Public | Health, OpenAPI, Swagger. |
+| GET | `/api/health/` · `/api/schema/` · `/api/docs/` | Public | Health, OpenAPI, Swagger. `health/?full=1` kiểm thêm Redis + Celery worker (chậm ~1 giây, dùng cho giám sát): chỉ DB hỏng mới `503`, Redis/worker hỏng → `status: degraded`. |
 | GET | `/api/notifications/` | Mọi vai trò | Thông báo của mình (kèm `chua_doc`); `?da_doc=false` chỉ chưa đọc; `?gui=true` thông báo mình đã gửi (kể cả đã thu hồi). |
 | PATCH | `/api/notifications/{id}/read/` · POST `/api/notifications/read-all/` | Mọi vai trò | Đánh dấu đã đọc. |
 | POST | `/api/notifications/` | PĐT/GV/KT/Admin | Gửi (GV chỉ `CLASS` lớp mình). |
@@ -447,11 +447,11 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET/POST/PATCH | `/api/users/` | Tài khoản (ADM-02). Mỗi bản ghi kèm `has_profile` (`null` = vai trò không cần hồ sơ) và `profile` (tóm tắt hồ sơ SV/GV) để Admin biết tài khoản nào còn thiếu hồ sơ. Lọc `?role=&is_locked=&search=`. |
 | PATCH | `/api/users/{id}/lock/` | Body `{is_locked}`. Không tự khóa chính mình (`409`); không tự đổi vai trò của mình. |
 | POST | `/api/users/{id}/reset-password/` | Admin đặt mật khẩu mới (body `{new_password}`, áp chính sách mật khẩu) → `204`, thu hồi refresh cũ. |
-| GET | `/api/admin/permissions/` | Ma trận quyền (**chỉ đọc**, ADM-04). |
-| GET/PATCH | `/api/admin/config/` | `SystemConfig` (ADM-05). |
+| GET | `/api/admin/permissions/` | Ma trận quyền (**chỉ đọc**, ADM-04): `{vai_tro[], results[{nhom, quyen, <ROLE>: {co, gioi_han}}]}` — nội dung cố định trong `apps/config/matrix.py` (bản máy đọc của mục 9, có test đối chiếu hành vi thật). |
+| GET/PATCH | `/api/admin/config/` | `SystemConfig` (ADM-05): đúng 6 khóa (`max_absent_pct` 0–100 · `so_ngay_cho_phep_nhap_diem` ≥ 0 · `backup_retention_days` ≥ 1 · `ck_ngan_hang` · `ck_so_tai_khoan` chỉ số · `ck_chu_tai_khoan` chữ in hoa không dấu), trả `{items[{khoa, nhom, mo_ta, mac_dinh, gia_tri, cap_nhat_luc}], sua_lan_cuoi{boi, luc}}`. `PATCH` nhận `{khoa: giá_trị}` một phần; **một khóa sai thì không lưu khóa nào** (`400` theo field); mỗi khóa thật sự đổi ghi một audit log `UPDATE SystemConfig`. |
 | GET | `/api/admin/audit-logs/` | Admin/PĐT/KT; phạm vi do role quyết định (Admin tất cả, PĐT `training`, KT `finance`), `?scope=` chỉ thu hẹp thêm. Lọc `?hanh_dong=&doi_tuong=&nguoi_thuc_hien=&tu_ngay=&den_ngay=&search=`. |
-| GET | `/api/admin/backups/` | Danh sách file trong `BACKUP_DIR` (tên, kích thước, thời gian). |
-| POST | `/api/admin/backups/` | Tạo backup (chạy nền). Không có restore. |
+| GET | `/api/admin/backups/` | `{dang_chay, so_ngay_giu, results[{ten, dung_luong, tao_luc}]}` — file `hpsv_*.dump` hoàn chỉnh trong `BACKUP_DIR`, mới nhất trước; `dang_chay` = có file `.partial` mới (tối đa 10 phút). |
+| POST | `/api/admin/backups/` | Tạo backup: `202 {trang_thai: DANG_CHAY}`, chạy nền qua job `backup_daily` (`pg_dump -Fc` ghi `.partial` rồi đổi tên). Đang có bản chạy → `409 TRANG_THAI_KHONG_HOP_LE`. Ghi audit `CREATE Backup`. Không có restore / tải xuống (khôi phục tay bằng `pg_restore`). |
 
 **Phòng đào tạo**
 
@@ -500,7 +500,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET | `/api/attendance/sessions/?lop_hoc_phan=` | Danh sách buổi sinh sẵn của lớp + tổng số buổi (GV-06, GV-09). Không có endpoint tạo buổi. |
 | GET/PUT | `/api/class-sections/{id}/grades/` | Xem / **nhập cả lớp** (upsert `NHAP_TAM`, GV-10); PUT nhận danh sách một phần (SV nào gửi mới ghi). GET kèm cờ `co_the_nhap/khoa/mo_khoa/duyet`, `han_nhap_diem`. PĐT dùng PUT này để nhập hộ (lưu thẳng `CHINH_THUC`). Tổng kết: QT NULL coi như 0 (BR-10). |
 | POST | `/api/class-sections/{id}/grades/lock/` | Body `{action: "lock" \| "unlock"}` cả lớp (BR-14). |
-| GET | `/api/class-sections/{id}/export/` | Excel (GV-12), chỉ GV lớp đó. 3 sheet: Danh sách SV · Bảng điểm (mọi trạng thái điểm, "Chưa nhập" nếu chưa có) · Điểm danh (ma trận SV × buổi: x có mặt, T đi trễ, P vắng có phép, V vắng không phép; kèm vắng KP, vắng có phép, tỷ lệ vắng BR-20). |
+| GET | `/api/class-sections/{id}/export/` | Excel (GV-12): GV lớp mình, PĐT mọi lớp (ma trận mục 9). 3 sheet: Danh sách SV · Bảng điểm (mọi trạng thái điểm, "Chưa nhập" nếu chưa có) · Điểm danh (ma trận SV × buổi: x có mặt, T đi trễ, P vắng có phép, V vắng không phép; kèm vắng KP, vắng có phép, tỷ lệ vắng BR-20). |
 
 **Kế toán**
 
@@ -518,7 +518,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Thông số | Giá trị |
 | :--- | :--- |
 | Phân trang | 25 mặc định, tối đa 50 (`page`, `page_size`). |
-| Rate limit | Login **10 lần/phút/IP** (không khóa theo tài khoản — tránh bị khóa hộ; IP lấy theo `NUM_PROXIES`, xem bảng biến môi trường); quên mật khẩu 3/15 phút/email; đăng ký môn 30/phút/user; ghi dữ liệu chung 120/phút/user. |
+| Rate limit | Login **10 lần/phút/IP** (không khóa theo tài khoản — tránh bị khóa hộ; IP lấy theo `NUM_PROXIES`, xem bảng biến môi trường); quên mật khẩu 3/15 phút/email; đăng ký môn 30/phút/user; ghi dữ liệu chung 120/phút/user (`core/throttles.py`: chỉ đếm POST/PUT/PATCH/DELETE, theo người dùng; đọc không giới hạn). Vượt → `429 QUA_NHIEU_YEU_CAU`. |
 | JWT | Access 60 phút, refresh 7 ngày, rotate + blacklist. Trên Web token nằm trong storage của trình duyệt (chấp nhận rủi ro XSS cho đồ án). |
 | `?hoc_ky=` mặc định | Học kỳ chứa ngày hiện tại → học kỳ `MO` gần nhất → `400`. |
 | Lọc / sắp xếp | `django-filter`: mỗi ViewSet khai báo `filterset_fields`, `search_fields`, `ordering_fields` tường minh (mặc định `-id`). |
@@ -825,6 +825,8 @@ Repo + CI; Docker Compose (Django + PostgreSQL + Redis + Celery); skeleton Djang
 ```
 docker-compose up -d:  web (Gunicorn :8000) · db (PostgreSQL 16) · redis · celery (worker + beat) · nginx (:80/:443)
 ```
+**Sao lưu:** image backend cài `postgresql-client-16` (cùng bản với máy chủ `postgres:16` — `pg_dump` cũ hơn sẽ từ chối chạy) và web + worker dùng chung volume `backups` mount ở `BACKUP_DIR=/backups`. Khôi phục tay: `pg_restore -c -d <db> /backups/<file>.dump` trên máy chủ.
+
 **Checklist production:** `DEBUG=False`, secret từ env · tạo Admin đầu tiên bằng `python manage.py createsuperuser` (tự gán vai trò `ADMIN`) · HTTPS (nginx + certbot) · `pg_dump` trước mỗi migrate · backup daily · log tập trung · `/api/health/` + monitoring · `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE=False`.
 
 | Biến | Mặc định | Ghi chú |
@@ -924,3 +926,4 @@ Pha 3 làm theo cặp để không trượt nếu một người nghỉ.
 | **v3.8** (2026-10-10) | Thêm thực thể **Faculty (khoa/viện)** do **PĐT** quản lý (route `/pdt/faculties`, API `/api/faculties/`): `Major`, `TeacherProfile`, `Course` trỏ tới Faculty qua FK `khoa` (thay cho chuỗi `khoa_bo_mon`); ngừng khoa/viện chỉ khi không còn ngành/giáo viên hoạt động. Đổi tên hiển thị "khoa / bộ môn" → "khoa / viện". 25 → 26 thực thể. |
 | **v3.9** (2026-10-11) | Điểm danh: "Đi trễ" là lựa chọn thứ hai trong nhóm 4 nút (không còn công tắc riêng), vì đi trễ nghĩa là có mặt; BR-19 ghi rõ `di_tre` chỉ hợp lệ khi `CO_MAT`. |
 | **v3.10** (2026-10-14) | Pha 9 — báo cáo & xuất Excel: `reports/training`, `reports/finance` (+ `/export/`), GV `class-sections/{id}/` · `students/` · `export/`; `tuition/` lọc thêm `?sinh_vien=` và trả `nganh_ma`; `class-sections/my/` thêm `ten_hk`, `han_nhap_diem_hieu_luc`, `diem_da_duyet`. Làm rõ: "lớp đầy / còn chỗ" chỉ xét lớp đang `MO`; "số sinh viên" đếm SV khác nhau (mockup ghi "ước tính"). Màn Flutter: `/pdt/reports`, `/accountant/reports`, `/teacher/classes` (App: chi tiết lớp 3 tab, lịch dạy cá nhân ở TKB). |
+| **v3.11** (2026-10-14) | Pha 10 — hoàn thiện: `admin/permissions` (có nhóm), `admin/config` (6 khóa, kiểm tra theo khóa, trả người sửa gần nhất), `admin/backups` (+ job `backup_daily` thật bằng `pg_dump`, dọn file quá `backup_retention_days`); `health?full=1`; giới hạn ghi chung 120/phút/user thật sự được áp dụng (trước đó chỉ khai báo); PĐT xuất Excel lớp (theo ma trận mục 9). Test: bảng quyền theo endpoint (mọi endpoint trong Swagger phải khai báo vai trò), phạm vi dữ liệu GV/SV, E2E đăng ký → điểm danh → điểm → học phí, cấu hình `prod`; kịch bản `locustfile.py` (đăng ký đồng thời). Flutter: `/admin/permissions`, `/admin/config`, `/admin/backups`. |

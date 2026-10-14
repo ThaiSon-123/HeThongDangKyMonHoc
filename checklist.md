@@ -1,6 +1,6 @@
 # CHECKLIST TRIỂN KHAI — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-> **Nguồn:** `plan.md` v3.10 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
+> **Nguồn:** `plan.md` v3.11 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
 > mỗi dòng trỏ về mục/BR trong plan. Có chỗ lệch giữa hai file ⇒ plan thắng, sửa checklist.
 > **Cách dùng:** tick `[x]` khi xong; mỗi pha phải đạt **Milestone + DoD** (mục 10) mới sang pha sau.
 > **Thời lượng:** ~10–11 tuần cho đội 4–5 người (plan mục 12).
@@ -170,14 +170,18 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] GV-04: `class-sections/{id}/` (chỉ lớp mình, `403` lớp khác) + `class-sections/{id}/students/`; `class-sections/my/` thêm `ten_hk`, `han_nhap_diem_hieu_luc`, `diem_da_duyet`; `tuition/` lọc `?sinh_vien=`, trả `nganh_ma`
 - [x] Flutter: PĐT `/pdt/reports` (thẻ, 2 biểu đồ, bảng sắp xếp được, Xuất Excel) · KT `/accountant/reports` (4 thẻ, theo ngành, bảng từng SV, Xuất Excel) · GV `/teacher/classes` (danh sách lớp, chi tiết 4 tab / App 3 tab, Xuất Excel, lối tắt `?lop=` sang Điểm danh / Nhập điểm)
 - [x] **Milestone:** báo cáo đúng (tổng khớp từng SV), tải được file *(đã chạy trên API thật + giao diện Web/App so với mockup)*
-- [x] _Hạn chế:_ chỉ GV xuất Excel lớp (PĐT đã có tab đăng ký trong chi tiết lớp); tổng quan `/pdt`, `/accountant`, `/teacher` (banner, thẻ tổng) chưa làm — không nằm trong phạm vi Pha 9
+- [x] _Hạn chế:_ PĐT xuất Excel lớp bằng API (Pha 10) nhưng giao diện PĐT chưa có nút (đã có tab đăng ký + xuất đăng ký); tổng quan `/pdt`, `/accountant`, `/teacher` (banner, thẻ tổng) chưa làm — không nằm trong phạm vi Pha 9
 
 **Pha 10 — Hoàn thiện (1 tuần)**
-- [ ] Backup: `POST/GET /admin/backups/` (tạo + liệt kê file ở `BACKUP_DIR`, không restore) · job `backup_daily`
-- [ ] `GET /admin/permissions/` (ma trận chỉ đọc) · `GET/PATCH /admin/config/`
-- [ ] Rà rate limit / phân trang / mã lỗi · responsive Web + App · E2E · load test đăng ký (locust)
-- [ ] Build: `flutter build web -t lib/main.dart` và `flutter build apk -t lib/main_app.dart`; xác nhận bản App không chứa màn Admin/PĐT/KT
-- [ ] **Milestone:** production-ready
+- [x] Backup: `POST/GET /admin/backups/` (tạo chạy nền + liệt kê `BACKUP_DIR`, không restore) · job `backup_daily` (`pg_dump -Fc`, ghi `.partial` rồi đổi tên, dọn quá `backup_retention_days`) · image có `postgresql-client-16`, volume `backups` dùng chung web/worker *(đã chạy thật trên Docker; thử restore tay vào DB tạm: đủ 43 bảng, 18 tài khoản)*
+- [x] `GET /admin/permissions/` (ma trận chỉ đọc, có nhóm) · `GET/PATCH /admin/config/` (6 khóa, kiểm tra theo khóa, một khóa sai không lưu khóa nào, audit từng khóa đổi, trả người sửa gần nhất)
+- [x] Rà rate limit / phân trang / mã lỗi: giới hạn **ghi chung 120/phút/user** (trước đó chỉ khai báo, chưa áp dụng) · quét mọi `business_error` chỉ dùng mã trong mục 8.4 · phân trang 25/50 · `health?full=1` (Redis + worker)
+- [x] Test phân quyền theo bảng: mọi endpoint trong Swagger phải có dòng vai trò (thiếu → fail); vai trò sai → `403`, chưa đăng nhập → `401`; phạm vi dữ liệu GV/SV (BR-23); ma trận mục 9 đối chiếu hành vi thật
+- [x] E2E (backend, qua API): đăng ký → điểm danh → điểm → duyệt → học phí/thu tiền · load test `locustfile.py` đăng ký đồng thời (lớp 3 chỗ, ~8 000 yêu cầu, ~440 req/s, 0 lỗi, sĩ số cuối đúng 3/3)
+- [x] Flutter Admin: `/admin/permissions` · `/admin/config` · `/admin/backups` (mockup `AD-Web-*`)
+- [x] Build: `flutter build web -t lib/main.dart` và `flutter build apk -t lib/main_app.dart` (release 54 MB; cần `kotlin.incremental=false` vì dự án ở ổ D: còn pub-cache ở ổ C:); bản App **không chứa** màn Admin/PĐT/KT (chỉ còn hàm tiện ích `failureText`)
+- [ ] Flutter `integration_test` (cần thiết bị/emulator) và rà responsive toàn bộ Web + App — mới kiểm các màn thêm ở Pha 9–10 ở cỡ Web và App
+- [ ] **Milestone:** production-ready — còn các việc vận hành mục 15 (HTTPS/certbot, `pg_dump` trước migrate, log tập trung, không publish cổng `web`)
 
 ---
 
@@ -247,22 +251,22 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | BR-18 | Miễn giảm do KT, có audit log | 6 | [x] |
 | BR-19 | 3 trạng thái điểm danh + cờ `di_tre` (chỉ khi `CO_MAT`; UI 4 nút) | 4 | [x] |
 | BR-20 | Buổi điểm danh sinh sẵn theo lịch; tỷ lệ vắng = vắng KP / tổng số buổi theo lịch + cờ cảnh báo | 4 | [x] |
-| BR-21 | Phân quyền 5 vai trò | 1–10 | [ ] |
-| BR-22 | JWT; khóa tài khoản chặn login + refresh | 1 | [ ] |
-| BR-23 | SV chỉ dữ liệu mình; GV chỉ lớp mình | 1–10 | [ ] |
+| BR-21 | Phân quyền 5 vai trò | 1–10 | [x] |
+| BR-22 | JWT; khóa tài khoản chặn login + refresh | 1 | [x] |
+| BR-23 | SV chỉ dữ liệu mình; GV chỉ lớp mình | 1–10 | [x] |
 | BR-24 | *(đã gỡ v3.0)* | — | — |
 | BR-25 | GPA, tín chỉ tích lũy, xếp loại | 5 | [x] |
 | BR-26 | Thu / hoàn tiền: `FOR UPDATE`, không vượt `con_no` / `can_hoan` | 6 | [x] |
 
 ## 13. ENDPOINT — tick khi có code + test + Swagger
 
-**Auth & chung:** [ ] login · [ ] logout · [ ] refresh · [ ] forgot-password · [ ] reset-password · [ ] change-password ·
-[ ] profiles/me · [ ] health · [x] notifications (list / read / read-all / gửi / thu hồi)
+**Auth & chung:** [x] login · [x] logout · [x] refresh · [x] forgot-password · [x] reset-password · [x] change-password ·
+[x] profiles/me · [x] health · [x] notifications (list / read / read-all / gửi / thu hồi)
 
-**Admin:** [ ] users · [ ] users/{id}/lock · [ ] users/{id}/reset-password · [ ] admin/permissions (GET) ·
-[ ] admin/config · [x] admin/audit-logs · [ ] admin/backups (GET/POST)
+**Admin:** [x] users · [x] users/{id}/lock · [x] users/{id}/reset-password · [x] admin/permissions (GET) ·
+[x] admin/config · [x] admin/audit-logs · [x] admin/backups (GET/POST)
 
-**PĐT:** [ ] profiles/students · [ ] profiles/teachers · [x] faculties · [x] majors · [x] curriculums · [x] curriculum-courses ·
+**PĐT:** [x] profiles/students · [x] profiles/teachers · [x] faculties · [x] majors · [x] curriculums · [x] curriculum-courses ·
 [x] courses · [x] prerequisites · [x] semesters (+ open/close/window) · [x] class-sections (+ open/close/grade-deadline) ·
 [x] schedules · [x] registrations (GET/DELETE/export) · [x] attendance/sessions (xem) ·
 [x] class-sections/{id}/grades/approve · [x] reports/training (+ export)
@@ -272,7 +276,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 **GV:** [x] class-sections/my · [x] class-sections/{id} · [x] class-sections/{id}/students ·
 [x] attendance/sessions (GET, sinh sẵn) · [x] attendance/sessions/{id}/records (GET/PUT) · [x] attendance/requests (GET/PATCH, chỉ lớp mình) ·
-[x] class-sections/{id}/grades (GET/PUT) · [x] class-sections/{id}/grades/lock · [x] class-sections/{id}/export
+[x] class-sections/{id}/grades (GET/PUT) · [x] class-sections/{id}/grades/lock · [x] class-sections/{id}/export (GV lớp mình · PĐT mọi lớp)
 
 **KT:** [x] tuition/config · [x] tuition/pricing · [x] tuition/discounts · [x] tuition (GET) · [x] tuition/calculate ·
 [x] tuition/payments · [x] tuition/debts · [x] tuition/payments/{id}/receipt · [x] reports/finance (+ export)
@@ -280,7 +284,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 ## 14. TEST BẮT BUỘC (plan mục 13)
 
 - [x] 2 SV cùng bấm chỗ cuối → 1 thành công; sĩ số không lệch sau hủy / đăng ký lại *(PostgreSQL thật)*
-- [ ] Replay `Idempotency-Key` (đăng ký, thanh toán); re-activate không đổi `request_id`; key khác khi đã đăng ký → `409 DA_DANG_KY`
+- [x] Replay `Idempotency-Key` (đăng ký, thanh toán); re-activate không đổi `request_id`; key khác khi đã đăng ký → `409 DA_DANG_KY`
 - [x] Thanh toán đồng thời không vượt `phai_nop`; `SO_TIEN_KHONG_HOP_LE` (vượt `con_no` / `can_hoan` / ≤ 0)
 - [x] `LOP_CHUA_MO` (lớp `KE_HOACH`/`DANG_HOC`/`DA_DONG`) · `NGOAI_CUA_SO_DANG_KY`
 - [x] Trùng lịch (cùng `thu` giao tiết); không giao tiết → hợp lệ; thứ 7 + Chủ nhật hợp lệ; `thu = 1`/`9` → 400
@@ -298,21 +302,21 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Yêu cầu sửa điểm danh: lớp `DA_DONG` không gửi được; đóng lớp → yêu cầu chờ tự từ chối; chỉ GV lớp đó duyệt được
 - [x] Tỷ lệ vắng: mẫu số = tổng buổi theo lịch (1/6 không cờ, 2/6 có cờ); vắng có phép không tính; cờ không chặn nhập CK
 - [x] Học phí: ưu tiên `hoc_ky` → NULL; khối → ngành → mặc định; `GIA_TH`; thiếu giá → `calculate` 400 nhưng đăng ký vẫn 201 + warning; hủy hết môn đã thu → `can_hoan > 0`; UNIQUE `MAC_DINH` cùng `hoc_ky`
-- [ ] Token: khóa chặn request + refresh; logout / đổi / reset blacklist refresh cũ; reset token 30 phút 1 lần; forgot-password không lộ email
-- [ ] Phân quyền: mỗi endpoint một test sai role; SV không xem SV khác; GV không xem lớp khác
-- [ ] Flutter: widget test Web + App; mọi route nằm dưới prefix vai trò (đã có); E2E đăng ký → điểm → học phí
+- [x] Token: khóa chặn request + refresh; logout / đổi / reset blacklist refresh cũ; reset token 30 phút 1 lần; forgot-password không lộ email
+- [x] Phân quyền: mỗi endpoint một test sai role (`core/tests/test_phan_quyen.py`, bảng bắt buộc đủ endpoint); SV không xem SV khác; GV không xem lớp khác (`test_pham_vi.py`)
+- [ ] Flutter: widget test Web + App; mọi route nằm dưới prefix vai trò (đã có); E2E đăng ký → điểm → học phí *(widget test đã có cho từng màn; E2E đã làm ở backend `core/tests/test_e2e.py`, còn `integration_test` của Flutter)*
 
 ## 15. TRIỂN KHAI
 
-- [ ] `DEBUG=False`, `SECRET_KEY` từ env, `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE=False`
-- [ ] CORS prod = danh sách origin tường minh (không dùng regex localhost)
+- [x] `DEBUG=False`, `SECRET_KEY` từ env, `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE=False` *(`settings.prod` từ chối khởi động nếu sai; có test)*
+- [x] CORS prod = danh sách origin tường minh (không dùng regex localhost) *(có test)*
 - [ ] `NUM_PROXIES=1` (mặc định ở `prod.py`) và **không publish cổng `web`** ra ngoài, chỉ nginx
-- [ ] Tạo Admin đầu tiên: `python manage.py createsuperuser` (vai trò tự là `ADMIN`)
+- [x] Tạo Admin đầu tiên: `python manage.py createsuperuser` (vai trò tự là `ADMIN`)
 - [ ] HTTPS (nginx + certbot)
 - [ ] `pg_dump` trước mỗi lần migrate prod
-- [ ] Backup daily chạy được; thử restore tay một lần bằng `pg_restore`
-- [ ] Log tập trung; `/api/health/` + monitoring (kể cả trạng thái worker)
+- [x] Backup daily chạy được; thử restore tay một lần bằng `pg_restore`
+- [ ] Log tập trung · [x] `/api/health/?full=1` báo Redis + worker (monitoring bên ngoài còn lại)
 
 ---
 
-*Tạo từ `plan.md` v3.10 (cập nhật 2026-10-14). Cập nhật khi plan đổi.*
+*Tạo từ `plan.md` v3.11 (cập nhật 2026-10-14). Cập nhật khi plan đổi.*

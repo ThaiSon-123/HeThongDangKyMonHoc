@@ -216,3 +216,13 @@ def test_gv_xuat_excel_lop_ba_sheet(login_as):
     assert dd[0][2:4] == ["02/03 T1", "09/03 T1"]
     assert dd[1][2:] == ["T", "V", 1, 0, 50.0]  # đi trễ · vắng KP · 1/2 buổi = 50%
     assert dd[2][2:4] == [None, None]  # SV chưa có bản ghi điểm danh
+
+
+def test_pdt_xuat_excel_lop_bat_ky_con_ke_toan_sinh_vien_thi_khong(login_as, pdt):
+    lop = ClassSectionFactory(trang_thai=TrangThaiLop.DANG_HOC)
+    url = f"/api/class-sections/{lop.id}/export/"
+    res = pdt.get(url)
+    assert res.status_code == 200 and lop.ma_lop in res["Content-Disposition"]
+    assert pdt.get(f"/api/class-sections/{lop.id}/students/").status_code == 403  # GV-04 chỉ của GV
+    for vai_tro in (Role.KE_TOAN, Role.SINH_VIEN, Role.ADMIN):
+        assert login_as(UserFactory(role=vai_tro)).get(url).status_code == 403

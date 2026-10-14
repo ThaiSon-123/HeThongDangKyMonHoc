@@ -12,24 +12,34 @@ from rest_framework.views import APIView
 
 from apps.attendance.models import Attendance, TrangThaiDiemDanh
 from apps.attendance.services import chi_so_vang, thong_ke_lop
+from apps.auth.models import Role
 from apps.grades import services as grades
 from apps.grades.models import Grade, TrangThaiDiem
 from apps.registration.serializers import ClassBriefSerializer
 from apps.training.models import ClassSection
 from apps.training.serializers import han_nhap_diem_cua
 from core.export import XLSX, xlsx_nhieu_sheet
-from core.permissions import IsGiaoVien
+from core.permissions import HasRole, IsGiaoVien
 
 
-def lop_cua_gv(user, pk):
-    """Lớp `pk` do `user` phụ trách; lớp của GV khác → `403 KHONG_CO_QUYEN` (BR-23)."""
+def _lop(pk):
     lop = (
         ClassSection.objects.select_related("giao_vien", "mon_hoc", "hoc_ky").filter(pk=pk).first()
     )
     if lop is None:
         raise NotFound("Không tìm thấy lớp học phần.")
+    return lop
+
+
+def lop_cua_gv(user, pk):
+    """Lớp `pk` do `user` phụ trách; lớp của GV khác → `403 KHONG_CO_QUYEN` (BR-23)."""
+    lop = _lop(pk)
     grades.kiem_tra_gv_lop(user, lop)
     return lop
+
+
+class IsGiaoVienOrPdt(HasRole):
+    roles = (Role.GIAO_VIEN, Role.PHONG_DAO_TAO)
 
 
 def lop_cua_toi(user):
@@ -121,13 +131,14 @@ def _o_diem_danh(trang_thai, di_tre):
 
 
 class ClassExportView(APIView):
-    """`GET /api/class-sections/{id}/export/` (GV-12): Excel gồm danh sách SV, bảng điểm, điểm danh."""
+    """`GET /api/class-sections/{id}/export/` (GV-12): Excel gồm danh sách SV, bảng điểm, điểm danh.
+    GV chỉ lớp mình; PĐT mọi lớp (ma trận quyền mục 9)."""
 
-    permission_classes = [IsGiaoVien]
+    permission_classes = [IsGiaoVienOrPdt]
 
     @extend_schema(responses={(200, XLSX): OpenApiTypes.BINARY})
     def get(self, request, pk):
-        lop = lop_cua_gv(request.user, pk)
+        lop = lop_cua_gv(request.user, pk) if request.user.role == Role.GIAO_VIEN else _lop(pk)
         sv = _sinh_vien(lop)
         danh_sach = [(i, s["ma_sv"], s["ho_ten"], s["nganh_ten"]) for i, s in enumerate(sv, 1)]
 

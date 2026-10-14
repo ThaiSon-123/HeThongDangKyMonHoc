@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 from apps.attendance import views as attendance
 from apps.audit.views import AuditLogListView
 from apps.auth.views import UserViewSet
+from apps.config import views as config
 from apps.grades import views as grades
 from apps.notifications.views import NotificationViewSet
 from apps.profiles.views import (
@@ -60,6 +61,9 @@ urlpatterns = [
     path("class-sections/<int:pk>/students/", teacher.ClassStudentsView.as_view()),
     path("class-sections/<int:pk>/export/", teacher.ClassExportView.as_view()),
     path("admin/audit-logs/", AuditLogListView.as_view()),
+    path("admin/permissions/", config.PermissionsView.as_view()),
+    path("admin/config/", config.ConfigView.as_view()),
+    path("admin/backups/", config.BackupsView.as_view()),
     path("reports/training/", training_reports.TrainingReportView.as_view()),
     path("reports/training/export/", training_reports.TrainingReportExportView.as_view()),
     path("reports/finance/", tuition_reports.FinanceReportView.as_view()),

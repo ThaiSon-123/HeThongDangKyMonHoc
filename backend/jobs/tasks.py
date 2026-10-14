@@ -1,8 +1,12 @@
-"""4 job nền — lịch ở config/celery.py (plan.md mục 7.8). đã làm: classes_transition_daily, tuition_overdue_notify, flush_expired_tokens; còn lại stub."""
+"""4 job nền — lịch ở config/celery.py (plan.md mục 7.8). cả 4 job đã làm."""
+
+import logging
 
 from django.core.management import call_command
 
 from config.celery import app
+
+logger = logging.getLogger(__name__)
 
 
 @app.task(name="jobs.classes_transition_daily")
@@ -23,8 +27,16 @@ def tuition_overdue_notify():
 
 @app.task(name="jobs.backup_daily")
 def backup_daily():
-    # TODO(Pha 10): ADM-08 pg_dump → BACKUP_DIR, xóa file quá backup_retention_days
-    pass
+    """Mục 7.8 / ADM-08: `pg_dump` → `BACKUP_DIR`, rồi xóa file quá `backup_retention_days`.
+    Cũng được `POST /api/admin/backups/` gọi (chạy nền). Lỗi → log + task FAILURE, không nuốt."""
+    from apps.config import services
+
+    try:
+        ten = services.tao_backup()
+    except services.BackupError:
+        logger.exception("Sao lưu thất bại")
+        raise
+    return {"file": ten, "da_xoa": services.don_backup_cu()}
 
 
 @app.task(name="jobs.flush_expired_tokens")
