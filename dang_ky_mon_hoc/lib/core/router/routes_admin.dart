@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/dashboard/admin_dashboard.dart';
 import '../../features/admin/accounts/accounts_screen.dart';
 import '../../features/admin/system/backups_screen.dart';
 import '../../features/admin/system/config_screen.dart';
@@ -17,6 +18,7 @@ const adminRoutes = RoleRoutes(
       '/admin',
       'Tổng quan',
       subtitle: 'Tình trạng hệ thống, tài khoản và sao lưu',
+      builder: AdminDashboard.new,
     ),
     RouteDef(
       '/admin/accounts',

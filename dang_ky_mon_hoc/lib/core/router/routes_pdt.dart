@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/dashboard/pdt_dashboard.dart';
 import '../../features/notifications/audit_log_screen.dart';
 import '../../features/reports/pdt_reports_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
@@ -18,7 +19,12 @@ import 'role_routes.dart';
 const pdtRoutes = RoleRoutes(
   UserRole.pdt,
   [
-    RouteDef('/pdt', 'Tổng quan'),
+    RouteDef(
+      '/pdt',
+      'Tổng quan',
+      subtitle: 'Tình hình đào tạo và việc cần làm',
+      builder: PdtDashboard.new,
+    ),
     RouteDef('/pdt/profiles', 'Hồ sơ SV / GV', builder: ProfilesScreen.new),
     RouteDef('/pdt/faculties', 'Khoa / viện', builder: FacultiesScreen.new),
     RouteDef('/pdt/majors', 'Ngành', builder: MajorsScreen.new),

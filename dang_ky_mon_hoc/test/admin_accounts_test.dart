@@ -270,8 +270,9 @@ void main() {
       var lists = 0;
       final api = adminApi(
         extra: {
-          'GET /users/': (_) {
-            lists++;
+          'GET /users/': (o) {
+            // Màn Tổng quan (trang chủ Admin) cũng đếm tài khoản bằng `page_size=1` — không tính.
+            if (o.queryParameters['page_size'] != 1) lists++;
             return reply(200, page(_rows));
           },
           'POST /users/': (_) => reply(201, row(20, 'gv006', 'GIAO_VIEN')),

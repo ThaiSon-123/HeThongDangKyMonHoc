@@ -237,7 +237,7 @@ void main() {
             ? apiError(500, 'LOI_HE_THONG')
             : reply(200, trainingReport()),
       });
-      await openPdt(t, a, '/pdt/reports');
+      await openPdt(t, a, '/pdt/reports', sauTongQuan: () => lan = 0);
       expect(find.text('Thử lại'), findsOneWidget);
       await tapText(t, 'Thử lại');
       expect(find.text('Chi tiết theo lớp'), findsOneWidget);

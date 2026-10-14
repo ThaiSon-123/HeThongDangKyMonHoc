@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/dashboard/accountant_dashboard.dart';
 import '../../features/notifications/audit_log_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/reports/finance_reports_screen.dart';
@@ -11,7 +12,12 @@ import 'role_routes.dart';
 const accountantRoutes = RoleRoutes(
   UserRole.accountant,
   [
-    RouteDef('/accountant', 'Tổng quan'),
+    RouteDef(
+      '/accountant',
+      'Tổng quan',
+      subtitle: 'Tình hình thu học phí',
+      builder: AccountantDashboard.new,
+    ),
     RouteDef(
       '/accountant/config',
       'Cấu hình học phí',

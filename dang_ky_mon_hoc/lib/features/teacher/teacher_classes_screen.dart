@@ -7,6 +7,7 @@ import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/status_chip.dart';
+import '../dashboard/dashboard_widgets.dart' show soNgayDen;
 import '../registration/registration_format.dart';
 import '../registration/timetable_screen.dart'
     show TimetableScreen, clockProvider;
@@ -24,13 +25,8 @@ const _filters = <(String, String)>[
 /// Dòng hạn nhập điểm kèm đếm ngược: `23/01/2027 · còn 105 ngày` (vàng khi còn ≤ 3 ngày) hoặc
 /// `09/10/2026 · quá hạn 1 ngày` (đỏ). [ymd] là ngày của API (`yyyy-MM-dd`).
 (String, Color) hanNhapDiemInfo(String ymd, DateTime now) {
-  final han = DateTime.tryParse(ymd);
-  if (han == null) return ('—', AppColors.muted);
-  final conLai = DateTime.utc(
-    han.year,
-    han.month,
-    han.day,
-  ).difference(DateTime.utc(now.year, now.month, now.day)).inDays;
+  final conLai = soNgayDen(ymd, now);
+  if (conLai == null) return ('—', AppColors.muted);
   final ngay = formatYmd(ymd);
   if (conLai < 0) return ('$ngay · quá hạn ${-conLai} ngày', AppColors.danger);
   if (conLai == 0) return ('$ngay · hết hạn hôm nay', const Color(0xFFB26A00));

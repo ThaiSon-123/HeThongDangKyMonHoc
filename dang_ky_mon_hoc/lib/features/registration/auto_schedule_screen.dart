@@ -574,7 +574,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           const SizedBox(height: 16),
           nhomNgay(
             'Ngày muốn học',
-            'Hệ thống sẽ ưu tiên xếp các môn vào ngày bạn chọn (vd: chọn Chủ nhật → các lớp có buổi CN được điểm cao hơn).',
+            'Hệ thống sẽ ưu tiên xếp các môn vào ngày bạn chọn (vd: chọn Chủ nhật thì các lớp có buổi CN được điểm cao hơn).',
             _muon,
             _tranh,
           ),

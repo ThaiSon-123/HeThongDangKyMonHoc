@@ -19,7 +19,14 @@ FakeAdapter adminApi(Map<String, Handler> extra) => FakeAdapter({
   ...extra,
 });
 
-Future<void> openAdmin(WidgetTester t, FakeAdapter api, String path) async {
+/// [sauTongQuan] chạy khi trang chủ (Tổng quan, tự gọi vài API) đã dựng xong và trước khi sang [path] —
+/// dùng để bắt đầu đếm lời gọi của chính màn đang test.
+Future<void> openAdmin(
+  WidgetTester t,
+  FakeAdapter api,
+  String path, {
+  VoidCallback? sauTongQuan,
+}) async {
   await pumpApp(
     t,
     router: webRouterProvider,
@@ -28,6 +35,7 @@ Future<void> openAdmin(WidgetTester t, FakeAdapter api, String path) async {
     size: bigScreen,
     overrides: [clockProvider.overrideWithValue(() => _homNay)],
   );
+  sauTongQuan?.call();
   GoRouter.of(t.element(find.byType(Scaffold).first)).go(path);
   await t.pumpAndSettle();
 }
@@ -397,7 +405,12 @@ void main() {
           'POST /admin/backups/': (_) =>
               reply(202, {'trang_thai': 'DANG_CHAY'}),
         });
-        await openAdmin(t, api, '/admin/backups');
+        await openAdmin(
+          t,
+          api,
+          '/admin/backups',
+          sauTongQuan: () => lanGet = 0,
+        );
         await tapText(t, 'Tạo bản sao lưu ngay');
         expect(find.text('1 bản ghi'), findsOneWidget);
         await t.pump(const Duration(seconds: 3));
@@ -412,7 +425,7 @@ void main() {
       final api = adminApi({
         'GET /admin/backups/': (_) => reply(200, ds(chay: ++lan < 2)),
       });
-      await openAdmin(t, api, '/admin/backups');
+      await openAdmin(t, api, '/admin/backups', sauTongQuan: () => lan = 0);
       expect(find.text('Đang sao lưu…'), findsOneWidget);
       await t.pump(const Duration(seconds: 3));
       await t.pumpAndSettle();

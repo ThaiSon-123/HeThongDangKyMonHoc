@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/dashboard/teacher_dashboard.dart';
 import '../../features/attendance/teacher_attendance_screen.dart';
 import '../../features/grades/teacher_grades_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
@@ -12,7 +13,12 @@ import 'role_routes.dart';
 const teacherRoutes = RoleRoutes(
   UserRole.teacher,
   [
-    RouteDef('/teacher', 'Tổng quan'),
+    RouteDef(
+      '/teacher',
+      'Tổng quan',
+      subtitle: 'Việc cần chú ý hôm nay',
+      builder: TeacherDashboard.new,
+    ),
     RouteDef(
       '/teacher/profile',
       'Hồ sơ',

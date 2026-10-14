@@ -24,11 +24,13 @@ FakeAdapter pdtApi(Map<String, Handler> extra) => FakeAdapter({
   ...extra,
 });
 
+/// [sauTongQuan] chạy khi trang chủ (Tổng quan, tự gọi API) đã dựng xong, trước khi sang [path].
 Future<void> openPdt(
   WidgetTester t,
   FakeAdapter api,
   String path, {
   List<Override> overrides = const [],
+  VoidCallback? sauTongQuan,
 }) async {
   await pumpApp(
     t,
@@ -38,6 +40,7 @@ Future<void> openPdt(
     size: bigScreen,
     overrides: overrides,
   );
+  sauTongQuan?.call();
   GoRouter.of(t.element(find.byType(Scaffold).first)).go(path);
   await t.pumpAndSettle();
 }

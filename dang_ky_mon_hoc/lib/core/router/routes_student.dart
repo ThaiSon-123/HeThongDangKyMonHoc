@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../features/attendance/student_attendance_screen.dart';
+import '../../features/dashboard/student_dashboard.dart';
 import '../../features/grades/student_grades_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/registration/auto_schedule_screen.dart';
+import '../../features/registration/curriculum_screen.dart';
 import '../../features/registration/register_screen.dart';
 import '../../features/registration/timetable_screen.dart';
 import '../../features/tuition/student_tuition_screen.dart';
@@ -14,7 +16,12 @@ import 'role_routes.dart';
 const studentRoutes = RoleRoutes(
   UserRole.student,
   [
-    RouteDef('/student', 'Tổng quan'),
+    RouteDef(
+      '/student',
+      'Tổng quan',
+      subtitle: 'Việc cần chú ý hôm nay',
+      builder: StudentDashboard.new,
+    ),
     RouteDef(
       '/student/profile',
       'Hồ sơ',
@@ -40,7 +47,12 @@ const studentRoutes = RoleRoutes(
       subtitle: 'Lịch học theo tuần của các môn đã đăng ký',
       builder: TimetableScreen.new,
     ),
-    RouteDef('/student/curriculum', 'Chương trình đào tạo'),
+    RouteDef(
+      '/student/curriculum',
+      'Chương trình đào tạo',
+      subtitle: 'Các môn theo học kỳ gợi ý và tiến độ tích lũy của bạn',
+      builder: CurriculumScreen.new,
+    ),
     RouteDef(
       '/student/grades',
       'Điểm',

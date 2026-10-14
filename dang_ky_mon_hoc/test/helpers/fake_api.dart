@@ -134,6 +134,11 @@ Future<void> pumpApp(
     ),
   );
   await tester.pumpAndSettle();
+  // Sau đăng nhập app đã dựng trang chủ của vai trò (màn Tổng quan, có gọi API): xóa dấu vết đó để test
+  // chỉ thấy các lời gọi do chính nó gây ra từ đây.
+  adapter.log.clear();
+  adapter.queries.clear();
+  adapter.bodies.clear();
 }
 
 const signedIn = {'access_token': 'a1', 'refresh_token': 'r1'};
