@@ -1,6 +1,6 @@
 # KẾ HOẠCH TRIỂN KHAI & ĐẶC TẢ — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-**Phiên bản:** 3.9 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
+**Phiên bản:** 3.10 — 5 vai trò · 59 chức năng · 26 thực thể · BR-01..26 (BR-24 đã gỡ) · Flutter Web + App (SV/GV) · Django REST · PostgreSQL 16
 
 > **Nền tảng theo vai trò:** **SV + GV = Flutter Web + Flutter App (Android/iOS)**;
 > **Admin + PĐT + KT = chỉ Flutter Web**. Một codebase Flutter; hai entrypoint (mục 10.2).
@@ -153,7 +153,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | PDT-11 | Hủy đăng ký khi cần | Hủy hộ SV có lý do (BR-05). |
 | PDT-12 | Duyệt điểm | Duyệt điểm cả lớp `CHINH_THUC` → `KHOA`; nhập hộ khi GV quá hạn (BR-13/14). |
 | PDT-13 | Gửi thông báo | Đến vai trò / lớp / SV cụ thể. |
-| PDT-14 | Báo cáo đào tạo | SV, lớp HP, số đăng ký, lớp đầy/còn chỗ; xuất Excel. |
+| PDT-14 | Báo cáo đào tạo | Số SV, số lớp, lượt đăng ký, lớp đầy/còn chỗ, lượt đăng ký theo môn, lấp đầy theo lớp (lọc học kỳ/ngành/môn); xuất Excel. |
 | PDT-15 | Tra cứu dữ liệu đào tạo | Tìm kiếm, lọc, xem chi tiết. |
 
 ### 3.2. Sinh viên
@@ -181,7 +181,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | GV-01 | Đăng nhập / đăng xuất | |
 | GV-02 | Hồ sơ cá nhân | Xem; sửa email/sdt; đổi mật khẩu. |
 | GV-03 | Xem lớp phụ trách | |
-| GV-04 | Xem chi tiết lớp | Môn, lịch, phòng, sĩ số, danh sách SV. |
+| GV-04 | Xem chi tiết lớp | Môn, tín chỉ, lịch, phòng, sĩ số, hạn nhập điểm, tổng số buổi, danh sách SV. |
 | GV-05 | Xem TKB cá nhân | Lịch dạy. |
 | GV-06 | Chọn buổi điểm danh | Buổi do hệ thống **sinh sẵn** theo lịch học × thời gian lớp (BR-20); GV chọn buổi đã đến ngày để điểm danh (lớp `DANG_HOC`). Không tạo buổi tay. |
 | GV-07 | Điểm danh | `CO_MAT` / `VANG_CO_PHEP` / `VANG_KHONG_PHEP` + cờ `di_tre` (BR-19). |
@@ -205,7 +205,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | KT-08 | Xác nhận thu / hoàn tiền | Ghi `Payment` loại `THU` hoặc `HOAN` (BR-26); đối soát khoản SV chuyển khoản theo nội dung `HOCPHI <ma_sv> <hoc_ky>`. |
 | KT-09 | Công nợ | SV còn nợ, quá hạn, chờ hoàn tiền. |
 | KT-10 | Biên lai | Xuất phiếu thu Excel. |
-| KT-11 | Báo cáo tài chính | Phải thu/đã thu/còn nợ theo học kỳ/ngành/lớp/SV; xuất Excel. |
+| KT-11 | Báo cáo tài chính | Phải thu/đã thu/còn nợ/chờ hoàn theo học kỳ/ngành/lớp/SV, tổng hợp theo ngành; xuất Excel. |
 
 ### 3.5. Admin
 
@@ -471,7 +471,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET | `/api/registrations/` · `/api/registrations/export/` | Theo dõi; xuất Excel (PDT-10). |
 | DELETE | `/api/registrations/{id}/` | Hủy hộ (PDT-11, BR-05), body `ly_do`. |
 | GET | `/api/attendance/sessions/` | Xem điểm danh theo lớp (PDT-10). |
-| GET | `/api/reports/training/` · `/api/reports/training/export/` | PDT-14. |
+| GET | `/api/reports/training/` · `/api/reports/training/export/` | PDT-14. Lọc `?hoc_ky=&nganh=&mon_hoc=` (`nganh` = môn thuộc CTĐT của ngành). Chỉ tính lớp đã mở (không tính `KE_HOACH`). Trả `tong{so_sinh_vien (SV khác nhau đang đăng ký), so_lop, tong_luot_dang_ky, lop_day, lop_con_cho}`, `theo_mon[]`, `theo_lop[]` (`ty_le_lap_day`); **lớp đầy / còn chỗ chỉ xét lớp đang `MO`** (còn nhận đăng ký). Excel 3 sheet: Tổng quan · Theo môn · Theo lớp. |
 
 **Sinh viên**
 
@@ -493,14 +493,14 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
-| GET | `/api/class-sections/my/` · `/api/class-sections/{id}/` | Lớp phụ trách; chi tiết (BR-23). |
-| GET | `/api/class-sections/{id}/students/` | Danh sách SV (GV-04). |
+| GET | `/api/class-sections/my/` · `/api/class-sections/{id}/` | Lớp phụ trách (kèm `ten_hk`, `han_nhap_diem_hieu_luc`, `diem_da_duyet`); chi tiết (BR-23: lớp của GV khác → `403 KHONG_CO_QUYEN`), kèm `tong_tin_chi`/`tin_chi_ly_thuyet`/`tin_chi_thuc_hanh`, `ngay_bat_dau_hieu_luc`/`ngay_ket_thuc_hieu_luc` (lớp chưa đặt ngày thì theo học kỳ), `tong_so_buoi`. `GET /class-sections/{id}/` chỉ mở thêm cho GV (lớp mình); `GET /class-sections/` vẫn chỉ PĐT/KT. |
+| GET | `/api/class-sections/{id}/students/` | Danh sách SV `DA_DANG_KY` của lớp mình, theo mã SV (GV-04): `{lop_hoc_phan, si_so, si_so_toi_da, records[{sinh_vien, ma_sv, ho_ten, nganh_ten}]}`. |
 | GET/PUT | `/api/attendance/sessions/{id}/records/` | Xem / **lưu cả lớp** (GV-07/08): PUT phải gửi đúng danh sách SV đang đăng ký; GET kèm tỷ lệ vắng + cờ cảnh báo từng SV (BR-20). PĐT xem được, không PUT. |
 | PATCH | `/api/attendance/requests/{id}/` | GV (lớp mình) duyệt / từ chối yêu cầu sửa điểm danh của SV (GV-08). |
 | GET | `/api/attendance/sessions/?lop_hoc_phan=` | Danh sách buổi sinh sẵn của lớp + tổng số buổi (GV-06, GV-09). Không có endpoint tạo buổi. |
 | GET/PUT | `/api/class-sections/{id}/grades/` | Xem / **nhập cả lớp** (upsert `NHAP_TAM`, GV-10); PUT nhận danh sách một phần (SV nào gửi mới ghi). GET kèm cờ `co_the_nhap/khoa/mo_khoa/duyet`, `han_nhap_diem`. PĐT dùng PUT này để nhập hộ (lưu thẳng `CHINH_THUC`). Tổng kết: QT NULL coi như 0 (BR-10). |
 | POST | `/api/class-sections/{id}/grades/lock/` | Body `{action: "lock" \| "unlock"}` cả lớp (BR-14). |
-| GET | `/api/class-sections/{id}/export/` | Excel (GV-12). |
+| GET | `/api/class-sections/{id}/export/` | Excel (GV-12), chỉ GV lớp đó. 3 sheet: Danh sách SV · Bảng điểm (mọi trạng thái điểm, "Chưa nhập" nếu chưa có) · Điểm danh (ma trận SV × buổi: x có mặt, T đi trễ, P vắng có phép, V vắng không phép; kèm vắng KP, vắng có phép, tỷ lệ vắng BR-20). |
 
 **Kế toán**
 
@@ -511,7 +511,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/tuition/calculate/` | Tính lại hàng loạt theo `?hoc_ky=` (KT-06). |
 | POST | `/api/tuition/payments/` | Ghi `THU`/`HOAN` (BR-26). Hỗ trợ `Idempotency-Key`. |
 | GET | `/api/tuition/payments/{id}/receipt/` | Biên lai Excel (KT-10). |
-| GET | `/api/reports/finance/` · `/api/reports/finance/export/` | KT-11. |
+| GET | `/api/reports/finance/` · `/api/reports/finance/export/` | KT-11. Cùng bộ lọc với `GET /api/tuition/` (`hoc_ky`, `nganh`, `lop_hoc_phan`, `sinh_vien`). Trả `tong{phai_thu, da_thu, con_no, cho_hoan, so_sinh_vien, so_chua_tinh, so_con_no, so_qua_han, so_cho_hoan}` và `theo_nganh[{nganh_ma, nganh_ten, phai_thu, da_thu}]`; mọi số là tổng từng SV (phải thu = Σ phải nộp, đã thu = Σ thu − hoàn) nên khớp bảng chi tiết, tiền là chuỗi. Bảng chi tiết từng SV dùng `GET /api/tuition/` với cùng bộ lọc. Excel 3 sheet: Tổng hợp · Theo ngành · Chi tiết theo sinh viên. |
 
 ### 8.2. Thông số chung
 
@@ -522,7 +522,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | JWT | Access 60 phút, refresh 7 ngày, rotate + blacklist. Trên Web token nằm trong storage của trình duyệt (chấp nhận rủi ro XSS cho đồ án). |
 | `?hoc_ky=` mặc định | Học kỳ chứa ngày hiện tại → học kỳ `MO` gần nhất → `400`. |
 | Lọc / sắp xếp | `django-filter`: mỗi ViewSet khai báo `filterset_fields`, `search_fields`, `ordering_fields` tường minh (mặc định `-id`). |
-| Xuất file | Excel (`openpyxl`) qua `?format=xlsx`; một registry `core/export.py`. |
+| Xuất file | Excel (`openpyxl`) qua endpoint `…/export/` (không dùng `?format=`); hàm chung `core/export.py` (tiêu đề đậm, cột vừa nội dung, nhiều sheet). Giao diện không xuất PDF. |
 | CORS | Dev: `CORS_ALLOWED_ORIGIN_REGEXES = [r"^http://localhost:\d+$"]` (không dùng `localhost:*` — không hợp lệ); prod: danh sách origin tường minh. |
 
 ### 8.3. Idempotency (chỉ 2 endpoint)
@@ -923,3 +923,4 @@ Pha 3 làm theo cặp để không trượt nếu một người nghỉ.
 | **v3.7** (2026-10-10) | **Trần tín chỉ do PĐT cấu hình theo từng học kỳ** (đặt trên `Semester`, thay cho `SystemConfig`; Admin không còn cấu hình mục này) — đảo lại quyết định gỡ ở v3.0. `Course` thêm `khoa_bo_mon`; bộ lọc liên động ở màn PĐT: ngành → môn, môn → giáo viên cùng khoa. Học kỳ phụ gọi là "Học kỳ 3". |
 | **v3.8** (2026-10-10) | Thêm thực thể **Faculty (khoa/viện)** do **PĐT** quản lý (route `/pdt/faculties`, API `/api/faculties/`): `Major`, `TeacherProfile`, `Course` trỏ tới Faculty qua FK `khoa` (thay cho chuỗi `khoa_bo_mon`); ngừng khoa/viện chỉ khi không còn ngành/giáo viên hoạt động. Đổi tên hiển thị "khoa / bộ môn" → "khoa / viện". 25 → 26 thực thể. |
 | **v3.9** (2026-10-11) | Điểm danh: "Đi trễ" là lựa chọn thứ hai trong nhóm 4 nút (không còn công tắc riêng), vì đi trễ nghĩa là có mặt; BR-19 ghi rõ `di_tre` chỉ hợp lệ khi `CO_MAT`. |
+| **v3.10** (2026-10-14) | Pha 9 — báo cáo & xuất Excel: `reports/training`, `reports/finance` (+ `/export/`), GV `class-sections/{id}/` · `students/` · `export/`; `tuition/` lọc thêm `?sinh_vien=` và trả `nganh_ma`; `class-sections/my/` thêm `ten_hk`, `han_nhap_diem_hieu_luc`, `diem_da_duyet`. Làm rõ: "lớp đầy / còn chỗ" chỉ xét lớp đang `MO`; "số sinh viên" đếm SV khác nhau (mockup ghi "ước tính"). Màn Flutter: `/pdt/reports`, `/accountant/reports`, `/teacher/classes` (App: chi tiết lớp 3 tab, lịch dạy cá nhân ở TKB). |

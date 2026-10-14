@@ -1,6 +1,6 @@
 # CHECKLIST TRIỂN KHAI — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-> **Nguồn:** `plan.md` v3.9 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
+> **Nguồn:** `plan.md` v3.10 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
 > mỗi dòng trỏ về mục/BR trong plan. Có chỗ lệch giữa hai file ⇒ plan thắng, sửa checklist.
 > **Cách dùng:** tick `[x]` khi xong; mỗi pha phải đạt **Milestone + DoD** (mục 10) mới sang pha sau.
 > **Thời lượng:** ~10–11 tuần cho đội 4–5 người (plan mục 12).
@@ -165,10 +165,12 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [ ] Bước chọn môn: bộ lọc *Theo CTĐT + kỳ* và *Môn chưa học* (kết hợp được) (ghép `curriculums/my`) + chọn *giáo viên mong muốn* từng môn (điểm +8 / −10)
 - [ ] **Milestone:** gợi ý được ≤ 3 tổ hợp hợp lệ
 
-**Pha 9 — Báo cáo & Excel (0.5–1 tuần)**
-- [ ] `core/export.py` (`openpyxl`, `?format=xlsx`) · báo cáo đào tạo + tài chính · xuất đăng ký / lớp / biên lai
-- [ ] Flutter: PĐT/KT xem báo cáo, xuất file
-- [ ] **Milestone:** báo cáo đúng, tải được file
+**Pha 9 — Báo cáo & Excel (0.5–1 tuần) ✅**
+- [x] `core/export.py` (`openpyxl`, nhiều sheet, endpoint `…/export/`) · `reports/training` + `reports/finance` (+ `/export/`) · GV `class-sections/{id}/export/` (đã có từ trước: xuất đăng ký, biên lai)
+- [x] GV-04: `class-sections/{id}/` (chỉ lớp mình, `403` lớp khác) + `class-sections/{id}/students/`; `class-sections/my/` thêm `ten_hk`, `han_nhap_diem_hieu_luc`, `diem_da_duyet`; `tuition/` lọc `?sinh_vien=`, trả `nganh_ma`
+- [x] Flutter: PĐT `/pdt/reports` (thẻ, 2 biểu đồ, bảng sắp xếp được, Xuất Excel) · KT `/accountant/reports` (4 thẻ, theo ngành, bảng từng SV, Xuất Excel) · GV `/teacher/classes` (danh sách lớp, chi tiết 4 tab / App 3 tab, Xuất Excel, lối tắt `?lop=` sang Điểm danh / Nhập điểm)
+- [x] **Milestone:** báo cáo đúng (tổng khớp từng SV), tải được file *(đã chạy trên API thật + giao diện Web/App so với mockup)*
+- [x] _Hạn chế:_ chỉ GV xuất Excel lớp (PĐT đã có tab đăng ký trong chi tiết lớp); tổng quan `/pdt`, `/accountant`, `/teacher` (banner, thẻ tổng) chưa làm — không nằm trong phạm vi Pha 9
 
 **Pha 10 — Hoàn thiện (1 tuần)**
 - [ ] Backup: `POST/GET /admin/backups/` (tạo + liệt kê file ở `BACKUP_DIR`, không restore) · job `backup_daily`
@@ -263,17 +265,17 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 **PĐT:** [ ] profiles/students · [ ] profiles/teachers · [x] faculties · [x] majors · [x] curriculums · [x] curriculum-courses ·
 [x] courses · [x] prerequisites · [x] semesters (+ open/close/window) · [x] class-sections (+ open/close/grade-deadline) ·
 [x] schedules · [x] registrations (GET/DELETE/export) · [x] attendance/sessions (xem) ·
-[x] class-sections/{id}/grades/approve · [ ] reports/training (+ export)
+[x] class-sections/{id}/grades/approve · [x] reports/training (+ export)
 
 **SV:** [x] curriculums/my · [x] courses/available · [ ] auto-schedule/available-courses · [x] registrations (POST/DELETE) ·
 [x] registrations/history · [x] timetable/my · [x] attendance/my · [x] attendance/requests (GET/POST) · [x] grades/my · [x] tuition/my
 
-**GV:** [x] class-sections/my · [ ] class-sections/{id} · [ ] class-sections/{id}/students ·
+**GV:** [x] class-sections/my · [x] class-sections/{id} · [x] class-sections/{id}/students ·
 [x] attendance/sessions (GET, sinh sẵn) · [x] attendance/sessions/{id}/records (GET/PUT) · [x] attendance/requests (GET/PATCH, chỉ lớp mình) ·
-[x] class-sections/{id}/grades (GET/PUT) · [x] class-sections/{id}/grades/lock · [ ] class-sections/{id}/export
+[x] class-sections/{id}/grades (GET/PUT) · [x] class-sections/{id}/grades/lock · [x] class-sections/{id}/export
 
 **KT:** [x] tuition/config · [x] tuition/pricing · [x] tuition/discounts · [x] tuition (GET) · [x] tuition/calculate ·
-[x] tuition/payments · [x] tuition/debts · [x] tuition/payments/{id}/receipt · [ ] reports/finance (+ export)
+[x] tuition/payments · [x] tuition/debts · [x] tuition/payments/{id}/receipt · [x] reports/finance (+ export)
 
 ## 14. TEST BẮT BUỘC (plan mục 13)
 
@@ -313,4 +315,4 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 ---
 
-*Tạo từ `plan.md` v3.9 (cập nhật 2026-10-11). Cập nhật khi plan đổi.*
+*Tạo từ `plan.md` v3.10 (cập nhật 2026-10-14). Cập nhật khi plan đổi.*

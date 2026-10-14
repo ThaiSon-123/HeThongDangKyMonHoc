@@ -175,6 +175,7 @@ class TuitionRowSerializer(serializers.Serializer):
     sinh_vien = serializers.IntegerField()
     ma_sv = serializers.CharField()
     ho_ten = serializers.CharField()
+    nganh_ma = serializers.CharField()
     nganh_ten = serializers.CharField()
     hoc_ky = serializers.IntegerField()
     ten_hk = serializers.CharField()

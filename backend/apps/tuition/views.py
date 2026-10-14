@@ -42,6 +42,7 @@ from core.export import XLSX, xlsx_response
 from core.mixins import AuditLogMixin, write_audit
 from core.pagination import StandardPagination
 from core.permissions import IsKeToan, IsSinhVien
+from core.utils import int_param
 
 HOC_KY = OpenApiParameter("hoc_ky", int, description="Mặc định: học kỳ hiện tại / `MO` gần nhất")
 
@@ -98,6 +99,7 @@ def _hang(t, discounts, han, hom_nay, chi_tiet=None, payments=None):
         "sinh_vien": t.sinh_vien_id,
         "ma_sv": ho_so.ma_sv if ho_so else "",
         "ho_ten": ho_so.ho_ten if ho_so else "",
+        "nganh_ma": ho_so.nganh.ma_nganh if ho_so else "",
         "nganh_ten": ho_so.nganh.ten_nganh if ho_so else "",
         "hoc_ky": t.hoc_ky_id,
         "ten_hk": t.hoc_ky.ten_hk,
@@ -121,11 +123,13 @@ def _tuition_qs(request, hoc_ky):
         .prefetch_related("payments")
     )
     p = request.query_params
-    if p.get("nganh"):
-        qs = qs.filter(sinh_vien__sinh_vien__nganh=p["nganh"])
-    if p.get("lop_hoc_phan"):
+    if nganh := int_param(request, "nganh"):
+        qs = qs.filter(sinh_vien__sinh_vien__nganh=nganh)
+    if sinh_vien := int_param(request, "sinh_vien"):
+        qs = qs.filter(sinh_vien=sinh_vien)
+    if lop := int_param(request, "lop_hoc_phan"):
         qs = qs.filter(
-            sinh_vien__dang_ky__lop_hoc_phan=p["lop_hoc_phan"],
+            sinh_vien__dang_ky__lop_hoc_phan=lop,
             sinh_vien__dang_ky__trang_thai=TrangThaiDangKy.DA_DANG_KY,
         )
     if p.get("search"):
@@ -156,6 +160,7 @@ LIST_PARAMS = [
     HOC_KY,
     OpenApiParameter("nganh", int),
     OpenApiParameter("lop_hoc_phan", int),
+    OpenApiParameter("sinh_vien", int),
     OpenApiParameter("search", str),
     OpenApiParameter("hien_thi", str, description="CHUA_TINH | CON_NO | CHO_HOAN_TIEN | DA_DONG"),
     OpenApiParameter("page", int),
@@ -393,6 +398,7 @@ def _hang_chua_co(t, ds, hoc_ky, ho_so):
         "sinh_vien": t.sinh_vien_id,
         "ma_sv": ho_so.ma_sv,
         "ho_ten": ho_so.ho_ten,
+        "nganh_ma": ho_so.nganh.ma_nganh,
         "nganh_ten": ho_so.nganh.ten_nganh,
         "hoc_ky": hoc_ky.id,
         "ten_hk": hoc_ky.ten_hk,
