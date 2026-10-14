@@ -108,6 +108,10 @@ class TrainingApi {
   Future<Json> update(String path, Object id, Json body) =>
       _guard(() async => _json(await _dio.patch('$path$id/', data: body)));
 
+  /// `PATCH` thẳng vào [path] (không kèm id) — vd cấu hình hệ thống.
+  Future<Json> patch(String path, Json body) =>
+      _guard(() async => _json(await _dio.patch(path, data: body)));
+
   Future<Json> put(String path, Json body) =>
       _guard(() async => _json(await _dio.put(path, data: body)));
 
