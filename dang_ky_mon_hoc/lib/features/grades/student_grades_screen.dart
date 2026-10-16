@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
@@ -123,56 +124,110 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
             ],
           ),
           const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columnSpacing: 20,
-              headingRowHeight: 36,
-              dataRowMinHeight: 36,
-              dataRowMaxHeight: 40,
-              columns: const [
-                DataColumn(label: Text('Mã môn')),
-                DataColumn(label: Text('Tên môn')),
-                DataColumn(label: Text('TC')),
-                DataColumn(label: Text('QT')),
-                DataColumn(label: Text('GK')),
-                DataColumn(label: Text('CK')),
-                DataColumn(label: Text('Tổng kết')),
-                DataColumn(label: Text('Chữ')),
-                DataColumn(label: Text('Hệ 4')),
-              ],
-              rows: [
-                for (final g in rows)
-                  DataRow(
-                    cells: [
-                      DataCell(Text(g.str('ma_mon'))),
-                      DataCell(Text(g.str('ten_mon'))),
-                      DataCell(Text(_d(g['tin_chi']))),
-                      DataCell(Text(_d(g['diem_qua_trinh']))),
-                      DataCell(Text(_d(g['diem_giua_ky']))),
-                      DataCell(Text(_d(g['diem_cuoi_ky']))),
-                      DataCell(Text(_d(g['diem_tong_ket']))),
-                      DataCell(
-                        g.str('diem_chu') == 'F'
-                            ? StatusChip.of('F', StatusChip.red)
-                            : Text(
-                                g.str('diem_chu'),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+          if (isCompact(context))
+            for (final g in rows) _theMon(g)
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columnSpacing: 20,
+                headingRowHeight: 36,
+                dataRowMinHeight: 36,
+                dataRowMaxHeight: 40,
+                columns: const [
+                  DataColumn(label: Text('Mã môn')),
+                  DataColumn(label: Text('Tên môn')),
+                  DataColumn(label: Text('TC')),
+                  DataColumn(label: Text('QT')),
+                  DataColumn(label: Text('GK')),
+                  DataColumn(label: Text('CK')),
+                  DataColumn(label: Text('Tổng kết')),
+                  DataColumn(label: Text('Chữ')),
+                  DataColumn(label: Text('Hệ 4')),
+                ],
+                rows: [
+                  for (final g in rows)
+                    DataRow(
+                      cells: [
+                        DataCell(Text(g.str('ma_mon'))),
+                        DataCell(Text(g.str('ten_mon'))),
+                        DataCell(Text(_d(g['tin_chi']))),
+                        DataCell(Text(_d(g['diem_qua_trinh']))),
+                        DataCell(Text(_d(g['diem_giua_ky']))),
+                        DataCell(Text(_d(g['diem_cuoi_ky']))),
+                        DataCell(Text(_d(g['diem_tong_ket']))),
+                        DataCell(
+                          g.str('diem_chu') == 'F'
+                              ? StatusChip.of('F', StatusChip.red)
+                              : Text(
+                                  g.str('diem_chu'),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                      ),
-                      DataCell(Text(_d(g['gpa_thang_4']))),
-                    ],
-                  ),
-              ],
+                        ),
+                        DataCell(Text(_d(g['gpa_thang_4']))),
+                      ],
+                    ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     ),
   );
 }
+
+/// App: mỗi môn một thẻ (bảng 9 cột không vừa màn điện thoại): tên + mã · TC, QT/GK/CK, tổng kết + chữ.
+Widget _theMon(Json g) => Container(
+  padding: const EdgeInsets.symmetric(vertical: 10),
+  decoration: const BoxDecoration(
+    border: Border(top: BorderSide(color: AppColors.divider)),
+  ),
+  child: Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              g.str('ten_mon'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            Text(
+              '${g.str('ma_mon')} · ${_d(g['tin_chi'])} TC',
+              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'QT ${_d(g['diem_qua_trinh'])} · GK ${_d(g['diem_giua_ky'])} · CK ${_d(g['diem_cuoi_ky'])}',
+              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+          ],
+        ),
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            _d(g['diem_tong_ket']),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          g.str('diem_chu') == 'F'
+              ? StatusChip.of('F', StatusChip.red)
+              : Text(
+                  '${g.str('diem_chu')}${g['gpa_thang_4'] == null ? '' : ' · ${g['gpa_thang_4']}'}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+        ],
+      ),
+    ],
+  ),
+);
 
 class _Stat extends StatelessWidget {
   const _Stat(this.label, this.value);

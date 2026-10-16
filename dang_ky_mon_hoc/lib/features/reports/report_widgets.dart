@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_failure.dart';
 import '../../core/download/save_file_provider.dart';
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/app_toast.dart';
 import '../admin/accounts/account_dialogs.dart' show failureText;
@@ -52,7 +53,7 @@ class StatCard extends StatelessWidget {
     this.note,
     this.accent,
     this.valueColor,
-    this.width = 200,
+    this.width,
   });
 
   final String label;
@@ -60,11 +61,13 @@ class StatCard extends StatelessWidget {
   final String? note;
   final Color? accent;
   final Color? valueColor;
-  final double width;
+
+  /// Mặc định: 200 trên Web, nửa bề ngang (2 thẻ/hàng) trên điện thoại.
+  final double? width;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: width,
+    width: width ?? (isCompact(context) ? soCot2(context, 16) : 200),
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
       color: Colors.white,
@@ -82,12 +85,18 @@ class StatCard extends StatelessWidget {
           style: const TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         const SizedBox(height: 6),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: valueColor ?? AppColors.navy,
+        // Số tiền dài (vd 40.970.000 ₫) thu nhỏ vừa thẻ thay vì xuống dòng.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: valueColor ?? AppColors.navy,
+            ),
           ),
         ),
         if (note != null) ...[
@@ -100,6 +109,65 @@ class StatCard extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Lưới thẻ số liệu: xếp hàng theo bề rộng từng thẻ (điện thoại: 2 thẻ/hàng, chia đều) và
+/// kéo mọi thẻ trong một hàng cao bằng nhau dù ghi chú dài ngắn khác nhau.
+class LuoiStat extends StatelessWidget {
+  const LuoiStat({super.key, required this.children});
+
+  final List<Widget> children;
+
+  static const _khoang = 16.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = isCompact(context);
+    return LayoutBuilder(
+      builder: (context, c) {
+        final hang = <List<Widget>>[];
+        var dong = <Widget>[];
+        var rong = 0.0;
+        for (final w in children) {
+          final cua = w is StatCard ? (w.width ?? 200) : 200.0;
+          final can = dong.isEmpty ? cua : rong + _khoang + cua;
+          if (dong.isNotEmpty &&
+              (compact ? dong.length == 2 : can > c.maxWidth)) {
+            hang.add(dong);
+            dong = [];
+            rong = 0;
+          }
+          rong = dong.isEmpty ? cua : rong + _khoang + cua;
+          dong.add(w);
+        }
+        if (dong.isNotEmpty) hang.add(dong);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final (i, h) in hang.indexed) ...[
+              if (i > 0) const SizedBox(height: _khoang),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: compact ? MainAxisSize.max : MainAxisSize.min,
+                  children: [
+                    for (final (j, w) in h.indexed) ...[
+                      if (j > 0) const SizedBox(width: _khoang),
+                      if (compact) Expanded(child: w) else w,
+                    ],
+                    if (compact && h.length == 1) ...[
+                      const SizedBox(width: _khoang),
+                      const Expanded(child: SizedBox.shrink()),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
 }
 
 /// Một dòng biểu đồ cột ngang: nhãn · thanh ([fraction] 0..1) · giá trị.

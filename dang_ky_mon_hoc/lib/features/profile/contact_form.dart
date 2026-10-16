@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_failure.dart';
 import '../../core/auth/auth_repository.dart';
+import '../../core/layout.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_toast.dart';
@@ -112,7 +113,9 @@ class _ContactFormState extends ConsumerState<ContactForm> {
         Align(
           alignment: Alignment.centerRight,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 220),
+            constraints: BoxConstraints(
+              maxWidth: isCompact(context) ? double.infinity : 220,
+            ),
             child: AppButton(
               label: 'Lưu thay đổi',
               height: 48,

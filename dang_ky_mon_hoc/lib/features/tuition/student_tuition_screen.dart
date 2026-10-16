@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../core/layout.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
@@ -396,6 +397,9 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
                       Wrap(
                         spacing: 24,
                         runSpacing: 16,
+                        alignment: isCompact(context)
+                            ? WrapAlignment.center
+                            : WrapAlignment.start,
                         children: [
                           Semantics(
                             label: 'Mã QR chuyển khoản',
@@ -446,30 +450,35 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
     },
   );
 
-  Widget _copyRow(String k, String v, {String? hien}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 110,
-          child: Text(
-            k,
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+  Widget _copyRow(String k, String v, {String? hien}) {
+    final compact = isCompact(context);
+    final gia = Text(
+      hien ?? v,
+      style: const TextStyle(fontWeight: FontWeight.w600),
+    );
+    // Điện thoại: giá trị chiếm phần còn lại của hàng (tự xuống dòng) để nút Sao chép không tràn.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisSize: compact ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: compact ? 92 : 110,
+            child: Text(
+              k,
+              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
           ),
-        ),
-        SizedBox(
-          width: 200,
-          child: Text(
-            hien ?? v,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+          if (compact)
+            Expanded(child: gia)
+          else
+            SizedBox(width: 200, child: gia),
+          TextButton(
+            onPressed: () => _copy(k.toLowerCase(), v),
+            child: const Text('Sao chép'),
           ),
-        ),
-        TextButton(
-          onPressed: () => _copy(k.toLowerCase(), v),
-          child: const Text('Sao chép'),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }

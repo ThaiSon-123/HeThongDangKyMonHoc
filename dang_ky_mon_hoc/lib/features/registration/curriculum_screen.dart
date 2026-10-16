@@ -5,7 +5,7 @@ import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/status_chip.dart';
-import '../reports/report_widgets.dart' show StatCard;
+import '../reports/report_widgets.dart' show LuoiStat, StatCard;
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
 import '../training/training_widgets.dart';
@@ -269,9 +269,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
+        LuoiStat(
           children: [
             StatCard(
               label: 'Tổng số môn',
@@ -307,9 +305,10 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
       children: [
         const Text('Phân bổ theo khối kiến thức', style: sectionTitleStyle),
         const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
+        LayoutBuilder(
+          builder: (context, box) => Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
               for (final (ma, nhan) in _khoi)
                 () {
@@ -319,8 +318,10 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
                       .fold<int>(0, (s, m) => s + m.tinChi);
                   final tong = trongKhoi.fold<int>(0, (s, m) => s + m.tinChi);
                   return Container(
-                    width: 170,
-                    margin: const EdgeInsets.only(right: 12),
+                    // Điện thoại: 2 ô/hàng vừa khung; Web: ô cố định 170.
+                    width: isCompact(context)
+                        ? (box.maxWidth - 12) / 2 - 0.5
+                        : 170,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF4F5FA),

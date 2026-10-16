@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_failure.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/app_button.dart';
 import '../training/training_api.dart';
@@ -145,6 +146,10 @@ class KhoiTongQuan extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 40),
+              ),
               onPressed: () => context.go(duongDan!),
               child: Text('$lienKet ›'),
             ),
@@ -167,7 +172,7 @@ class LoiTat extends StatelessWidget {
     children: [
       for (final (nhan, duong) in muc)
         SizedBox(
-          width: 170,
+          width: isCompact(context) ? soCot2(context, 12) : 170,
           child: AppButton(
             label: nhan,
             height: 44,

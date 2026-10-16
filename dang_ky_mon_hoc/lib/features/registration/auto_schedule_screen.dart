@@ -993,13 +993,15 @@ class _Stepper extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            n,
-            style: TextStyle(
-              fontWeight: i == buoc ? FontWeight.w700 : FontWeight.w500,
-              color: i == buoc ? AppColors.navy : AppColors.muted,
+          // Điện thoại chỉ hiện nhãn của bước đang làm, các bước khác chỉ còn số — vừa một hàng.
+          if (!isCompact(context) || i == buoc)
+            Text(
+              n,
+              style: TextStyle(
+                fontWeight: i == buoc ? FontWeight.w700 : FontWeight.w500,
+                color: i == buoc ? AppColors.navy : AppColors.muted,
+              ),
             ),
-          ),
           if (i < nhan.length - 1)
             const Text('›', style: TextStyle(color: AppColors.muted)),
         ],

@@ -5,7 +5,7 @@ import '../../core/api/page_result.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
 import '../registration/timetable_screen.dart' show clockProvider;
-import '../reports/report_widgets.dart' show StatCard;
+import '../reports/report_widgets.dart' show LuoiStat, StatCard;
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
 import '../tuition/money.dart';
@@ -100,22 +100,18 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                   '${hs.str('ma_sv')} · $nganh · ${hs.str('khoa_nhap_hoc')} · ${ngayDayDu(now)}',
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
+            LuoiStat(
               children: [
                 StatCard(
                   label: 'Tín chỉ đã đăng ký',
                   value: '$tinChi',
                   note: d.tkb.str('ten_hk'),
-                  width: 220,
                 ),
                 StatCard(
                   label: 'GPA tích lũy',
                   value: gpa.isEmpty ? 'Chưa có' : gpa,
                   note:
                       '${hs.num0('tin_chi_tich_luy')} tín chỉ tích lũy${hs.str('xep_loai').isEmpty ? '' : ' · ${hs.str('xep_loai')}'}',
-                  width: 220,
                 ),
                 StatCard(
                   label: 'Cảnh báo vắng',
@@ -124,7 +120,6 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                       ? 'Không có môn nguy cơ cấm thi'
                       : '${canhBao.first.str('ten_mon')} — nguy cơ cấm thi',
                   valueColor: canhBao.isEmpty ? null : AppColors.danger,
-                  width: 220,
                 ),
                 StatCard(
                   label: 'Học phí còn nợ',
@@ -140,7 +135,6 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                       : canHoan > 0
                       ? const Color(0xFFB26A00)
                       : null,
-                  width: 220,
                 ),
               ],
             ),
@@ -212,7 +206,9 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
             ),
             const SizedBox(height: 16),
             const LoiTat([
-              ('Đăng ký môn học', '/student/register'),
+              ('Đăng ký môn', '/student/register'),
+              ('Tạo TKB tự động', '/student/auto-schedule'),
+              ('CTĐT của tôi', '/student/curriculum'),
               ('Xem điểm', '/student/grades'),
               ('Điểm danh', '/student/attendance'),
               ('Học phí', '/student/tuition'),

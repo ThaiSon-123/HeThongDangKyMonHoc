@@ -7,7 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
 import '../registration/timetable_screen.dart' show clockProvider;
-import '../reports/report_widgets.dart' show BarRow, StatCard;
+import '../reports/report_widgets.dart' show BarRow, LuoiStat, StatCard;
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
 import '../training/training_widgets.dart' show PanelCard, sectionTitleStyle;
@@ -99,9 +99,7 @@ class _AccountantDashboardState extends ConsumerState<AccountantDashboard> {
               phu: '${d.str('ten_hk')} · ${ngayDayDu(now)}',
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
+            LuoiStat(
               children: [
                 StatCard(
                   label: 'Phải thu',

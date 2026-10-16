@@ -40,7 +40,7 @@ class AppButton extends StatelessWidget {
               color: outlined ? AppColors.primary : Colors.white,
             ),
           )
-        : Text(label);
+        : FittedBox(fit: BoxFit.scaleDown, child: Text(label, maxLines: 1));
     final onTap = loading ? null : onPressed;
     return SizedBox(
       height: h,

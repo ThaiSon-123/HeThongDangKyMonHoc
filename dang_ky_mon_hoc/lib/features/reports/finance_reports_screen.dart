@@ -223,9 +223,7 @@ class _Summary extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
+        LuoiStat(
           children: [
             StatCard(
               width: 260,

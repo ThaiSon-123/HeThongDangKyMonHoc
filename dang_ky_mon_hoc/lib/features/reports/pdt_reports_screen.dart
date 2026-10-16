@@ -210,9 +210,7 @@ class _Body extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
+        LuoiStat(
           children: [
             StatCard(
               label: 'Số sinh viên',

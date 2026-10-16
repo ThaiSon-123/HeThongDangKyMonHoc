@@ -205,16 +205,24 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
         ),
         const SizedBox(height: 16),
         for (final i in widget.items) ...[
-          LabeledField(
-            label: _truong[i.str('khoa')]?.$1 ?? i.str('khoa'),
-            controller: _ctl[i.str('khoa')]!,
-            helper: [
-              ?_truong[i.str('khoa')]?.$2,
-              if (i.str('mac_dinh').isNotEmpty)
-                'Mặc định ${i.str('mac_dinh')}.',
-            ].join(' '),
-            hint: i.str('khoa') == 'ck_ngan_hang' ? 'VD: Vietcombank' : null,
-            error: _errors[i.str('khoa')],
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: LabeledField(
+                label: _truong[i.str('khoa')]?.$1 ?? i.str('khoa'),
+                controller: _ctl[i.str('khoa')]!,
+                helper: [
+                  ?_truong[i.str('khoa')]?.$2,
+                  if (i.str('mac_dinh').isNotEmpty)
+                    'Mặc định ${i.str('mac_dinh')}.',
+                ].join(' '),
+                hint: i.str('khoa') == 'ck_ngan_hang'
+                    ? 'VD: Vietcombank'
+                    : null,
+                error: _errors[i.str('khoa')],
+              ),
+            ),
           ),
           const SizedBox(height: 12),
         ],

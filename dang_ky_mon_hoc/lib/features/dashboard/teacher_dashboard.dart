@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../registration/registration_format.dart' show thuText;
 import '../registration/timetable_screen.dart' show clockProvider;
-import '../reports/report_widgets.dart' show StatCard;
+import '../reports/report_widgets.dart' show LuoiStat, StatCard;
 import '../teacher/teacher_classes_screen.dart' show hanNhapDiemInfo;
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
@@ -138,15 +139,12 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               ),
             ],
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
+            LuoiStat(
               children: [
                 StatCard(
                   label: 'Lớp đang dạy',
                   value: '${dang.length}',
                   note: 'Trạng thái Đang học',
-                  width: 220,
                 ),
                 StatCard(
                   label: 'Sinh viên đang dạy',
@@ -155,7 +153,6 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   note: dang.isEmpty
                       ? null
                       : '${dang.map((l) => l.num0('si_so_hien_tai')).join(' + ')} sinh viên',
-                  width: 220,
                 ),
                 StatCard(
                   label: 'Lớp cần xử lý',
@@ -164,14 +161,12 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                       ? 'Không có lớp nào sắp hết hạn'
                       : '${canXuLy.length - quaHan} sắp đến hạn · $quaHan quá hạn nhập điểm',
                   valueColor: quaHan > 0 ? AppColors.danger : null,
-                  width: 220,
                 ),
                 StatCard(
                   label: 'Buổi điểm danh tuần này',
                   value: '${d.tuanNay.length}',
                   note:
                       'Đã chốt $dacChot · Còn mở ${d.tuanNay.length - dacChot}',
-                  width: 220,
                 ),
               ],
             ),
@@ -227,7 +222,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
     final (han, mau) = hanNhapDiemInfo(l.str('han_nhap_diem_hieu_luc'), now);
     final lich = [
       for (final b in (l['lich_hoc'] as List))
-        '${thuText((b as Map)['thu'] as int)} T${b['tiet_bat_dau']}–${b['tiet_ket_thuc']}',
+        '${thuText((b as Map)['thu'] as int)} T${b['tiet_bat_dau']}-${b['tiet_ket_thuc']}',
     ].join(' · ');
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -236,13 +231,9 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
         border: Border.all(color: AppColors.divider),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 8,
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Column(
+      child: Builder(
+        builder: (context) {
+          final thongTin = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Wrap(
@@ -267,31 +258,44 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                 style: TextStyle(fontSize: 12, color: mau),
               ),
             ],
-          ),
-          Wrap(
-            spacing: 8,
-            children: [
-              SizedBox(
-                width: 120,
-                child: AppButton(
-                  label: 'Điểm danh',
-                  height: 40,
-                  outlined: true,
-                  onPressed: () =>
-                      context.go('/teacher/attendance?lop=${l.id}'),
-                ),
-              ),
-              SizedBox(
-                width: 120,
-                child: AppButton(
-                  label: 'Nhập điểm',
-                  height: 40,
-                  onPressed: () => context.go('/teacher/grades?lop=${l.id}'),
-                ),
-              ),
-            ],
-          ),
-        ],
+          );
+          Widget nut(String nhan, String duong, {bool vien = false}) {
+            final n = AppButton(
+              label: nhan,
+              height: 40,
+              outlined: vien,
+              onPressed: () => context.go('$duong?lop=${l.id}'),
+            );
+            return isCompact(context)
+                ? Expanded(child: n)
+                : SizedBox(width: 120, child: n);
+          }
+
+          final nuts = [
+            nut('Điểm danh', '/teacher/attendance', vien: true),
+            const SizedBox(width: 8),
+            nut('Nhập điểm', '/teacher/grades'),
+          ];
+          return isCompact(context)
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    thongTin,
+                    const SizedBox(height: 10),
+                    Row(children: nuts),
+                  ],
+                )
+              : Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    thongTin,
+                    Row(mainAxisSize: MainAxisSize.min, children: nuts),
+                  ],
+                );
+        },
       ),
     );
   }
