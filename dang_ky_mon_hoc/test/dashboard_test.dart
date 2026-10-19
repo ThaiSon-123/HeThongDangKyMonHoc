@@ -515,7 +515,7 @@ void main() {
             backups ??
             [
               {
-                'ten': 'hpsv_20261010_020000.dump',
+                'ten': 'hethongdangkymonhoc_20261010_020000.dump',
                 'dung_luong': 412 * 1024 * 1024,
                 'tao_luc': '2026-10-10T02:00:00+07:00',
               },
@@ -552,7 +552,7 @@ void main() {
         expect(find.text('2 tài khoản đang khóa'), findsOneWidget);
         expect(find.text('Sinh viên'), findsOneWidget);
         expect(find.text('6'), findsOneWidget);
-        expect(find.text('hpsv_20261010_020000.dump'), findsOneWidget);
+        expect(find.text('hethongdangkymonhoc_20261010_020000.dump'), findsOneWidget);
         expect(find.text('412 MB'), findsOneWidget);
         expect(find.textContaining('chưa có bản sao lưu mới'), findsNothing);
         expect(find.text('pdt01'), findsOneWidget);
@@ -567,7 +567,7 @@ void main() {
           worker: false,
           backups: [
             {
-              'ten': 'hpsv_old.dump',
+              'ten': 'hethongdangkymonhoc_old.dump',
               'dung_luong': 1024,
               'tao_luc': '2026-10-05T02:00:00+07:00',
             },

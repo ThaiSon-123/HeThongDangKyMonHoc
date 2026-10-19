@@ -450,7 +450,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET | `/api/admin/permissions/` | Ma trận quyền (**chỉ đọc**, ADM-04): `{vai_tro[], results[{nhom, quyen, <ROLE>: {co, gioi_han}}]}` — nội dung cố định trong `apps/config/matrix.py` (bản máy đọc của mục 9, có test đối chiếu hành vi thật). |
 | GET/PATCH | `/api/admin/config/` | `SystemConfig` (ADM-05): đúng 6 khóa (`max_absent_pct` 0–100 · `so_ngay_cho_phep_nhap_diem` ≥ 0 · `backup_retention_days` ≥ 1 · `ck_ngan_hang` · `ck_so_tai_khoan` chỉ số · `ck_chu_tai_khoan` chữ in hoa không dấu), trả `{items[{khoa, nhom, mo_ta, mac_dinh, gia_tri, cap_nhat_luc}], sua_lan_cuoi{boi, luc}}`. `PATCH` nhận `{khoa: giá_trị}` một phần; **một khóa sai thì không lưu khóa nào** (`400` theo field); mỗi khóa thật sự đổi ghi một audit log `UPDATE SystemConfig`. |
 | GET | `/api/admin/audit-logs/` | Admin/PĐT/KT; phạm vi do role quyết định (Admin tất cả, PĐT `training`, KT `finance`), `?scope=` chỉ thu hẹp thêm. Lọc `?hanh_dong=&doi_tuong=&nguoi_thuc_hien=&tu_ngay=&den_ngay=&search=`. |
-| GET | `/api/admin/backups/` | `{dang_chay, so_ngay_giu, results[{ten, dung_luong, tao_luc}]}` — file `hpsv_*.dump` hoàn chỉnh trong `BACKUP_DIR`, mới nhất trước; `dang_chay` = có file `.partial` mới (tối đa 10 phút). |
+| GET | `/api/admin/backups/` | `{dang_chay, so_ngay_giu, results[{ten, dung_luong, tao_luc}]}` — file `hethongdangkymonhoc_*.dump` hoàn chỉnh trong `BACKUP_DIR`, mới nhất trước; `dang_chay` = có file `.partial` mới (tối đa 10 phút). |
 | POST | `/api/admin/backups/` | Tạo backup: `202 {trang_thai: DANG_CHAY}`, chạy nền qua job `backup_daily` (`pg_dump -Fc` ghi `.partial` rồi đổi tên). Đang có bản chạy → `409 TRANG_THAI_KHONG_HOP_LE`. Ghi audit `CREATE Backup`. Không có restore / tải xuống (khôi phục tay bằng `pg_restore`). |
 
 **Phòng đào tạo**
@@ -836,7 +836,7 @@ docker-compose up -d:  web (Gunicorn :8000) · db (PostgreSQL 16) · redis · ce
 | `DEBUG` | `False` | `True` chỉ ở dev |
 | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | CSV |
 | `CORS_ALLOWED_ORIGINS` | *(rỗng)* | prod: danh sách origin; dev dùng regex `^http://localhost:\d+$` |
-| `DB_NAME`/`DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT` | `hpsv`/`postgres`/—/`db`/`5432` | |
+| `DB_NAME`/`DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT` | `hethongdangkymonhoc`/`postgres`/—/`db`/`5432` | |
 | `REDIS_URL` · `CELERY_BROKER_URL` · `CELERY_RESULT_BACKEND` | `redis://redis:6379/0·1·2` | |
 | `JWT_ACCESS_LIFETIME_MIN` · `JWT_REFRESH_LIFETIME_DAYS` | `60` · `7` | |
 | `NUM_PROXIES` | `0` (dev) · `1` (prod, sau nginx) | Số reverse proxy tin cậy. `0` = bỏ qua `X-Forwarded-For` (không lách rate limit bằng header giả). Prod **không publish cổng `web`**, chỉ nginx. |

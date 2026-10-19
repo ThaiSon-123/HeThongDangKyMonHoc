@@ -94,7 +94,7 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME", "hpsv"),
+        "NAME": env("DB_NAME", "hethongdangkymonhoc"),
         "USER": env("DB_USER", "postgres"),
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST", "db"),
@@ -224,7 +224,7 @@ EMAIL_PORT = env_int("EMAIL_PORT", 25)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@hpsv.local")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@hethongdangkymonhoc.local")
 
 # --- Backup ---
 BACKUP_DIR = Path(env("BACKUP_DIR", str(BASE_DIR / "backups")))

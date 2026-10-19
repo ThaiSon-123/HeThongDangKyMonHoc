@@ -93,7 +93,7 @@ CI (GitHub Actions) chạy đúng các bước trên cho mỗi PR.
 
 ## 4. Sao lưu, khôi phục và load test
 
-- **Sao lưu:** Admin → *Sao lưu* (hoặc tự động 02:00 mỗi ngày). File `hpsv_YYYYMMDD_HHMMSS.dump` nằm trong volume
+- **Sao lưu:** Admin → *Sao lưu* (hoặc tự động 02:00 mỗi ngày). File `hethongdangkymonhoc_YYYYMMDD_HHMMSS.dump` nằm trong volume
   `backups` (`/backups` trong container), giữ `backup_retention_days` ngày (Admin → *Cấu hình*).
 - **Khôi phục (làm tay, giao diện không có nút này):**
 

@@ -150,7 +150,7 @@ def cap_nhat_cau_hinh(du_lieu):
 
 # ----------------------------------------------------------------- sao lưu (ADM-08)
 
-MAU_FILE = "hpsv_*.dump"
+MAU_FILE = "hethongdangkymonhoc_*.dump"
 HET_GIO_PG_DUMP = 600  # giây; cũng là thời gian tối đa một file `.partial` còn coi là "đang chạy"
 
 
@@ -198,7 +198,7 @@ def tao_backup(now: datetime | None = None) -> str:
     db = cau_hinh_db()
     if "postgresql" not in db["ENGINE"]:
         raise BackupError("Chỉ sao lưu được khi dùng PostgreSQL.")
-    ten = f"hpsv_{timezone.localtime(now):%Y%m%d_%H%M%S}.dump"
+    ten = f"hethongdangkymonhoc_{timezone.localtime(now):%Y%m%d_%H%M%S}.dump"
     dich = thu_muc_backup() / ten
     tam = dich.with_name(ten + ".partial")
     lenh = [

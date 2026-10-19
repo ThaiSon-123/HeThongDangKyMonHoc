@@ -276,12 +276,12 @@ void main() {
           f ??
           [
             file(
-              'hpsv_20270112_020000.dump',
+              'hethongdangkymonhoc_20270112_020000.dump',
               '2027-01-12T02:00:00+07:00',
               412 * 1024 * 1024,
             ),
             file(
-              'hpsv_20270111_020000.dump',
+              'hethongdangkymonhoc_20270111_020000.dump',
               '2027-01-11T02:00:00+07:00',
               409 * 1024 * 1024,
             ),
@@ -302,7 +302,7 @@ void main() {
         ); // thẻ + dòng đầu bảng
         expect(find.text('02:00 hằng ngày'), findsOneWidget);
         expect(find.text('Giữ các bản sao lưu trong 14 ngày'), findsOneWidget);
-        expect(find.text('hpsv_20270111_020000.dump'), findsOneWidget);
+        expect(find.text('hethongdangkymonhoc_20270111_020000.dump'), findsOneWidget);
         expect(find.text('409 MB'), findsOneWidget);
         expect(find.text('2 bản ghi'), findsOneWidget);
         expect(find.textContaining('chưa có bản sao lưu mới'), findsNothing);
@@ -324,7 +324,7 @@ void main() {
             ds(
               f: [
                 file(
-                  'hpsv_20270108_020000.dump',
+                  'hethongdangkymonhoc_20270108_020000.dump',
                   '2027-01-08T02:00:00+07:00',
                   1024,
                 ),
@@ -361,7 +361,7 @@ void main() {
               : ds(
                   f: [
                     file(
-                      'hpsv_20270112_020000.dump',
+                      'hethongdangkymonhoc_20270112_020000.dump',
                       '2027-01-12T02:00:00+07:00',
                       1024 * 1024,
                     ),
@@ -393,7 +393,7 @@ void main() {
                   ? ds(
                       f: [
                         file(
-                          'hpsv_20270111_020000.dump',
+                          'hethongdangkymonhoc_20270111_020000.dump',
                           '2027-01-11T02:00:00+07:00',
                           1024 * 1024,
                         ),

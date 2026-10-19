@@ -185,7 +185,7 @@ def postgres():
         "HOST": "db",
         "PORT": "5432",
         "USER": "u",
-        "NAME": "hpsv",
+        "NAME": "hethongdangkymonhoc",
         "PASSWORD": "mat-khau-bi-mat",
     }
     with mock.patch.object(services, "cau_hinh_db", return_value=cfg):
@@ -198,13 +198,13 @@ def test_tao_backup_ghi_partial_roi_doi_ten(thu_muc, postgres):
     lenh = run.call_args.args[0]
     assert (
         lenh[:2] == ["pg_dump", "-Fc"]
-        and ["-h", "db", "-p", "5432", "-U", "u", "-d", "hpsv"] == lenh[2:10]
+        and ["-h", "db", "-p", "5432", "-U", "u", "-d", "hethongdangkymonhoc"] == lenh[2:10]
     )
     assert (
         run.call_args.kwargs["env"]["PGPASSWORD"] == "mat-khau-bi-mat"
     )  # mật khẩu không nằm trong argv
     assert "mat-khau-bi-mat" not in " ".join(lenh)
-    assert ten.startswith("hpsv_") and ten.endswith(".dump")
+    assert ten.startswith("hethongdangkymonhoc_") and ten.endswith(".dump")
     assert (thu_muc / ten).read_bytes() == b"PGDMP"
     assert list(thu_muc.glob("*.partial")) == []  # không còn file dở
 
@@ -235,8 +235,8 @@ def tao_file(thu_muc, ten, tuoi_ngay):
 
 def test_don_backup_cu_theo_retention_chi_xoa_file_backup(thu_muc):
     SystemConfig.objects.create(khoa="backup_retention_days", gia_tri="7")
-    cu = tao_file(thu_muc, "hpsv_20200101_000000.dump", 30)
-    moi = tao_file(thu_muc, "hpsv_20990101_000000.dump", 2)
+    cu = tao_file(thu_muc, "hethongdangkymonhoc_20200101_000000.dump", 30)
+    moi = tao_file(thu_muc, "hethongdangkymonhoc_20990101_000000.dump", 2)
     la = tao_file(thu_muc, "ghi_chu_cua_admin.txt", 365)  # không đúng mẫu → không đụng tới
     assert services.don_backup_cu() == [cu.name]
     assert not cu.exists() and moi.exists() and la.exists()
@@ -245,7 +245,7 @@ def test_don_backup_cu_theo_retention_chi_xoa_file_backup(thu_muc):
 def test_job_backup_daily_tao_roi_don(thu_muc, postgres):
     from jobs.tasks import backup_daily
 
-    cu = tao_file(thu_muc, "hpsv_20200101_000000.dump", 100)
+    cu = tao_file(thu_muc, "hethongdangkymonhoc_20200101_000000.dump", 100)
     with mock.patch.object(subprocess, "run", side_effect=pg_dump_gia()):
         kq = backup_daily()
     assert kq["da_xoa"] == [cu.name]
@@ -256,22 +256,22 @@ def test_job_backup_daily_tao_roi_don(thu_muc, postgres):
 
 
 def test_danh_sach_backup_moi_nhat_truoc_va_trang_thai_dang_chay(admin, thu_muc):
-    tao_file(thu_muc, "hpsv_20990101_000000.dump", 5)
-    moi = tao_file(thu_muc, "hpsv_20990102_000000.dump", 1)
+    tao_file(thu_muc, "hethongdangkymonhoc_20990101_000000.dump", 5)
+    moi = tao_file(thu_muc, "hethongdangkymonhoc_20990102_000000.dump", 1)
     res = admin.get("/api/admin/backups/")
     assert res.status_code == 200
     assert [r["ten"] for r in res.data["results"]][0] == moi.name
     assert res.data["results"][0]["dung_luong"] == 10
     assert res.data["dang_chay"] is False and res.data["so_ngay_giu"] == 30
 
-    tao_file(thu_muc, "hpsv_20990103_000000.dump.partial", 0)
+    tao_file(thu_muc, "hethongdangkymonhoc_20990103_000000.dump.partial", 0)
     res = admin.get("/api/admin/backups/")
     assert res.data["dang_chay"] is True
     assert len(res.data["results"]) == 2  # file dở không hiện trong danh sách
 
 
 def test_file_partial_treo_qua_lau_khong_con_la_dang_chay(thu_muc):
-    p = tao_file(thu_muc, "hpsv_20200101_000000.dump.partial", 0)
+    p = tao_file(thu_muc, "hethongdangkymonhoc_20200101_000000.dump.partial", 0)
     t = time.time() - services.HET_GIO_PG_DUMP - 60
     os.utime(p, (t, t))
     assert services.dang_chay() is False
@@ -285,7 +285,7 @@ def test_post_backup_chay_nen_ghi_audit_va_chan_chay_trung(admin, thu_muc):
     log = AuditLog.objects.get(doi_tuong="Backup")
     assert log.hanh_dong == "CREATE" and log.scope == "other"
 
-    tao_file(thu_muc, "hpsv_20990103_000000.dump.partial", 0)
+    tao_file(thu_muc, "hethongdangkymonhoc_20990103_000000.dump.partial", 0)
     with mock.patch("jobs.tasks.backup_daily.delay") as delay:
         res = admin.post("/api/admin/backups/")
         assert res.status_code == 409 and res.data["error"]["code"] == "TRANG_THAI_KHONG_HOP_LE"
@@ -293,8 +293,8 @@ def test_post_backup_chay_nen_ghi_audit_va_chan_chay_trung(admin, thu_muc):
 
 
 def test_khong_co_api_restore_hay_tai_xuong(admin, thu_muc):
-    tao_file(thu_muc, "hpsv_20990101_000000.dump", 1)
-    for url in ("/api/admin/backups/hpsv_20990101_000000.dump/", "/api/admin/backups/restore/"):
+    tao_file(thu_muc, "hethongdangkymonhoc_20990101_000000.dump", 1)
+    for url in ("/api/admin/backups/hethongdangkymonhoc_20990101_000000.dump/", "/api/admin/backups/restore/"):
         assert admin.get(url).status_code == 404
     assert admin.delete("/api/admin/backups/").status_code == 405
 

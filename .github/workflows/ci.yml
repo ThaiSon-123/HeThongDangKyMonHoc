@@ -40,7 +40,7 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: hpsv
+          POSTGRES_DB: hethongdangkymonhoc
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
@@ -52,7 +52,7 @@ jobs:
       TEST_DB: postgres
       DB_HOST: localhost
       DB_PORT: "5432"
-      DB_NAME: hpsv
+      DB_NAME: hethongdangkymonhoc
       DB_USER: postgres
       DB_PASSWORD: postgres
     steps:
