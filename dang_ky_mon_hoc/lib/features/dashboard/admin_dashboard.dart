@@ -102,9 +102,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
               phu: ngayDayDu(now),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
+            HangThe(
               children: [
                 _Suc(
                   'Máy chủ ứng dụng',

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -225,6 +226,8 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
         '${thuText((b as Map)['thu'] as int)} T${b['tiet_bat_dau']}-${b['tiet_ket_thuc']}',
     ].join(' · ');
     return Container(
+      // Web: thẻ lớp giãn hết bề ngang, nút nằm sát phải (Android giữ nguyên).
+      width: kIsWeb ? double.infinity : null,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -283,6 +286,14 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                     thongTin,
                     const SizedBox(height: 10),
                     Row(children: nuts),
+                  ],
+                )
+              : kIsWeb
+              ? Row(
+                  children: [
+                    Expanded(child: thongTin),
+                    const SizedBox(width: 16),
+                    Row(mainAxisSize: MainAxisSize.min, children: nuts),
                   ],
                 )
               : Wrap(

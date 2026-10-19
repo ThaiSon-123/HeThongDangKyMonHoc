@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -123,6 +124,8 @@ class LuoiStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = isCompact(context);
+    // Web: thẻ giãn đều hết bề ngang thay vì giữ bề rộng cố định (Android giữ nguyên).
+    final gian = compact || kIsWeb;
     return LayoutBuilder(
       builder: (context, c) {
         final hang = <List<Widget>>[];
@@ -141,6 +144,18 @@ class LuoiStat extends StatelessWidget {
           dong.add(w);
         }
         if (dong.isNotEmpty) hang.add(dong);
+        // Web nhiều hàng: chia đều số thẻ mỗi hàng (7 thẻ → 4 + 3) thay vì để một thẻ lẻ loi ở hàng cuối.
+        if (kIsWeb && !compact && hang.length > 1) {
+          final moi = (children.length / hang.length).ceil();
+          hang.clear();
+          for (var i = 0; i < children.length; i += moi) {
+            hang.add(children.sublist(i, (i + moi).clamp(0, children.length)));
+          }
+        }
+        // Số ô mỗi hàng: điện thoại 2; web theo hàng đầy nhất, hàng thiếu chừa ô trống cho cùng bề rộng.
+        final cot = compact
+            ? 2
+            : hang.fold<int>(1, (m, h) => h.length > m ? h.length : m);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -149,16 +164,17 @@ class LuoiStat extends StatelessWidget {
               IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: compact ? MainAxisSize.max : MainAxisSize.min,
+                  mainAxisSize: gian ? MainAxisSize.max : MainAxisSize.min,
                   children: [
                     for (final (j, w) in h.indexed) ...[
                       if (j > 0) const SizedBox(width: _khoang),
-                      if (compact) Expanded(child: w) else w,
+                      if (gian) Expanded(child: w) else w,
                     ],
-                    if (compact && h.length == 1) ...[
-                      const SizedBox(width: _khoang),
-                      const Expanded(child: SizedBox.shrink()),
-                    ],
+                    if (gian)
+                      for (var k = h.length; k < cot; k++) ...[
+                        const SizedBox(width: _khoang),
+                        const Expanded(child: SizedBox.shrink()),
+                      ],
                   ],
                 ),
               ),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -28,6 +29,13 @@ class AppTheme {
       textTheme: GoogleFonts.beVietnamProTextTheme(base.textTheme),
       scaffoldBackgroundColor: isLight ? AppColors.bg : null,
       visualDensity: VisualDensity.adaptivePlatformDensity,
+      // Web: chip to hơn một chút cho cân với màn hình rộng; Android giữ mặc định.
+      chipTheme: kIsWeb
+          ? const ChipThemeData(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              labelStyle: TextStyle(fontSize: 14),
+            )
+          : null,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isLight ? AppColors.surface : null,

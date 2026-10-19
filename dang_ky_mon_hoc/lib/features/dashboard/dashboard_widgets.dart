@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -166,22 +167,58 @@ class LoiTat extends StatelessWidget {
   final List<(String, String)> muc;
 
   @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 12,
-    runSpacing: 8,
-    children: [
-      for (final (nhan, duong) in muc)
-        SizedBox(
-          width: isCompact(context) ? soCot2(context, 12) : 170,
-          child: AppButton(
-            label: nhan,
-            height: 44,
-            outlined: true,
-            onPressed: () => context.go(duong),
-          ),
-        ),
-    ],
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, c) {
+      // Web: các nút chia đều bề ngang, mỗi hàng nhiều nhất số nút vừa 170px (Android giữ nguyên).
+      final cot = (((c.maxWidth + 12) / 182).floor()).clamp(1, muc.length);
+      final rongWeb = (c.maxWidth - 12 * (cot - 1)) / cot - 0.5;
+      return Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        children: [
+          for (final (nhan, duong) in muc)
+            SizedBox(
+              width: kIsWeb && !isCompact(context)
+                  ? rongWeb
+                  : isCompact(context)
+                  ? soCot2(context, 12)
+                  : 170,
+              child: AppButton(
+                label: nhan,
+                height: 44,
+                outlined: true,
+                onPressed: () => context.go(duong),
+              ),
+            ),
+        ],
+      );
+    },
   );
+}
+
+/// Hàng thẻ: Web chia đều hết bề ngang; Android/điện thoại xếp theo bề rộng thẻ.
+class HangThe extends StatelessWidget {
+  const HangThe({super.key, required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!kIsWeb || isCompact(context)) {
+      return Wrap(spacing: 16, runSpacing: 16, children: children);
+    }
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (i, w) in children.indexed) ...[
+            if (i > 0) const SizedBox(width: 16),
+            Expanded(child: w),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 /// Dòng "Tiết 1–3 · Sáng · P.A101 / Môn / mã lớp · phụ" trong khối lịch hôm nay.

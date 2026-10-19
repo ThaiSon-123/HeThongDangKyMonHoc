@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -127,49 +128,57 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
           if (isCompact(context))
             for (final g in rows) _theMon(g)
           else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columnSpacing: 20,
-                headingRowHeight: 36,
-                dataRowMinHeight: 36,
-                dataRowMaxHeight: 40,
-                columns: const [
-                  DataColumn(label: Text('Mã môn')),
-                  DataColumn(label: Text('Tên môn')),
-                  DataColumn(label: Text('TC')),
-                  DataColumn(label: Text('QT')),
-                  DataColumn(label: Text('GK')),
-                  DataColumn(label: Text('CK')),
-                  DataColumn(label: Text('Tổng kết')),
-                  DataColumn(label: Text('Chữ')),
-                  DataColumn(label: Text('Hệ 4')),
-                ],
-                rows: [
-                  for (final g in rows)
-                    DataRow(
-                      cells: [
-                        DataCell(Text(g.str('ma_mon'))),
-                        DataCell(Text(g.str('ten_mon'))),
-                        DataCell(Text(_d(g['tin_chi']))),
-                        DataCell(Text(_d(g['diem_qua_trinh']))),
-                        DataCell(Text(_d(g['diem_giua_ky']))),
-                        DataCell(Text(_d(g['diem_cuoi_ky']))),
-                        DataCell(Text(_d(g['diem_tong_ket']))),
-                        DataCell(
-                          g.str('diem_chu') == 'F'
-                              ? StatusChip.of('F', StatusChip.red)
-                              : Text(
-                                  g.str('diem_chu'),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+            LayoutBuilder(
+              builder: (context, c) => SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                // Web: bảng giãn hết bề ngang thẻ; Android giữ bề rộng theo nội dung.
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: kIsWeb ? c.maxWidth : 0,
+                  ),
+                  child: DataTable(
+                    columnSpacing: 20,
+                    headingRowHeight: 36,
+                    dataRowMinHeight: 36,
+                    dataRowMaxHeight: 40,
+                    columns: const [
+                      DataColumn(label: Text('Mã môn')),
+                      DataColumn(label: Text('Tên môn')),
+                      DataColumn(label: Text('TC')),
+                      DataColumn(label: Text('QT')),
+                      DataColumn(label: Text('GK')),
+                      DataColumn(label: Text('CK')),
+                      DataColumn(label: Text('Tổng kết')),
+                      DataColumn(label: Text('Chữ')),
+                      DataColumn(label: Text('Hệ 4')),
+                    ],
+                    rows: [
+                      for (final g in rows)
+                        DataRow(
+                          cells: [
+                            DataCell(Text(g.str('ma_mon'))),
+                            DataCell(Text(g.str('ten_mon'))),
+                            DataCell(Text(_d(g['tin_chi']))),
+                            DataCell(Text(_d(g['diem_qua_trinh']))),
+                            DataCell(Text(_d(g['diem_giua_ky']))),
+                            DataCell(Text(_d(g['diem_cuoi_ky']))),
+                            DataCell(Text(_d(g['diem_tong_ket']))),
+                            DataCell(
+                              g.str('diem_chu') == 'F'
+                                  ? StatusChip.of('F', StatusChip.red)
+                                  : Text(
+                                      g.str('diem_chu'),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                            ),
+                            DataCell(Text(_d(g['gpa_thang_4']))),
+                          ],
                         ),
-                        DataCell(Text(_d(g['gpa_thang_4']))),
-                      ],
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
         ],

@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_toast.dart';
 import '../../registration/timetable_screen.dart' show clockProvider;
 import '../../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../../training/training_api.dart';
+import '../../dashboard/dashboard_widgets.dart' show HangThe;
 import '../../training/training_widgets.dart';
 import '../accounts/account_dialogs.dart' show failureText;
 
@@ -119,9 +120,7 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
+            HangThe(
               children: [
                 _InfoCard(
                   title: 'Bản sao lưu gần nhất',
