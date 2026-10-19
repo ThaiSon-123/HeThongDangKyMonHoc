@@ -4,6 +4,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from corsheaders.defaults import default_headers
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
@@ -92,7 +94,7 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("DB_NAME", "hpsv"),
+        "NAME": env("DB_NAME", "hethongdangkymonhoc"),
         "USER": env("DB_USER", "postgres"),
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST", "db"),
@@ -134,6 +136,9 @@ MEDIA_ROOT = Path(env("MEDIA_DIR", str(BASE_DIR / "media")))
 # django-cors-headers không hỗ trợ wildcard port ("localhost:*") → dev dùng regex (dev.py), prod liệt kê origin.
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_CREDENTIALS = True
+# Đăng ký môn và thu tiền gửi `Idempotency-Key` (plan 8.3): không cho phép ở preflight thì trình duyệt
+# (Flutter Web) chặn mọi POST đó, dù gọi bằng curl/test vẫn chạy bình thường.
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "")
 
 # --- DRF ---
@@ -153,12 +158,15 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
-    "DEFAULT_THROTTLE_CLASSES": ("rest_framework.throttling.ScopedRateThrottle",),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.ScopedRateThrottle",
+        "core.throttles.WriteThrottle",
+    ),
     "DEFAULT_THROTTLE_RATES": {
         "login": env("RATE_LOGIN", "10/min"),
         # forgot_password: 3 lần/15 phút/email — DRF không parse được "15min", xem apps/auth/throttles.py
         "registration": "30/min",
-        "write": "120/min",
+        "write": env("RATE_WRITE", "120/min"),
     },
 }
 SPECTACULAR_SETTINGS = {
@@ -216,7 +224,7 @@ EMAIL_PORT = env_int("EMAIL_PORT", 25)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@hpsv.local")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "no-reply@hethongdangkymonhoc.local")
 
 # --- Backup ---
 BACKUP_DIR = Path(env("BACKUP_DIR", str(BASE_DIR / "backups")))

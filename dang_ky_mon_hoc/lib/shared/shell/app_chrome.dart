@@ -249,25 +249,26 @@ class _Tab extends StatelessWidget {
       label: item.label,
       child: InkResponse(
         onTap: onTap,
-        child: Center(
-          child: Container(
-            // Viên thuốc rộng tối thiểu 62 và nới theo nhãn ("Trang chủ", "Nhập điểm").
-            constraints: const BoxConstraints(minWidth: 62),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            height: 54,
-            decoration: BoxDecoration(
-              gradient: selected ? AppColors.navyGradient : null,
-              borderRadius: BorderRadius.circular(27),
-              boxShadow: selected
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x4D1F2A5C),
-                        blurRadius: 12,
-                        offset: Offset(0, 4),
-                      ),
-                    ]
-                  : null,
-            ),
+        // Viên thuốc luôn bằng ô (5 ô đều nhau) trừ lề; nhãn dài ("Tổng quan") tự thu nhỏ, không tràn ô.
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            gradient: selected ? AppColors.navyGradient : null,
+            borderRadius: BorderRadius.circular(27),
+            boxShadow: selected
+                ? const [
+                    BoxShadow(
+                      color: Color(0x4D1F2A5C),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -276,9 +277,8 @@ class _Tab extends StatelessWidget {
                 Text(
                   item.label,
                   maxLines: 1,
-                  overflow: TextOverflow.clip,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10.5,
                     color: color,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                   ),

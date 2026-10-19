@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 from apps.attendance import views as attendance
 from apps.audit.views import AuditLogListView
 from apps.auth.views import UserViewSet
+from apps.config import views as config
 from apps.grades import views as grades
 from apps.notifications.views import NotificationViewSet
 from apps.profiles.views import (
@@ -15,7 +16,10 @@ from apps.profiles.views import (
     TeacherProfileViewSet,
 )
 from apps.registration import views as registration
+from apps.training import reports as training_reports
+from apps.training import teacher
 from apps.training import views as training
+from apps.tuition import reports as tuition_reports
 from apps.tuition import views as tuition
 from core.views import HealthView
 
@@ -54,7 +58,16 @@ urlpatterns = [
     path("class-sections/<int:pk>/grades/", grades.ClassGradesView.as_view()),
     path("class-sections/<int:pk>/grades/lock/", grades.ClassGradesLockView.as_view()),
     path("class-sections/<int:pk>/grades/approve/", grades.ClassGradesApproveView.as_view()),
+    path("class-sections/<int:pk>/students/", teacher.ClassStudentsView.as_view()),
+    path("class-sections/<int:pk>/export/", teacher.ClassExportView.as_view()),
     path("admin/audit-logs/", AuditLogListView.as_view()),
+    path("admin/permissions/", config.PermissionsView.as_view()),
+    path("admin/config/", config.ConfigView.as_view()),
+    path("admin/backups/", config.BackupsView.as_view()),
+    path("reports/training/", training_reports.TrainingReportView.as_view()),
+    path("reports/training/export/", training_reports.TrainingReportExportView.as_view()),
+    path("reports/finance/", tuition_reports.FinanceReportView.as_view()),
+    path("reports/finance/export/", tuition_reports.FinanceReportExportView.as_view()),
     path("tuition/my/", tuition.MyTuitionView.as_view()),
     path("tuition/debts/", tuition.TuitionDebtsView.as_view()),
     path("tuition/calculate/", tuition.TuitionCalculateView.as_view()),
@@ -65,6 +78,7 @@ urlpatterns = [
     path("grade-sheets/", grades.GradeSheetListView.as_view()),
     path("class-sections/my/", training.MyClassSectionsView.as_view()),
     path("courses/available/", registration.AvailableCoursesView.as_view()),
+    path("auto-schedule/available-courses/", registration.AutoScheduleCoursesView.as_view()),
     path("curriculums/my/", registration.MyCurriculumView.as_view()),
     path("timetable/my/", registration.MyTimetableView.as_view()),
     path("attendance/my/", attendance.MyAttendanceView.as_view()),

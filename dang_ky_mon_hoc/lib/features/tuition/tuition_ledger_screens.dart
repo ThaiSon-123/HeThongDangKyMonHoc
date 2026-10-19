@@ -592,7 +592,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
             ListColumn('Học kỳ', flex: 2),
             ListColumn('Số tiền', width: 140),
             ListColumn('Hạn đóng', width: 120),
-            ListColumn('Số ngày trễ', width: 110),
+            ListColumn('Số ngày trễ', width: 170),
             ListColumn('', width: 120),
           ],
           cells: (r) => [

@@ -112,7 +112,14 @@ class RoleShell extends ConsumerWidget {
                 ),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, topLevel ? 100 : 16),
+                  // Chừa chỗ cho thanh điều hướng nổi (cao ~100) cộng vùng cử chỉ của hệ thống, nếu không
+                  // phần cuối trang bị thanh này che mất trên máy có thanh cử chỉ.
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    topLevel ? 100 + MediaQuery.paddingOf(context).bottom : 16,
+                  ),
                   child: child,
                 ),
               ),

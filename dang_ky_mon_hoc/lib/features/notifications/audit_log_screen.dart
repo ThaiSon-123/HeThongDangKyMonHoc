@@ -7,6 +7,7 @@ import '../../core/auth/auth_provider.dart';
 import '../../core/auth/auth_user.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_dialog.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../training/resource_list.dart';
@@ -181,13 +182,23 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                     ('other', 'Hệ thống'),
                   ],
                 ),
-              OutlinedButton(
-                onPressed: () => _chonNgay(true),
-                child: Text(_tu == null ? 'Từ ngày' : 'Từ ${_ymd(_tu!)}'),
+              SizedBox(
+                width: 150,
+                child: AppButton(
+                  label: _tu == null ? 'Từ ngày' : 'Từ ${_ymd(_tu!)}',
+                  height: 48,
+                  outlined: true,
+                  onPressed: () => _chonNgay(true),
+                ),
               ),
-              OutlinedButton(
-                onPressed: () => _chonNgay(false),
-                child: Text(_den == null ? 'Đến ngày' : 'Đến ${_ymd(_den!)}'),
+              SizedBox(
+                width: 150,
+                child: AppButton(
+                  label: _den == null ? 'Đến ngày' : 'Đến ${_ymd(_den!)}',
+                  height: 48,
+                  outlined: true,
+                  onPressed: () => _chonNgay(false),
+                ),
               ),
               if (_tu != null || _den != null)
                 TextButton(

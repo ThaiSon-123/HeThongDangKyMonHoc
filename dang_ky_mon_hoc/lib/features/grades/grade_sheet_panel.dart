@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_failure.dart';
 import '../../core/format.dart';
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
@@ -337,7 +338,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
 
   Widget _field(TextEditingController c, String label, bool enabled) =>
       SizedBox(
-        width: 84,
+        width: 100,
         child: TextField(
           controller: c,
           enabled: enabled,
@@ -364,48 +365,88 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
     final (chu, _) = r.editable
         ? xepLoai(tong, datKhongDat: datKhongDat)
         : (r.json.str('diem_chu'), null);
+    final ten = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          r.json.str('ho_ten'),
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        Text(
+          r.json.str('ma_sv'),
+          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
+      ],
+    );
+    final tongKet = Text(
+      tong == null ? 'Tổng kết —' : 'Tổng kết ${formatScore(tong)} · $chu',
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+    );
     return Container(
       key: ValueKey('${r.id}-$_version'),
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.divider)),
       ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 10,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          SizedBox(
-            width: 190,
-            child: Column(
+      child: isCompact(context)
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  r.json.str('ho_ten'),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ten,
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    for (final (c, nhan) in [
+                      (r.qt, 'QT 10%'),
+                      (r.gk, 'GK 40%'),
+                      (r.ck, 'CK 50%'),
+                    ]) ...[
+                      Expanded(
+                        child: TextField(
+                          controller: c,
+                          enabled: enabled,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: nhan,
+                            isDense: true,
+                            errorText: parseScore(c.text).invalid
+                                ? '0–10'
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (c != r.ck) const SizedBox(width: 8),
+                    ],
+                  ],
                 ),
-                Text(
-                  r.json.str('ma_sv'),
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(child: tongKet),
+                    gradeStatusChip(r.trangThai),
+                  ],
                 ),
               ],
+            )
+          : Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(width: 190, child: ten),
+                _field(r.qt, 'QT (10%)', enabled),
+                _field(r.gk, 'GK (40%)', enabled),
+                _field(r.ck, 'CK (50%)', enabled),
+                SizedBox(width: 120, child: tongKet),
+                gradeStatusChip(r.trangThai),
+              ],
             ),
-          ),
-          _field(r.qt, 'QT (10%)', enabled),
-          _field(r.gk, 'GK (40%)', enabled),
-          _field(r.ck, 'CK (50%)', enabled),
-          SizedBox(
-            width: 120,
-            child: Text(
-              tong == null
-                  ? 'Tổng kết —'
-                  : 'Tổng kết ${formatScore(tong)} · $chu',
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-            ),
-          ),
-          gradeStatusChip(r.trangThai),
-        ],
-      ),
     );
   }
 }

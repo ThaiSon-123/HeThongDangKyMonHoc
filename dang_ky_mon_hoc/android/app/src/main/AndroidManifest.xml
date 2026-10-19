@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- App gọi API qua mạng; thiếu quyền này thì bản release không kết nối được máy chủ. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="dang_ky_mon_hoc"
         android:name="${applicationName}"

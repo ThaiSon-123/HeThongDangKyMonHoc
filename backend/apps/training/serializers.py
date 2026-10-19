@@ -22,6 +22,14 @@ from apps.training.models import (
 )
 
 
+def han_nhap_diem_cua(serializer, lop):
+    """`han_nhap_diem_hieu_luc` (BR-13); đọc cấu hình một lần cho cả trang kết quả."""
+    so_ngay = serializer.root.context.setdefault(
+        "so_ngay_nhap_diem", SystemConfig.get_int("so_ngay_cho_phep_nhap_diem", 14)
+    )
+    return services.han_nhap_diem_hieu_luc(lop, so_ngay)
+
+
 def _gia_tri(serializer, attrs, ten):
     """Giá trị `ten` sau khi áp `attrs` lên bản ghi đang sửa (PATCH một phần vẫn kiểm tra đủ)."""
     if ten in attrs:
@@ -324,13 +332,26 @@ class ClassSectionSerializer(serializers.ModelSerializer):
     giao_vien_ten = serializers.CharField(source="giao_vien.ho_ten", read_only=True)
     lich_hoc = ScheduleSerializer(many=True, read_only=True)
     han_nhap_diem_hieu_luc = serializers.SerializerMethodField()
+    ngay_bat_dau_hieu_luc = serializers.SerializerMethodField()
+    ngay_ket_thuc_hieu_luc = serializers.SerializerMethodField()
+    tong_so_buoi = serializers.SerializerMethodField()
+    tong_tin_chi = serializers.IntegerField(source="mon_hoc.tong_tin_chi", read_only=True)
+    tin_chi_ly_thuyet = serializers.IntegerField(source="mon_hoc.tin_chi_ly_thuyet", read_only=True)
+    tin_chi_thuc_hanh = serializers.IntegerField(source="mon_hoc.tin_chi_thuc_hanh", read_only=True)
 
     def get_han_nhap_diem_hieu_luc(self, obj) -> date:
-        # Đọc cấu hình một lần cho cả trang kết quả.
-        so_ngay = self.root.context.setdefault(
-            "so_ngay_nhap_diem", SystemConfig.get_int("so_ngay_cho_phep_nhap_diem", 14)
-        )
-        return services.han_nhap_diem_hieu_luc(obj, so_ngay)
+        return han_nhap_diem_cua(self, obj)
+
+    def get_ngay_bat_dau_hieu_luc(self, obj) -> date:
+        return services.ngay_bat_dau_lop(obj)
+
+    def get_ngay_ket_thuc_hieu_luc(self, obj) -> date:
+        return services.ngay_ket_thuc_lop(obj)
+
+    def get_tong_so_buoi(self, obj) -> int:
+        # `so_buoi` do queryset của ViewSet annotate; ngoài đó (vd phản hồi tạo lớp) thì đếm.
+        so_buoi = getattr(obj, "so_buoi", None)
+        return obj.buoi_diem_danh.count() if so_buoi is None else so_buoi
 
     class Meta:
         model = ClassSection
@@ -348,9 +369,15 @@ class ClassSectionSerializer(serializers.ModelSerializer):
             "si_so_hien_tai",
             "ngay_bat_dau",
             "ngay_ket_thuc",
+            "ngay_bat_dau_hieu_luc",
+            "ngay_ket_thuc_hieu_luc",
             "han_nhap_diem",
             "han_nhap_diem_hieu_luc",
             "trang_thai",
+            "tong_tin_chi",
+            "tin_chi_ly_thuyet",
+            "tin_chi_thuc_hanh",
+            "tong_so_buoi",
             "lich_hoc",
         ]
         # Trạng thái đổi qua open/close/job; sĩ số hiện tại do đăng ký (Pha 3); hạn điểm qua grade-deadline.

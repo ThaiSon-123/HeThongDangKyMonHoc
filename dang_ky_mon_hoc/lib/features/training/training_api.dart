@@ -81,8 +81,18 @@ class TrainingApi {
     }
   }
 
-  Future<Json> get(String path) =>
-      _guard(() async => _json(await _dio.get(path)));
+  Future<Json> get(String path, {Map<String, Object?> query = const {}}) =>
+      _guard(
+        () async => _json(
+          await _dio.get(
+            path,
+            queryParameters: {
+              for (final e in query.entries)
+                if (e.value != null && '${e.value}'.isNotEmpty) e.key: e.value,
+            },
+          ),
+        ),
+      );
 
   Future<Json> create(String path, Json body, {Map<String, String>? headers}) =>
       _guard(
@@ -97,6 +107,10 @@ class TrainingApi {
 
   Future<Json> update(String path, Object id, Json body) =>
       _guard(() async => _json(await _dio.patch('$path$id/', data: body)));
+
+  /// `PATCH` thẳng vào [path] (không kèm id) — vd cấu hình hệ thống.
+  Future<Json> patch(String path, Json body) =>
+      _guard(() async => _json(await _dio.patch(path, data: body)));
 
   Future<Json> put(String path, Json body) =>
       _guard(() async => _json(await _dio.put(path, data: body)));

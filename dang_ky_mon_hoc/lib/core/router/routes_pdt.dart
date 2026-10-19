@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../features/dashboard/pdt_dashboard.dart';
 import '../../features/notifications/audit_log_screen.dart';
+import '../../features/reports/pdt_reports_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/grades/pdt_grade_sheets_screen.dart';
 import '../../features/training/classes_screen.dart';
@@ -17,7 +19,12 @@ import 'role_routes.dart';
 const pdtRoutes = RoleRoutes(
   UserRole.pdt,
   [
-    RouteDef('/pdt', 'Tổng quan'),
+    RouteDef(
+      '/pdt',
+      'Tổng quan',
+      subtitle: 'Tình hình đào tạo và việc cần làm',
+      builder: PdtDashboard.new,
+    ),
     RouteDef('/pdt/profiles', 'Hồ sơ SV / GV', builder: ProfilesScreen.new),
     RouteDef('/pdt/faculties', 'Khoa / viện', builder: FacultiesScreen.new),
     RouteDef('/pdt/majors', 'Ngành', builder: MajorsScreen.new),
@@ -48,7 +55,12 @@ const pdtRoutes = RoleRoutes(
       subtitle: 'Duyệt điểm cả lớp, gia hạn hoặc nhập hộ khi giáo viên quá hạn',
       builder: PdtGradeSheetsScreen.new,
     ),
-    RouteDef('/pdt/reports', 'Báo cáo'),
+    RouteDef(
+      '/pdt/reports',
+      'Báo cáo đào tạo',
+      subtitle: 'Số liệu đăng ký theo học kỳ, ngành và môn',
+      builder: PdtReportsScreen.new,
+    ),
     RouteDef(
       '/pdt/notifications',
       'Thông báo',

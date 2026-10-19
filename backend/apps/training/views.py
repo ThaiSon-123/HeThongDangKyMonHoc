@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.audit.models import HanhDong
-from apps.registration.serializers import ClassBriefSerializer
+from apps.auth.models import Role
 from apps.training import services
 from apps.training.models import (
     ClassSection,
@@ -37,10 +37,11 @@ from apps.training.serializers import (
     SemesterSerializer,
     SemesterWindowSerializer,
 )
+from apps.training.teacher import MyClassSerializer, lop_cua_gv, lop_cua_toi
 from core.exceptions import business_error
 from core.mixins import AuditLogMixin
 from core.pagination import StandardPagination
-from core.permissions import IsGiaoVien, IsPhongDaoTao, PdtWriteKtRead
+from core.permissions import HasRole, IsGiaoVien, IsPhongDaoTao, PdtWriteKtRead
 
 
 class _PdtViewSet(AuditLogMixin):
@@ -180,16 +181,32 @@ class ClassSectionFilter(django_filters.FilterSet):
         fields = ["hoc_ky", "mon_hoc", "giao_vien", "trang_thai"]
 
 
+class IsPdtKtOrGiaoVien(HasRole):
+    roles = (Role.PHONG_DAO_TAO, Role.KE_TOAN, Role.GIAO_VIEN)
+
+
 class ClassSectionViewSet(_PdtViewSet):
-    permission_classes = [PdtWriteKtRead]  # KT chỉ đọc
+    permission_classes = [PdtWriteKtRead]  # KT chỉ đọc; GV chỉ xem chi tiết lớp mình (`retrieve`)
     audit_model = "ClassSection"
-    queryset = ClassSection.objects.select_related(
-        "mon_hoc", "hoc_ky", "giao_vien"
-    ).prefetch_related("lich_hoc")
+    queryset = (
+        ClassSection.objects.select_related("mon_hoc", "hoc_ky", "giao_vien")
+        .prefetch_related("lich_hoc")
+        .annotate(so_buoi=Count("buoi_diem_danh", distinct=True))
+    )
     serializer_class = ClassSectionSerializer
     filterset_class = ClassSectionFilter
     search_fields = ["ma_lop", "mon_hoc__ma_mon", "mon_hoc__ten_mon", "giao_vien__ho_ten"]
     ordering_fields = ["id", "ma_lop", "ngay_bat_dau"]
+
+    def get_permissions(self):
+        return [IsPdtKtOrGiaoVien()] if self.action == "retrieve" else super().get_permissions()
+
+    def retrieve(self, request, *args, **kwargs):
+        """GV-04: GV chỉ xem lớp mình phụ trách (BR-23); PĐT/KT xem mọi lớp."""
+        lop = self.get_object()
+        if request.user.role == Role.GIAO_VIEN:
+            lop_cua_gv(request.user, lop.pk)
+        return Response(self.get_serializer(lop).data)
 
     def perform_update(self, serializer):
         lop = super().perform_update(serializer)
@@ -296,11 +313,11 @@ class MyClassSectionsView(APIView):
             OpenApiParameter("page", int),
             OpenApiParameter("page_size", int),
         ],
-        responses=ClassBriefSerializer(many=True),
+        responses=MyClassSerializer(many=True),
     )
     def get(self, request):
         qs = (
-            ClassSection.objects.filter(giao_vien__user=request.user)
+            lop_cua_toi(request.user)
             .select_related("mon_hoc", "giao_vien", "hoc_ky")
             .prefetch_related("lich_hoc")
             .order_by("-hoc_ky__ngay_bat_dau", "ma_lop")
@@ -312,4 +329,4 @@ class MyClassSectionsView(APIView):
             qs = qs.filter(trang_thai=request.query_params["trang_thai"])
         paginator = StandardPagination()
         page = paginator.paginate_queryset(qs, request, view=self)
-        return paginator.get_paginated_response(ClassBriefSerializer(page, many=True).data)
+        return paginator.get_paginated_response(MyClassSerializer(page, many=True).data)

@@ -5,6 +5,10 @@ x-backend: &backend
   env_file: .env
   environment:
     DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
+    BACKUP_DIR: /backups
+  # worker ghi file sao lưu, web đọc danh sách → dùng chung một volume.
+  volumes:
+    - backups:/backups
   depends_on:
     db:
       condition: service_healthy
@@ -40,6 +44,7 @@ services:
     command: celery -A config worker --loglevel=info
     environment:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
+      BACKUP_DIR: /backups
       RUN_MIGRATE: "0"
 
   beat:
@@ -59,7 +64,7 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${DB_NAME:-hpsv}
+      POSTGRES_DB: ${DB_NAME:-hethongdangkymonhoc}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Thiếu DB_PASSWORD trong .env}
     ports:
@@ -68,11 +73,19 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-hpsv}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-hethongdangkymonhoc}"]
       interval: 5s
       timeout: 5s
       retries: 10
     restart: unless-stopped
+
+  # Xem DB trên web (chỉ dev): http://localhost:8080 — System=PostgreSQL, Server=db.
+  adminer:
+    image: adminer:4
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - db
 
   redis:
     image: redis:7-alpine
@@ -97,5 +110,6 @@ services:
 
 volumes:
   pgdata:
+  backups:
   staticfiles:
   media:

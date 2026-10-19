@@ -110,3 +110,35 @@ def test_openapi_schema_hop_le_khong_canh_bao(tmp_path):
 
     text = (tmp_path / "s.yml").read_text(encoding="utf-8")
     assert "/api/auth/login/" in text and "jwtAuth" in text
+
+
+# ---- giới hạn ghi chung (plan mục 8.2: 120/phút/người dùng) ----------------------
+def test_gioi_han_ghi_chung_chi_dem_thao_tac_ghi_theo_nguoi_dung(login_as, monkeypatch):
+    from core.throttles import WriteThrottle
+
+    monkeypatch.setattr(WriteThrottle, "THROTTLE_RATES", {"write": "3/min"})
+    a = login_as(UserFactory(role=Role.ADMIN))
+    b = login_as(UserFactory(role=Role.ADMIN))
+    for _ in range(3):
+        assert (
+            a.patch("/api/admin/config/", {"max_absent_pct": 20}, format="json").status_code == 200
+        )
+    res = a.patch("/api/admin/config/", {"max_absent_pct": 20}, format="json")
+    assert res.status_code == 429 and res.data["error"]["code"] == "QUA_NHIEU_YEU_CAU"
+    # Đọc không bị đếm; người dùng khác có hạn mức riêng.
+    for _ in range(5):
+        assert a.get("/api/admin/config/").status_code == 200
+    assert b.patch("/api/admin/config/", {"max_absent_pct": 20}, format="json").status_code == 200
+
+
+# ---- CORS: trình duyệt phải được phép gửi Idempotency-Key ----------------------------
+def test_preflight_cho_phep_header_idempotency_key(client):
+    res = client.options(
+        "/api/registrations/",
+        HTTP_ORIGIN="http://localhost:5111",
+        HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST",
+        HTTP_ACCESS_CONTROL_REQUEST_HEADERS="authorization,content-type,idempotency-key",
+    )
+    assert res.status_code == 200
+    cho_phep = res["access-control-allow-headers"].lower()
+    assert "idempotency-key" in cho_phep and "authorization" in cho_phep

@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/auth/auth_provider.dart';
 import '../../core/auth/auth_repository.dart';
+import '../../core/auth/auth_user.dart';
 import '../../core/download/print_html.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
@@ -312,8 +314,11 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     final blocks = _blocks(d, lop);
     final mon = _weekStart;
     if (blocks.isEmpty) {
-      return const _Empty(
-        'Tuần này không có tiết dạy',
+      // Màn dùng chung SV (học) và GV (dạy).
+      final coDay =
+          ref.read(authControllerProvider).user?.role == UserRole.teacher;
+      return _Empty(
+        coDay ? 'Tuần này không có tiết dạy' : 'Tuần này không có tiết học',
         'Chuyển sang tuần khác hoặc xem cả học kỳ.',
       );
     }

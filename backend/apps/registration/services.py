@@ -245,9 +245,10 @@ def dang_ky(user, lop_id, request_id=None):
     return reg, warnings, True
 
 
-def lop_co_the_dang_ky(user, ho_so, hoc_ky, search=""):
+def lop_co_the_dang_ky(user, ho_so, hoc_ky, search="", loc_trung_lich=True):
     """`GET /courses/available/` (SV-04): lớp `MO` của học kỳ, môn thuộc CTĐT của SV, còn chỗ,
-    chưa đăng ký và không trùng lịch với các lớp đã đăng ký."""
+    chưa đăng ký và (khi `loc_trung_lich`) không trùng lịch với các lớp đã đăng ký. TKB tự động (SV-06)
+    gọi với `loc_trung_lich=False` để tự ghép lịch ở client."""
     qs = (
         ClassSection.objects.filter(
             hoc_ky=hoc_ky,
@@ -267,6 +268,8 @@ def lop_co_the_dang_ky(user, ho_so, hoc_ky, search=""):
             | Q(mon_hoc__ma_mon__icontains=t)
             | Q(mon_hoc__ten_mon__icontains=t)
         )
+    if not loc_trung_lich:
+        return list(qs)
     lich_da_co = lich_da_dang_ky(user, hoc_ky)
     return [lop for lop in qs if lop_trung_lich(lop, lich_da_co) is None]
 

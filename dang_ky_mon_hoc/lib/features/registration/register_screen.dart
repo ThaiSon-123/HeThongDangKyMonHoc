@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_failure.dart';
 import '../../core/format.dart';
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
@@ -188,10 +189,25 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Widget _tabs(_RegData d) {
     final labels = [
-      'Lớp đang mở',
-      'Đã đăng ký (${d.dangKy.length})',
+      isCompact(context) ? 'Đang mở' : 'Lớp đang mở',
+      isCompact(context) ? 'Đã đăng ký' : 'Đã đăng ký (${d.dangKy.length})',
       'Lịch sử',
     ];
+    // App: thanh chia đoạn đủ bề ngang (mockup), không để tab rớt dòng; Web: chip như cũ.
+    if (isCompact(context)) {
+      return SegmentedButton<int>(
+        showSelectedIcon: false,
+        segments: [
+          for (final (i, l) in labels.indexed)
+            ButtonSegment(
+              value: i,
+              label: Text(l, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+        ],
+        selected: {_tab},
+        onSelectionChanged: (s) => setState(() => _tab = s.first),
+      );
+    }
     return Wrap(
       spacing: 8,
       runSpacing: 8,

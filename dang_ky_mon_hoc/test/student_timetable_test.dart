@@ -103,16 +103,16 @@ void main() {
           ),
         ]),
       );
-      expect(find.text('Tuần này không có tiết dạy'), findsOneWidget);
+      expect(find.text('Tuần này không có tiết học'), findsOneWidget);
 
       await t.tap(find.byTooltip('Tuần sau'));
       await t.pumpAndSettle();
-      expect(find.text('Tuần này không có tiết dạy'), findsNothing);
+      expect(find.text('Tuần này không có tiết học'), findsNothing);
       expect(find.text('X-01 · P1'), findsOneWidget);
       expect(find.text('18/01'), findsOneWidget);
 
       await tapText(t, 'Tuần này · 18/01 – 24/01');
-      expect(find.text('Tuần này không có tiết dạy'), findsOneWidget);
+      expect(find.text('Tuần này không có tiết học'), findsOneWidget);
     },
   );
 

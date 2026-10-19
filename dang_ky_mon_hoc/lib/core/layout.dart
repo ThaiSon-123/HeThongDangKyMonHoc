@@ -9,3 +9,8 @@ bool isCompact(BuildContext context) =>
 
 bool isWide(BuildContext context) =>
     MediaQuery.sizeOf(context).width >= kWideMin;
+
+/// Bề rộng mỗi ô khi chia đôi vùng nội dung (lề 16 hai bên) với khoảng cách [khoang] giữa hai ô.
+/// Trừ thêm 0,5 để sai số làm tròn không đẩy ô thứ hai xuống dòng.
+double soCot2(BuildContext context, double khoang) =>
+    (MediaQuery.sizeOf(context).width - 32 - khoang) / 2 - 0.5;
