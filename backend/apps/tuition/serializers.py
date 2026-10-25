@@ -6,6 +6,7 @@ from apps.auth.models import Role
 from apps.training.models import KhoiKienThuc, Major
 from apps.tuition.models import (
     Discount,
+    HinhThucDong,
     HocPhanGia,
     LoaiThanhToan,
     Payment,
@@ -210,6 +211,7 @@ class TuitionRowSerializer(serializers.Serializer):
     con_no = serializers.DecimalField(**TIEN)
     can_hoan = serializers.DecimalField(**TIEN)
     hien_thi = serializers.CharField()
+    hinh_thuc = serializers.CharField()
     han_dong = serializers.DateField(allow_null=True)
     qua_han = serializers.BooleanField()
 
@@ -224,8 +226,27 @@ class HocKyCoHocPhiSerializer(serializers.Serializer):
     ten_hk = serializers.CharField()
 
 
+class DotMySerializer(serializers.Serializer):
+    thu_tu = serializers.IntegerField()
+    han_dong = serializers.DateField()
+    phai_nop = serializers.DecimalField(**TIEN)
+    luy_ke = serializers.DecimalField(**TIEN)
+    da_dong = serializers.BooleanField()
+
+
+class DotTiepTheoSerializer(serializers.Serializer):
+    thu_tu = serializers.IntegerField()
+    can_dong = serializers.DecimalField(**TIEN)
+
+
+class MyPlanSerializer(serializers.Serializer):
+    hinh_thuc = serializers.ChoiceField(choices=HinhThucDong.choices)
+
+
 class MyTuitionSerializer(TuitionDetailSerializer):
     thanh_toan = ThanhToanSerializer()
+    cac_dot = DotMySerializer(many=True)  # lịch 3 đợt nếu học kỳ đã cấu hình, ngược lại []
+    dot_tiep_theo = DotTiepTheoSerializer(allow_null=True)  # chỉ có khi CHIA_DOT
     cac_hoc_ky = HocKyCoHocPhiSerializer(
         many=True
     )  # kỳ tôi có học phí (+ kỳ đang xem), mới nhất trước

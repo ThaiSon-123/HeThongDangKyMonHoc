@@ -22,9 +22,11 @@ from apps.training.services import chon_hoc_ky
 from apps.tuition import services
 from apps.tuition.models import (
     Discount,
+    HinhThucDong,
     HocPhanGia,
     LoaiThanhToan,
     Payment,
+    TrangThaiHocPhi,
     Tuition,
     TuitionConfig,
     TuitionInstallment,
@@ -35,6 +37,7 @@ from apps.tuition.serializers import (
     HocPhanGiaSerializer,
     InstallmentSerializer,
     InstallmentsPutSerializer,
+    MyPlanSerializer,
     MyTuitionSerializer,
     PaymentCreateSerializer,
     PaymentSerializer,
@@ -43,6 +46,7 @@ from apps.tuition.serializers import (
     TuitionDetailSerializer,
     TuitionRowSerializer,
 )
+from core.exceptions import Codes, business_error
 from core.export import XLSX, xlsx_response
 from core.mixins import AuditLogMixin, write_audit
 from core.pagination import StandardPagination
@@ -130,9 +134,11 @@ class DiscountViewSet(_KtViewSet):
 # ----------------------------------------------------------------- danh sách / chi tiết
 
 
-def _hang(t, discounts, han, hom_nay, chi_tiet=None, payments=None):
+def _hang(t, discounts, han, hom_nay, chi_tiet=None, payments=None, dots=()):
     ho_so = getattr(t.sinh_vien, "sinh_vien", None)
     dx = services.gia_tri_dan_xuat(t, discounts, t.payments.all())
+    lich = services.lich_dot(dx["phai_nop"], dx["thuc_thu"], dots)
+    han, qua_han = services.han_va_qua_han(t.hinh_thuc, dx, han, lich, hom_nay)
     out = {
         "id": t.id,
         "sinh_vien": t.sinh_vien_id,
@@ -146,8 +152,9 @@ def _hang(t, discounts, han, hom_nay, chi_tiet=None, payments=None):
         "tong_tien": t.tong_tien,
         "trang_thai": t.trang_thai,
         **dx,
+        "hinh_thuc": t.hinh_thuc,
         "han_dong": han,
-        "qua_han": bool(han and hom_nay > han and dx["con_no"] > 0),
+        "qua_han": qua_han,
     }
     if chi_tiet is not None:
         out["chi_tiet"] = chi_tiet
@@ -186,7 +193,8 @@ def _rows(qs, hoc_ky):
     for d in Discount.objects.filter(hoc_ky=hoc_ky):
         ds.setdefault(d.sinh_vien_id, []).append(d)
     han, hom_nay = services.han_dong(hoc_ky.id), timezone.localdate()
-    return [_hang(t, ds.get(t.sinh_vien_id, []), han, hom_nay) for t in qs]
+    dots = services.dot_cua_hoc_ky(hoc_ky.id)
+    return [_hang(t, ds.get(t.sinh_vien_id, []), han, hom_nay, dots=dots) for t in qs]
 
 
 def _phan_trang(request, rows, view):
@@ -275,6 +283,7 @@ class TuitionDetailView(APIView):
                     timezone.localdate(),
                     chi_tiet,
                     list(t.payments.all()),
+                    services.dot_cua_hoc_ky(t.hoc_ky_id),
                 )
             ).data
         )
@@ -420,10 +429,18 @@ class MyTuitionView(APIView):
         except Exception:  # chưa cấu hình giá: SV thấy CHUA_TINH
             chi_tiet = []
         ds = list(Discount.objects.filter(sinh_vien=user, hoc_ky=hoc_ky))
+        dots = services.dot_cua_hoc_ky(hoc_ky.id)
         if t.pk is None:
             row = _hang_chua_co(t, ds, hoc_ky, ho_so)
         else:
-            row = _hang(t, ds, services.han_dong(hoc_ky.id), timezone.localdate())
+            row = _hang(t, ds, services.han_dong(hoc_ky.id), timezone.localdate(), dots=dots)
+        lich = services.lich_dot(row["phai_nop"], row["thuc_thu"], dots)
+        row["cac_dot"] = lich
+        row["dot_tiep_theo"] = (
+            services.dot_tiep_theo(lich, row["thuc_thu"])
+            if row["hinh_thuc"] == HinhThucDong.CHIA_DOT
+            else None
+        )
         row["chi_tiet"] = chi_tiet
         row["payments"] = payments
         row["thanh_toan"] = services.thong_tin_chuyen_khoan(ho_so, hoc_ky)
@@ -436,6 +453,37 @@ class MyTuitionView(APIView):
             .values("id", "ten_hk")
         )
         return Response(MyTuitionSerializer(row).data)
+
+
+class MyPlanView(APIView):
+    """`PATCH /api/tuition/my/plan/?hoc_ky=`: SV đổi giữa đóng một lần / chia 3 đợt (đổi lúc nào cũng
+    được: lịch đợt là dẫn xuất nên `con_no` không đổi)."""
+
+    permission_classes = [IsSinhVien]
+
+    @extend_schema(parameters=[HOC_KY], request=MyPlanSerializer, responses=MyPlanSerializer)
+    def patch(self, request):
+        hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
+        s = MyPlanSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        hinh_thuc = s.validated_data["hinh_thuc"]
+        t = Tuition.objects.filter(sinh_vien=request.user, hoc_ky=hoc_ky).first()
+        if t is None or t.trang_thai != TrangThaiHocPhi.DA_TINH:
+            raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Học phí chưa được tính.")
+        if hinh_thuc == HinhThucDong.CHIA_DOT and not services.dot_cua_hoc_ky(hoc_ky.id):
+            raise business_error(
+                Codes.TRANG_THAI_KHONG_HOP_LE, "Học kỳ này chưa cấu hình chia đợt."
+            )
+        t.hinh_thuc = hinh_thuc
+        t.save(update_fields=["hinh_thuc"])
+        write_audit(
+            request,
+            HanhDong.UPDATE,
+            "Tuition",
+            t.id,
+            {"hanh_dong": "doi_hinh_thuc", "hinh_thuc": hinh_thuc},
+        )
+        return Response({"hinh_thuc": hinh_thuc})
 
 
 def _hang_chua_co(t, ds, hoc_ky, ho_so):
@@ -453,6 +501,7 @@ def _hang_chua_co(t, ds, hoc_ky, ho_so):
         "tong_tien": t.tong_tien,
         "trang_thai": t.trang_thai,
         **dx,
+        "hinh_thuc": t.hinh_thuc,
         "han_dong": services.han_dong(hoc_ky.id),
         "qua_han": False,
     }

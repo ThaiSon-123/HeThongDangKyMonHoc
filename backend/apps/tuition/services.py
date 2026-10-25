@@ -15,7 +15,7 @@ from apps.notifications.models import Audience, Notification
 from apps.notifications.services import gui_cho_nguoi_dung
 from apps.profiles.models import StudentProfile
 from apps.registration.models import Registration, TrangThaiDangKy
-from apps.training.models import CurriculumCourse
+from apps.training.models import CurriculumCourse, Semester
 from apps.tuition.models import (
     Discount,
     HinhThucDong,
@@ -308,19 +308,30 @@ def thong_tin_chuyen_khoan(ho_so, hoc_ky):
 
 
 def thong_bao_qua_han(hom_nay=None):
-    """Job `tuition_overdue_notify`: `Tuition` `DA_TINH` còn nợ và quá `han_dong` → báo SV (một lần mỗi
-    học kỳ) + một thông báo tổng hợp cho Kế toán khi có sinh viên mới. Idempotent. Trả số SV mới báo.
+    """Job `tuition_overdue_notify`: `Tuition` `DA_TINH` còn nợ và quá hạn (một lần hoặc theo đợt, xem
+    `han_va_qua_han`) → báo SV (một lần mỗi học kỳ) + một thông báo tổng hợp cho Kế toán khi có sinh
+    viên mới. Idempotent. Trả số SV mới báo.
     """
     hom_nay = hom_nay or timezone.localdate()
     moi = {}  # hoc_ky → số SV vừa báo
-    cfgs = TuitionConfig.objects.filter(han_dong__lt=hom_nay).select_related("hoc_ky")
-    for cfg in cfgs:
+    hoc_ky_ids = set(
+        TuitionConfig.objects.filter(han_dong__lt=hom_nay).values_list("hoc_ky_id", flat=True)
+    ) | set(
+        TuitionInstallment.objects.filter(han_dong__lt=hom_nay).values_list("hoc_ky_id", flat=True)
+    )
+    for hoc_ky in Semester.objects.filter(id__in=hoc_ky_ids):
+        han_mot_lan, dots = han_dong(hoc_ky.id), dot_cua_hoc_ky(hoc_ky.id)
         for t in Tuition.objects.filter(
-            hoc_ky=cfg.hoc_ky, trang_thai=TrangThaiHocPhi.DA_TINH
+            hoc_ky=hoc_ky, trang_thai=TrangThaiHocPhi.DA_TINH
         ).select_related("sinh_vien"):
-            if dan_xuat_cua(t)["con_no"] <= 0:
+            dx = dan_xuat_cua(t)
+            if dx["con_no"] <= 0:
                 continue
-            tieu_de = f"Học phí quá hạn — {cfg.hoc_ky.ten_hk}"
+            lich = lich_dot(dx["phai_nop"], dx["thuc_thu"], dots)
+            han, qua_han = han_va_qua_han(t.hinh_thuc, dx, han_mot_lan, lich, hom_nay)
+            if not qua_han:
+                continue
+            tieu_de = f"Học phí quá hạn — {hoc_ky.ten_hk}"
             if Notification.objects.filter(
                 tieu_de=tieu_de, audience=Audience.USER, target_refs=[t.sinh_vien_id]
             ).exists():
@@ -328,10 +339,10 @@ def thong_bao_qua_han(hom_nay=None):
             gui_cho_nguoi_dung(
                 t.sinh_vien,
                 tieu_de,
-                f"Học phí {cfg.hoc_ky.ten_hk} đã quá hạn đóng ({cfg.han_dong:%d/%m/%Y}). "
+                f"Học phí {hoc_ky.ten_hk} đã quá hạn đóng ({han:%d/%m/%Y}). "
                 "Vui lòng thanh toán sớm.",
             )
-            moi[cfg.hoc_ky] = moi.get(cfg.hoc_ky, 0) + 1
+            moi[hoc_ky] = moi.get(hoc_ky, 0) + 1
     kt_ids = list(
         User.objects.filter(role=Role.KE_TOAN, is_locked=False).values_list("id", flat=True)
     )

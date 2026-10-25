@@ -9,8 +9,14 @@ from django.db import IntegrityError, transaction
 
 from apps.audit.models import AuditLog
 from apps.auth.models import Role
-from apps.tuition.models import OnlineTransaction, Tuition, TuitionInstallment
-from apps.tuition.services import dot_tiep_theo, han_va_qua_han, lich_dot
+from apps.tuition.models import (
+    OnlineTransaction,
+    Payment,
+    Tuition,
+    TuitionConfig,
+    TuitionInstallment,
+)
+from apps.tuition.services import dot_tiep_theo, han_va_qua_han, lich_dot, thong_bao_qua_han
 from core.factories import SemesterFactory, StudentProfileFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -181,3 +187,114 @@ def test_chi_ke_toan_duoc_cau_hinh(login_as, role):
     c = login_as(UserFactory(role=role))
     assert c.get(f"{URL}?hoc_ky={hk.id}").status_code == 403
     assert c.put(f"{URL}?hoc_ky={hk.id}", dots_body(), format="json").status_code == 403
+
+
+# --------------------------------------------------------------- tuition/my, đổi hình thức, quá hạn theo đợt
+
+
+def cau_hinh_dot(hk, han=(date(2027, 1, 1), date(2027, 2, 1), date(2027, 3, 1)), tl=(40, 30, 30)):
+    for i in range(3):
+        TuitionInstallment.objects.create(hoc_ky=hk, thu_tu=i + 1, ty_le=D(tl[i]), han_dong=han[i])
+
+
+def thu_tien(t, so_tien):
+    return Payment.objects.create(
+        tuition=t,
+        loai="THU",
+        so_tien=D(so_tien),
+        phuong_thuc="TIEN_MAT",
+        nguoi_thu=UserFactory(role=Role.KE_TOAN),
+    )
+
+
+def test_my_chia_dot_tra_ba_dot_va_dot_tiep_theo(login_as):
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    cau_hinh_dot(hk)
+    t = hoc_phi(sv, hk, 1000, hinh_thuc="CHIA_DOT")
+    thu_tien(t, 500)
+    d = login_as(sv.user).get(f"/api/tuition/my/?hoc_ky={hk.id}").json()
+    assert d["hinh_thuc"] == "CHIA_DOT"
+    assert [x["da_dong"] for x in d["cac_dot"]] == [True, False, False]
+    assert d["dot_tiep_theo"] == {"thu_tu": 2, "can_dong": "200.00"}
+    assert d["han_dong"] == "2027-02-01"
+
+
+def test_my_mot_lan_van_thay_lich_nhung_khong_co_dot_tiep_theo(login_as):
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    hoc_phi(sv, hk, 1000)
+    c = login_as(sv.user)
+    assert c.get(f"/api/tuition/my/?hoc_ky={hk.id}").json()["cac_dot"] == []
+    cau_hinh_dot(hk)
+    d = c.get(f"/api/tuition/my/?hoc_ky={hk.id}").json()
+    assert len(d["cac_dot"]) == 3 and d["dot_tiep_theo"] is None and d["hinh_thuc"] == "MOT_LAN"
+
+
+def test_plan_doi_giua_chung_khong_doi_con_no(login_as):
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    cau_hinh_dot(hk)
+    t = hoc_phi(sv, hk, 1000)
+    thu_tien(t, 500)
+    c = login_as(sv.user)
+    truoc = c.get(f"/api/tuition/my/?hoc_ky={hk.id}").json()["con_no"]
+    res = c.patch(f"/api/tuition/my/plan/?hoc_ky={hk.id}", {"hinh_thuc": "CHIA_DOT"}, format="json")
+    assert res.status_code == 200 and res.json() == {"hinh_thuc": "CHIA_DOT"}
+    t.refresh_from_db()
+    assert t.hinh_thuc == "CHIA_DOT"
+    assert c.get(f"/api/tuition/my/?hoc_ky={hk.id}").json()["con_no"] == truoc
+    c.patch(f"/api/tuition/my/plan/?hoc_ky={hk.id}", {"hinh_thuc": "MOT_LAN"}, format="json")
+    t.refresh_from_db()
+    assert t.hinh_thuc == "MOT_LAN"
+
+
+def test_plan_chia_dot_khi_chua_cau_hinh_bi_tu_choi(login_as):
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    hoc_phi(sv, hk, 1000)
+    res = login_as(sv.user).patch(
+        f"/api/tuition/my/plan/?hoc_ky={hk.id}", {"hinh_thuc": "CHIA_DOT"}, format="json"
+    )
+    assert res.status_code == 409 and res.data["error"]["code"] == "TRANG_THAI_KHONG_HOP_LE"
+
+
+def test_plan_khong_co_hoc_phi_hoac_chua_tinh_bi_tu_choi(login_as):
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    cau_hinh_dot(hk)
+    c = login_as(sv.user)
+    body = {"hinh_thuc": "CHIA_DOT"}
+    assert c.patch(f"/api/tuition/my/plan/?hoc_ky={hk.id}", body, format="json").status_code == 409
+    hoc_phi(sv, hk, 1000, trang_thai="CHUA_TINH")
+    assert c.patch(f"/api/tuition/my/plan/?hoc_ky={hk.id}", body, format="json").status_code == 409
+
+
+def test_plan_gia_tri_la_va_phan_quyen(login_as):
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    hoc_phi(sv, hk, 1000)
+    url = f"/api/tuition/my/plan/?hoc_ky={hk.id}"
+    assert login_as(sv.user).patch(url, {"hinh_thuc": "BA_LAN"}, format="json").status_code == 400
+    kt = login_as(UserFactory(role=Role.KE_TOAN))
+    assert kt.patch(url, {"hinh_thuc": "MOT_LAN"}, format="json").status_code == 403
+
+
+def test_danh_sach_kt_qua_han_theo_dot(login_as):
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    cau_hinh_dot(hk, han=(date(2020, 1, 1), date(2999, 2, 1), date(2999, 3, 1)))
+    hoc_phi(sv, hk, 1000, hinh_thuc="CHIA_DOT")
+    kt = login_as(UserFactory(role=Role.KE_TOAN))
+    row = kt.get(f"/api/tuition/?hoc_ky={hk.id}").json()["results"][0]
+    assert row["qua_han"] is True and row["han_dong"] == "2020-01-01"
+    assert row["hinh_thuc"] == "CHIA_DOT"
+
+
+def test_job_qua_han_bao_theo_dot():
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    cau_hinh_dot(hk, han=(date(2026, 3, 1), date(2026, 4, 1), date(2026, 5, 1)))
+    hoc_phi(sv, hk, 1000, hinh_thuc="CHIA_DOT")
+    assert thong_bao_qua_han(hom_nay=date(2026, 3, 2)) == 1
+    assert thong_bao_qua_han(hom_nay=date(2026, 3, 3)) == 0  # không báo trùng
+
+
+def test_job_qua_han_mot_lan_van_theo_tuition_config():
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    TuitionConfig.objects.create(hoc_ky=hk, han_dong=date(2026, 3, 1))
+    cau_hinh_dot(hk, han=(date(2099, 1, 1), date(2099, 2, 1), date(2099, 3, 1)))
+    hoc_phi(sv, hk, 1000)  # MOT_LAN: chỉ xét hạn một lần, bỏ qua hạn các đợt
+    assert thong_bao_qua_han(hom_nay=date(2026, 3, 2)) == 1
