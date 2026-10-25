@@ -140,5 +140,6 @@ Flutter: một widget test cho `StudentPayScreen` (hiện 3 đợt, đổi hình
      ("Thanh toán bằng VNPAY-QR") nếu thử được bằng điện thoại; không đổi thiết kế.
 - Điện thoại phải gọi được `VNPAY_RETURN_URL` (cùng WiFi hoặc ngrok); nếu không, thanh toán xong nhưng bước redirect về backend lỗi
   trên điện thoại, và vì IPN cần SSL + đăng ký nên học phí sẽ không cập nhật. Mặc định mình cấu hình `VNPAY_RETURN_URL` bằng IP LAN của máy chạy backend.
-- Chưa đăng ký sandbox (`http://sandbox.vnpayment.vn/devreg/`), nên chưa chạy thử đầu cuối với VNPay thật. Chữ ký được khóa bằng
-  test vector tự tính; cần một lần chạy thật để chắc khớp.
+- Đã đăng ký sandbox (2026-10-25). **Chiều gửi đã kiểm chứng:** URL do `vnpay.tao_url` dựng bằng key thật được sandbox chấp nhận
+  (hiện trang "Chọn phương thức thanh toán", không báo sai chữ ký). **Chưa kiểm chứng:** chiều callback (return URL ghi `Payment` sau
+  khi trả bằng thẻ test) và quét QR bằng điện thoại.
