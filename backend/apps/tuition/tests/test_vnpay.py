@@ -54,6 +54,14 @@ def test_kiem_chu_ky_dung_sai_va_thieu(vnp):
     assert vnpay.kiem_chu_ky(params) is False
 
 
+def test_kiem_chu_ky_tu_choi_khi_chua_cau_hinh_khoa(settings):
+    """Khóa rỗng: ai cũng ký được bằng HMAC khóa rỗng → không được coi là chữ ký hợp lệ."""
+    settings.VNPAY_TMN_CODE, settings.VNPAY_HASH_SECRET = "", ""
+    params = {"vnp_Command": "pay", "vnp_Amount": "1000000"}
+    gia = hmac.new(b"", b"vnp_Amount=1000000&vnp_Command=pay", hashlib.sha512).hexdigest()
+    assert vnpay.kiem_chu_ky({**params, "vnp_SecureHash": gia}) is False
+
+
 def test_tao_url_co_du_tham_so(vnp):
     now = datetime(2026, 10, 25, 3, 0, tzinfo=UTC)  # 10:00 giờ VN
     url = vnpay.tao_url("a" * 32, D("1000000.50"), "HOCPHI SV01 HK1", "1.2.3.4", now)
