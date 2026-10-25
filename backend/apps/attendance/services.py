@@ -20,10 +20,38 @@ from apps.training.models import ClassSection, TrangThaiDon, TrangThaiLop
 from core.exceptions import Codes, business_error
 
 MAX_ABSENT_PCT_MAC_DINH = 20
+SO_NGAY_XIN_SUA_MAC_DINH = 7
 
 
 def max_absent_pct():
     return SystemConfig.get_int("max_absent_pct", MAX_ABSENT_PCT_MAC_DINH)
+
+
+def so_ngay_xin_sua():
+    """Số ngày sau buổi học SV còn được xin sửa điểm danh (0 = chỉ trong ngày học)."""
+    return SystemConfig.get_int("so_ngay_xin_sua_diem_danh", SO_NGAY_XIN_SUA_MAC_DINH)
+
+
+def hom_nay():
+    return timezone.localdate()
+
+
+def con_han_xin_sua(ngay_hoc, so_ngay=None, hom=None):
+    """Còn sửa được điểm danh của buổi `ngay_hoc` không (GV lưu/sửa, SV xin sửa): hôm nay ≤ ngày học + N ngày."""
+    so_ngay = so_ngay_xin_sua() if so_ngay is None else so_ngay
+    return (hom or hom_nay()) <= ngay_hoc + timedelta(days=so_ngay)
+
+
+def kiem_tra_con_han(ngay_hoc, hanh_dong, hom=None):
+    """Quá hạn → `409 TRANG_THAI_KHONG_HOP_LE` (BR-20e). `hanh_dong`: "sửa điểm danh" / "xin sửa điểm danh"."""
+    so_ngay = so_ngay_xin_sua()
+    if not con_han_xin_sua(ngay_hoc, so_ngay, hom):
+        raise business_error(
+            Codes.TRANG_THAI_KHONG_HOP_LE,
+            f"Chỉ {hanh_dong} trong ngày học."
+            if so_ngay == 0
+            else f"Đã quá hạn {hanh_dong} ({so_ngay} ngày kể từ buổi học).",
+        )
 
 
 # ----------------------------------------------------------------- sinh buổi (BR-20a)
@@ -141,9 +169,10 @@ def sinh_vien_dang_ky(lop):
 @transaction.atomic
 def luu_diem_danh(session_id, gv, records, hom_nay=None):
     """`PUT records` — lưu **cả lớp**: `records` phải gồm đúng các SV đang đăng ký, mỗi SV một dòng
-    `{sinh_vien, trang_thai, di_tre, ghi_chu}`. Chỉ lớp `DANG_HOC` và buổi `ngay_hoc` ≤ hôm nay;
-    lần lưu đầu chuyển buổi sang `DA_DIEM_DANH`. Trả `(session, số dòng)`."""
-    hom_nay = hom_nay or timezone.localdate()
+    `{sinh_vien, trang_thai, di_tre, ghi_chu}`. Chỉ lớp `DANG_HOC`, buổi `ngay_hoc` ≤ hôm nay và còn trong
+    hạn sửa (BR-20e: hôm nay ≤ ngày học + N ngày); lần lưu đầu chuyển buổi sang `DA_DIEM_DANH`.
+    Trả `(session, số dòng)`."""
+    moc = hom_nay or timezone.localdate()
     session = (
         AttendanceSession.objects.select_for_update()
         .select_related("lop_hoc_phan__giao_vien")
@@ -153,10 +182,11 @@ def luu_diem_danh(session_id, gv, records, hom_nay=None):
     kiem_tra_gv_lop(gv, lop)
     if lop.trang_thai != TrangThaiLop.DANG_HOC:
         raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Chỉ điểm danh được khi lớp đang học.")
-    if session.ngay_hoc > hom_nay:
+    if session.ngay_hoc > moc:
         raise business_error(
             Codes.TRANG_THAI_KHONG_HOP_LE, "Chưa tới ngày học, chưa điểm danh được."
         )
+    kiem_tra_con_han(session.ngay_hoc, "sửa điểm danh", hom_nay)
 
     dang_ky = {r.sinh_vien_id for r in sinh_vien_dang_ky(lop)}
     gui = [r["sinh_vien"] for r in records]
@@ -209,6 +239,7 @@ def tao_yeu_cau(sv, attendance_id, trang_thai_mong_muon, di_tre_mong_muon, ly_do
         raise ValidationError({"attendance": ["Không tìm thấy buổi điểm danh của bạn."]})
     if att.lop_hoc_phan.trang_thai != TrangThaiLop.DANG_HOC:
         raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Chỉ gửi yêu cầu khi lớp đang học.")
+    kiem_tra_con_han(att.ngay_hoc, "xin sửa điểm danh")
     if att.yeu_cau.filter(trang_thai=TrangThaiDon.CHO_DUYET).exists():
         raise business_error(
             Codes.TRANG_THAI_KHONG_HOP_LE, "Buổi này đã có yêu cầu đang chờ duyệt."

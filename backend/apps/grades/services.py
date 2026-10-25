@@ -18,13 +18,15 @@ from core.exceptions import Codes, business_error
 
 D = Decimal
 HAI_SO = D("0.01")
-# (ngưỡng tổng kết tối thiểu, chữ, GPA thang 4) — band liên tục, BR-11
+# (ngưỡng tổng kết tối thiểu, chữ) — band liên tục, chỉ để hiển thị và xác định đạt/không đạt (BR-11)
 _THANG_CHU = [
-    (D("8.50"), "A", D("4.0")),
-    (D("7.00"), "B", D("3.0")),
-    (D("5.50"), "C", D("2.0")),
-    (D("4.00"), "D", D("1.0")),
+    (D("8.50"), "A"),
+    (D("7.00"), "B"),
+    (D("5.50"), "C"),
+    (D("4.00"), "D"),
 ]
+# Điểm hệ 4 của môn = tổng kết × 4 / 10 (tuyến tính, làm tròn 2 số lẻ); không đạt (F) = 0 (BR-11)
+HE_SO_THANG_4 = D("0.4")
 
 
 def lam_tron(x):
@@ -53,9 +55,9 @@ def xep_loai_diem(tong_ket, loai_danh_gia="DIEM"):
         return "", None
     if loai_danh_gia == "DAT_KHONG_DAT":
         return ("P", None) if tong_ket >= D("5.00") else ("F", D("0.0"))
-    for nguong, chu, gpa in _THANG_CHU:
+    for nguong, chu in _THANG_CHU:
         if tong_ket >= nguong:
-            return chu, gpa
+            return chu, lam_tron(tong_ket * HE_SO_THANG_4)
     return "F", D("0.0")
 
 

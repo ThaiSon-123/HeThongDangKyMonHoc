@@ -40,13 +40,15 @@ int? tinhTongKet(int? qt, int? gk, int? ck) {
   return (tuSo + 50) ~/ 100;
 }
 
-/// BR-11: `(điểm chữ, GPA thang 4)`. Môn Đạt/Không đạt: ≥ 5.00 → `P` (không vào GPA), ngược lại `F`.
+/// BR-11: `(điểm chữ, điểm hệ 4 = tổng kết × 0.4)`. Môn Đạt/Không đạt: ≥ 5.00 → `P` (không vào GPA), ngược lại `F`.
 (String, double?) xepLoai(int? tongKet, {bool datKhongDat = false}) {
   if (tongKet == null) return ('', null);
   if (datKhongDat) return tongKet >= 500 ? ('P', null) : ('F', 0.0);
-  if (tongKet >= 850) return ('A', 4.0);
-  if (tongKet >= 700) return ('B', 3.0);
-  if (tongKet >= 550) return ('C', 2.0);
-  if (tongKet >= 400) return ('D', 1.0);
+  // Điểm hệ 4 = tổng kết × 0.4 (tuyến tính, làm tròn 2 số lẻ); F = 0 (BR-11).
+  double he4() => (tongKet * 4 / 10).round() / 100;
+  if (tongKet >= 850) return ('A', he4());
+  if (tongKet >= 700) return ('B', he4());
+  if (tongKet >= 550) return ('C', he4());
+  if (tongKet >= 400) return ('D', he4());
   return ('F', 0.0);
 }

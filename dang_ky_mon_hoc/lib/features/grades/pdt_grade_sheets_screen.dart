@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/theme/app_colors.dart';
+import '../training/classes_screen.dart' show hocKyLabel;
+import '../training/curriculums_screen.dart' show nganhLabel;
+import '../training/entity_form.dart' show ApiSelect;
 import '../training/resource_list.dart';
 import '../training/training_api.dart';
 import '../training/training_widgets.dart';
@@ -46,6 +48,26 @@ class _PdtGradeSheetsScreenState extends ConsumerState<PdtGradeSheetsScreen> {
               label: 'Tìm lớp',
               hint: 'Mã lớp hoặc tên môn',
             ),
+            SizedBox(
+              width: 210,
+              child: ApiSelect(
+                label: 'Học kỳ',
+                path: '/semesters/',
+                labelOf: hocKyLabel,
+                hint: 'Tất cả học kỳ',
+                onChanged: (o) => _ctl.setFilter('hoc_ky', o?.id),
+              ),
+            ),
+            SizedBox(
+              width: 210,
+              child: ApiSelect(
+                label: 'Ngành',
+                path: '/majors/',
+                labelOf: nganhLabel,
+                hint: 'Tất cả ngành',
+                onChanged: (o) => _ctl.setFilter('nganh', o?.id),
+              ),
+            ),
             FilterDropdown(
               controller: _ctl,
               filterKey: 'trang_thai',
@@ -64,7 +86,15 @@ class _PdtGradeSheetsScreenState extends ConsumerState<PdtGradeSheetsScreen> {
           path: '/grade-sheets/',
           minWidth: 1000,
           emptyText: 'Chưa có lớp nào đang học hoặc đã đóng.',
-          onRowTap: (r) => setState(() => _sel = r.id),
+          onRowTap: (r) => setState(() => _sel = _sel == r.id ? null : r.id),
+          rowDetail: (r) => r.id != _sel
+              ? null
+              : GradeSheetPanel(
+                  key: ValueKey(_sel),
+                  lopId: _sel!,
+                  isPdt: true,
+                  onChanged: _ctl.reload,
+                ),
           columns: const [
             ListColumn('Mã lớp', width: 150),
             ListColumn('Môn học', flex: 2),
@@ -86,21 +116,6 @@ class _PdtGradeSheetsScreenState extends ConsumerState<PdtGradeSheetsScreen> {
             trangThaiChip(r.str('trang_thai')),
           ],
         ),
-        const SizedBox(height: 24),
-        if (_sel == null)
-          const PanelCard(
-            child: Text(
-              'Chọn một lớp ở bảng trên để xem bảng điểm cả lớp và các thao tác.',
-              style: TextStyle(color: AppColors.muted, fontSize: 14),
-            ),
-          )
-        else
-          GradeSheetPanel(
-            key: ValueKey(_sel),
-            lopId: _sel!,
-            isPdt: true,
-            onChanged: _ctl.reload,
-          ),
       ],
     ),
   );

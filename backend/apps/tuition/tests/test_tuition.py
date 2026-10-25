@@ -498,6 +498,7 @@ def test_tuition_my_chi_tiet_giao_dich_va_thong_tin_chuyen_khoan(login_as, kt):
         D("170000"),
     )
     assert d["hien_thi"] == "CON_NO"
+    assert [h["id"] for h in d["cac_hoc_ky"]] == [hk.id]  # kỳ đang xem có trong danh sách chọn kỳ
     assert d["chi_tiet"][0]["ma_mon"] == mon.ma_mon and D(d["chi_tiet"][0]["thanh_tien"]) == D(
         "300000"
     )

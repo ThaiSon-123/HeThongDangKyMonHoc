@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/auth/auth_user.dart';
 import '../../core/format.dart';
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/shell/bell_badge.dart';
 import '../../shared/widgets/app_button.dart';
@@ -153,61 +154,112 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_coTheGui) ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ChoiceChip(
-                label: const Text('Hộp thư'),
-                selected: _tab == 0,
-                onSelected: (_) => setState(() => _tab = 0),
-              ),
-              ChoiceChip(
-                label: const Text('Đã gửi'),
-                selected: _tab == 1,
-                onSelected: (_) => setState(() => _tab = 1),
-              ),
-              if (!_laGv)
-                SizedBox(
-                  width: 190,
-                  child: AppButton(
-                    label: '+ Gửi theo vai trò',
-                    height: 40,
-                    onPressed: () => _send('ROLE'),
-                  ),
-                ),
-              SizedBox(
-                width: 190,
-                child: AppButton(
-                  label: '+ Gửi cho lớp',
-                  height: 40,
-                  outlined: !_laGv,
-                  onPressed: _role == UserRole.admin
-                      ? null
-                      : () => _send('CLASS'),
-                ),
-              ),
-              if (!_laGv)
-                SizedBox(
-                  width: 190,
-                  child: AppButton(
-                    label: '+ Gửi cho một người',
-                    height: 40,
-                    outlined: true,
-                    onPressed: () => _send('USER'),
-                  ),
-                ),
-            ],
+  Widget build(BuildContext context) {
+    final compact = isCompact(context);
+    Widget tab(int i, String nhan) {
+      final chon = _tab == i;
+      return InkWell(
+        onTap: () => setState(() => _tab = i),
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 14 : 22,
+            vertical: 14,
           ),
-          const SizedBox(height: 16),
-        ],
-        if (_tab == 0) _inboxView() else _sentView(),
-      ],
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: chon ? AppColors.primary : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Text(
+            nhan,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: chon ? AppColors.primary : AppColors.muted,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final soan = <Widget>[
+      if (!_laGv)
+        SizedBox(
+          width: 190,
+          child: AppButton(
+            label: '+ Gửi theo vai trò',
+            height: 40,
+            onPressed: () => _send('ROLE'),
+          ),
+        ),
+      SizedBox(
+        width: 190,
+        child: AppButton(
+          label: '+ Gửi cho lớp',
+          height: 40,
+          outlined: !_laGv,
+          onPressed: _role == UserRole.admin ? null : () => _send('CLASS'),
+        ),
+      ),
+      if (!_laGv)
+        SizedBox(
+          width: 190,
+          child: AppButton(
+            label: '+ Gửi cho một người',
+            height: 40,
+            outlined: true,
+            onPressed: () => _send('USER'),
+          ),
+        ),
+    ];
+    return SingleChildScrollView(
+      child: Container(
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppColors.cardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_coTheGui)
+              Container(
+                padding: EdgeInsets.fromLTRB(compact ? 6 : 14, 0, 16, 0),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: AppColors.divider)),
+                ),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [tab(0, 'Hộp thư'), tab(1, 'Đã gửi')],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Wrap(spacing: 8, runSpacing: 8, children: soan),
+                    ),
+                  ],
+                ),
+              ),
+            if (_tab == 0) _inboxView() else _sentView(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _trong(String text) => Padding(
+    padding: const EdgeInsets.all(32),
+    child: Center(
+      child: Text(text, style: const TextStyle(color: AppColors.muted)),
     ),
   );
 
@@ -216,43 +268,69 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     builder: (context, snap) {
       if (snap.hasError) return ListErrorCard(onRetry: _reload);
       final d = snap.data;
-      if (d == null) return const ListSkeleton();
+      if (d == null) {
+        return const Padding(
+          padding: EdgeInsets.all(16),
+          child: ListSkeleton(),
+        );
+      }
       final ds = [for (final n in d['results'] as List) Json.from(n as Map)];
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              FilterChip(
-                label: const Text('Chưa đọc'),
-                selected: _chuaDoc,
-                onSelected: (v) {
-                  _chuaDoc = v;
-                  _reload();
-                },
-              ),
-              Text(
-                '${d.num0('chua_doc')} chưa đọc',
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
-              ),
-              TextButton(
-                onPressed: d.num0('chua_doc') == 0 ? null : _readAll,
-                child: const Text('Đánh dấu tất cả đã đọc'),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.divider)),
+            ),
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Tất cả'),
+                      selected: !_chuaDoc,
+                      onSelected: (_) {
+                        _chuaDoc = false;
+                        _reload();
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Chưa đọc'),
+                      selected: _chuaDoc,
+                      onSelected: (_) {
+                        _chuaDoc = true;
+                        _reload();
+                      },
+                    ),
+                    Text(
+                      '${d.num0('chua_doc')} chưa đọc',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+                OutlinedButton(
+                  onPressed: d.num0('chua_doc') == 0 ? null : _readAll,
+                  child: const Text('Đánh dấu tất cả đã đọc'),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
           if (ds.isEmpty)
-            _Card(
-              child: Text(
-                _chuaDoc
-                    ? 'Không có thông báo chưa đọc.'
-                    : 'Chưa có thông báo nào.',
-                style: const TextStyle(color: AppColors.muted),
-              ),
+            _trong(
+              _chuaDoc
+                  ? 'Không có thông báo chưa đọc.'
+                  : 'Chưa có thông báo nào.',
             ),
           for (final n in ds) _item(n),
         ],
@@ -262,53 +340,85 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   Widget _item(Json n) {
     final chua = n['da_doc'] != true;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _read(n),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: chua ? const Color(0xFFF3F4FC) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: AppColors.cardShadow,
-            border: chua
-                ? const Border(
-                    left: BorderSide(color: AppColors.primary, width: 4),
-                  )
-                : null,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    final compact = isCompact(context);
+    final gio = Text(
+      formatIso(n.str('ngay_gui')),
+      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+    );
+    return InkWell(
+      onTap: () => _read(n),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 16 : 20,
+          vertical: 14,
+        ),
+        decoration: BoxDecoration(
+          color: chua ? const Color(0xFFF6F7FD) : Colors.white,
+          border: const Border(bottom: BorderSide(color: AppColors.divider)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: 12),
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: chua ? AppColors.primary : Colors.transparent,
+                  border: Border.all(
+                    color: chua ? AppColors.primary : AppColors.border,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      n.str('tieu_de'),
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: chua ? FontWeight.w700 : FontWeight.w500,
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          n.str('tieu_de'),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: chua
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                          ),
+                        ),
                       ),
+                      if (chua) ...[
+                        const SizedBox(width: 8),
+                        StatusChip.of('Mới', StatusChip.indigo),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    n.str('noi_dung'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.label,
                     ),
                   ),
-                  if (chua) StatusChip.of('Mới', StatusChip.indigo),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Từ ${n.str('nguoi_gui_ten')}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                  if (compact) ...[const SizedBox(height: 2), gio],
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                n.str('noi_dung'),
-                style: const TextStyle(fontSize: 14, color: AppColors.label),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Từ ${n.str('nguoi_gui_ten')} · ${formatIso(n.str('ngay_gui'))}',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
-              ),
-            ],
-          ),
+            ),
+            if (!compact) ...[const SizedBox(width: 16), gio],
+          ],
         ),
       ),
     );
@@ -319,92 +429,79 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     builder: (context, snap) {
       if (snap.hasError) return ListErrorCard(onRetry: _reload);
       final d = snap.data;
-      if (d == null) return const ListSkeleton();
-      final ds = [for (final n in d['results'] as List) Json.from(n as Map)];
-      if (ds.isEmpty) {
-        return const _Card(
-          child: Text(
-            'Chưa gửi thông báo nào.',
-            style: TextStyle(color: AppColors.muted),
-          ),
+      if (d == null) {
+        return const Padding(
+          padding: EdgeInsets.all(16),
+          child: ListSkeleton(),
         );
       }
+      final ds = [for (final n in d['results'] as List) Json.from(n as Map)];
+      if (ds.isEmpty) return _trong('Chưa gửi thông báo nào.');
+      final compact = isCompact(context);
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final n in ds)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _Card(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            n.str('tieu_de'),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        n.str('trang_thai') == 'THU_HOI'
-                            ? StatusChip.of('Đã thu hồi', StatusChip.gray)
-                            : StatusChip.of('Đã gửi', StatusChip.green),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      n.str('noi_dung'),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.label,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 12,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          'Tới ${_nguoiNhanLabel(n)} · ${formatIso(n.str('ngay_gui'))}',
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 16 : 20,
+                vertical: 14,
+              ),
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.divider)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          n.str('tieu_de'),
                           style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.muted,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
                           ),
                         ),
-                        if (n.str('trang_thai') == 'DA_GUI')
-                          OutlinedButton(
-                            onPressed: () => _recall(n),
-                            child: const Text('Thu hồi'),
-                          ),
-                      ],
+                      ),
+                      n.str('trang_thai') == 'THU_HOI'
+                          ? StatusChip.of('Đã thu hồi', StatusChip.gray)
+                          : StatusChip.of('Đã gửi', StatusChip.green),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    n.str('noi_dung'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.label,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Tới ${_nguoiNhanLabel(n)} · ${formatIso(n.str('ngay_gui'))}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.muted,
+                        ),
+                      ),
+                      if (n.str('trang_thai') == 'DA_GUI')
+                        OutlinedButton(
+                          onPressed: () => _recall(n),
+                          child: const Text('Thu hồi'),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
         ],
       );
     },
-  );
-}
-
-class _Card extends StatelessWidget {
-  const _Card({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: AppColors.cardShadow,
-    ),
-    child: child,
   );
 }

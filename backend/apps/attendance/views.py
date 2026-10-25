@@ -26,7 +26,7 @@ from apps.attendance.serializers import (
 from apps.audit.models import HanhDong
 from apps.auth.models import Role
 from apps.registration.models import Registration, TrangThaiDangKy
-from apps.training.models import ClassSection, TrangThaiDon, TrangThaiLop
+from apps.training.models import ClassSection, Semester, TrangThaiDon, TrangThaiLop
 from apps.training.services import chon_hoc_ky
 from core.mixins import write_audit
 from core.pagination import StandardPagination
@@ -109,7 +109,10 @@ class SessionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             "session": SessionSerializer(session).data,
             "lop_trang_thai": lop.trang_thai,
             "co_the_diem_danh": lop.trang_thai == TrangThaiLop.DANG_HOC
-            and session.ngay_hoc <= timezone.localdate(),
+            and session.ngay_hoc <= timezone.localdate()
+            and services.con_han_xin_sua(session.ngay_hoc),
+            "con_han_sua": services.con_han_xin_sua(session.ngay_hoc),
+            "so_ngay_xin_sua": services.so_ngay_xin_sua(),
             "tong_so_buoi": tong,
             "max_absent_pct": pct,
             "records": rows,
@@ -157,6 +160,7 @@ class MyAttendanceView(APIView):
         user = request.user
         hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
         pct = services.max_absent_pct()
+        so_ngay = services.so_ngay_xin_sua()
         regs = Registration.objects.filter(
             sinh_vien=user,
             trang_thai=TrangThaiDangKy.DA_DANG_KY,
@@ -191,6 +195,7 @@ class MyAttendanceView(APIView):
                         "di_tre": a.di_tre if a else False,
                         "ghi_chu": a.ghi_chu if a else "",
                         "yeu_cau": yc,
+                        "con_han_xin_sua": services.con_han_xin_sua(s.ngay_hoc, so_ngay),
                     }
                 )
             tong, thong_ke = services.thong_ke_lop(lop)
@@ -212,12 +217,23 @@ class MyAttendanceView(APIView):
                     "buoi": buoi,
                 }
             )
+        cac_hoc_ky = (
+            Semester.objects.filter(
+                id__in=Registration.objects.filter(
+                    sinh_vien=user, trang_thai=TrangThaiDangKy.DA_DANG_KY
+                ).values("lop_hoc_phan__hoc_ky_id")
+            )
+            .order_by("-ngay_bat_dau")
+            .values("id", "ten_hk")
+        )
         return Response(
             MyAttendanceSerializer(
                 {
                     "hoc_ky": hoc_ky.id,
                     "ten_hk": hoc_ky.ten_hk,
+                    "cac_hoc_ky": cac_hoc_ky,
                     "max_absent_pct": pct,
+                    "so_ngay_xin_sua": so_ngay,
                     "lop_hoc_phan": lop_data,
                 }
             ).data

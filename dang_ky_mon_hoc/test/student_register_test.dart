@@ -176,7 +176,10 @@ void main() {
       await tapText(t, 'Lập trình cơ bản');
       expect(find.text('M1-01'), findsOneWidget);
       expect(find.text('M1-02'), findsOneWidget);
-      expect(find.textContaining('Thứ 2 · tiết 1–3 · A101'), findsWidgets);
+      expect(find.text('Thứ 2 · tiết 1–3'), findsWidgets); // cột Lịch học
+      expect(find.text('A101'), findsWidgets); // cột Phòng
+      expect(find.text('MÃ LỚP'), findsOneWidget); // tiêu đề cột của bảng lớp
+      expect(find.text('40/45'), findsWidgets); // sĩ số
 
       await tapText(t, 'Đăng ký');
       expect(api.bodies['POST /registrations/'], {'lop_hoc_phan': 1});
@@ -199,9 +202,7 @@ void main() {
     expect(find.text('Trùng lịch với lớp M2-01.'), findsOneWidget);
   });
 
-  testWidgets('bộ lọc Theo CTĐT + kỳ và Môn chưa học (kết hợp được)', (
-    t,
-  ) async {
+  testWidgets('bộ lọc Theo CTĐT và Môn chưa học (kết hợp được)', (t) async {
     await openStudent(t, api0(), '/student/register');
     expect(find.text('2 môn · 3 lớp học phần đang mở'), findsOneWidget);
 
@@ -209,10 +210,10 @@ void main() {
     expect(find.text('1 môn · 1 lớp học phần đang mở'), findsOneWidget);
     await tapText(t, 'Môn chưa học');
 
-    await tapText(t, 'Theo CTĐT');
-    await tapText(t, 'Tất cả các kỳ');
-    await t.tap(find.text('Kỳ 3').last);
-    await t.pumpAndSettle();
+    await tapText(t, 'Theo CTĐT'); // cả 2 môn đều thuộc CTĐT của sinh viên
+    expect(find.text('Kỳ trong chương trình đào tạo'), findsNothing);
+    expect(find.text('2 môn · 3 lớp học phần đang mở'), findsOneWidget);
+    await tapText(t, 'Môn chưa học'); // kết hợp: M1 đã đạt → ẩn
     expect(find.text('1 môn · 1 lớp học phần đang mở'), findsOneWidget);
     expect(find.text('Cấu trúc dữ liệu'), findsOneWidget);
   });
@@ -269,9 +270,43 @@ void main() {
 
       await tapText(t, 'Lịch sử');
       expect(find.textContaining('Đổi lịch'), findsOneWidget);
-      expect(find.text('Đã hủy'), findsOneWidget);
+      expect(
+        find.text('Đã hủy'),
+        findsNWidgets(2),
+      ); // nút lọc + nhãn của đăng ký đã hủy
     },
   );
+
+  testWidgets('tab Lịch sử: lọc theo học kỳ và trạng thái', (t) async {
+    final api = api0(
+      history: [
+        lichSu(5, 'M9-01', 'Giải tích'),
+        lichSu(6, 'M8-01', 'Vật lý', tt: 'DA_HUY', ly: 'Đổi lịch'),
+        {...lichSu(7, 'M7-01', 'Hóa học'), 'hoc_ky': 6, 'ten_hk': 'Học kỳ 1'},
+      ],
+    );
+    await openStudent(t, api, '/student/register');
+    await tapText(t, 'Lịch sử');
+    expect(find.text('3 đăng ký'), findsOneWidget);
+
+    await tapText(t, 'Đã hủy'); // nút lọc (đứng trước nhãn trong danh sách)
+    expect(find.text('1 đăng ký'), findsOneWidget);
+    expect(find.text('Vật lý'), findsOneWidget);
+    expect(find.text('Giải tích'), findsNothing);
+
+    await tapText(t, 'Tất cả');
+    await tapText(t, 'Tất cả học kỳ');
+    await t.tap(find.text('Học kỳ 1').last);
+    await t.pumpAndSettle();
+    expect(find.text('1 đăng ký'), findsOneWidget);
+    expect(find.text('Hóa học'), findsOneWidget);
+
+    await tapText(t, 'Đã hủy'); // học kỳ 1 không có đăng ký đã hủy
+    expect(
+      find.text('Không có đăng ký nào phù hợp với bộ lọc.'),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('bố cục App (390 px): không tràn, vẫn đăng ký được', (t) async {
     final api = api0(

@@ -302,7 +302,7 @@ class ScheduleViewSet(_CoXoaViewSet):
 
 class MyClassSectionsView(APIView):
     """`GET /api/class-sections/my/` (GV-03): lớp tôi phụ trách, mới nhất trước. Lọc `?hoc_ky=`,
-    `?trang_thai=`."""
+    `?trang_thai=`, tìm `?search=` (mã lớp, mã/tên môn)."""
 
     permission_classes = [IsGiaoVien]
 
@@ -310,6 +310,7 @@ class MyClassSectionsView(APIView):
         parameters=[
             OpenApiParameter("hoc_ky", int),
             OpenApiParameter("trang_thai", str),
+            OpenApiParameter("search", str),
             OpenApiParameter("page", int),
             OpenApiParameter("page_size", int),
         ],
@@ -327,6 +328,13 @@ class MyClassSectionsView(APIView):
             qs = qs.filter(hoc_ky=services.chon_hoc_ky(hoc_ky_id))
         if request.query_params.get("trang_thai"):
             qs = qs.filter(trang_thai=request.query_params["trang_thai"])
+        tu_khoa = request.query_params.get("search", "").strip()
+        if tu_khoa:
+            qs = qs.filter(
+                Q(ma_lop__icontains=tu_khoa)
+                | Q(mon_hoc__ma_mon__icontains=tu_khoa)
+                | Q(mon_hoc__ten_mon__icontains=tu_khoa)
+            )
         paginator = StandardPagination()
         page = paginator.paginate_queryset(qs, request, view=self)
         return paginator.get_paginated_response(MyClassSerializer(page, many=True).data)

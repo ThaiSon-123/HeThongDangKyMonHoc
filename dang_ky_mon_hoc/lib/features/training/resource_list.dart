@@ -68,6 +68,7 @@ class ResourceList extends ConsumerStatefulWidget {
     required this.columns,
     required this.cells,
     this.onRowTap,
+    this.rowDetail,
     this.emptyText = 'Chưa có dữ liệu.',
     this.minWidth = 900,
     this.footer,
@@ -80,6 +81,9 @@ class ResourceList extends ConsumerStatefulWidget {
   /// Các ô của một dòng, đúng thứ tự [columns].
   final List<Widget> Function(Json row) cells;
   final void Function(Json row)? onRowTap;
+
+  /// Nội dung mở ngay dưới dòng (null = dòng đang đóng).
+  final Widget? Function(Json row)? rowDetail;
   final String emptyText;
   final double minWidth;
   final Widget Function(PageResult<Json> page)? footer;
@@ -180,7 +184,7 @@ class _ResourceListState extends ConsumerState<ResourceList> {
                           ),
                       ],
                     ),
-                    for (final r in page.items)
+                    for (final r in page.items) ...[
                       InkWell(
                         onTap: widget.onRowTap == null
                             ? null
@@ -192,6 +196,19 @@ class _ResourceListState extends ConsumerState<ResourceList> {
                           ],
                         ),
                       ),
+                      if (widget.rowDetail?.call(r) case final detail?)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF6F7FD),
+                            border: Border(
+                              top: BorderSide(color: AppColors.divider),
+                            ),
+                          ),
+                          child: detail,
+                        ),
+                    ],
                   ],
                 ),
               ),

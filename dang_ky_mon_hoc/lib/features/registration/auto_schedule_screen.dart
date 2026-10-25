@@ -8,13 +8,14 @@ import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_dialog.dart';
-import '../../shared/widgets/labeled_dropdown.dart';
+import '../../shared/widgets/hang_chip.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../admin/accounts/account_dialogs.dart' show failureText;
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
-import '../training/training_widgets.dart' show PanelCard, monoStyle;
+import '../training/training_widgets.dart' show PanelCard;
 import 'auto_schedule_service.dart';
+import 'bang_lop.dart';
 import 'registration_format.dart' show loaiMonText, newIdempotencyKey;
 
 /// Nghỉ giữa hai lần đăng ký liên tiếp để không vượt 30 lần/phút/người dùng (plan mục 8.2).
@@ -68,7 +69,6 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
 
   // Bước 1
   int _mode = 0; // 0 = tất cả môn đang mở, 1 = theo CTĐT
-  int? _ky;
   bool _chuaHoc = false;
   final _chon = <int>{};
   final _gv = <int, int>{}; // monId → giáo viên mong muốn
@@ -265,13 +265,10 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
 
   // ================================================================ bước 1
   Widget _buoc1(_Data d, List<MonChon> mon) {
-    final ky = {
-      for (final m in mon)
-        if (m.kyGoiY != null) m.kyGoiY!,
-    }.toList()..sort();
     final hienThi = [
       for (final m in mon)
-        if ((_mode == 0 || _ky == null || m.kyGoiY == _ky) &&
+        // "Theo CTĐT": chỉ môn có trong chương trình đào tạo của mình.
+        if ((_mode == 0 || m.kyGoiY != null) &&
             !(_chuaHoc && d.daDat[m.id] == true))
           m,
     ];
@@ -306,10 +303,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                   ChoiceChip(
                     label: const Text('Tất cả môn đang mở'),
                     selected: _mode == 0,
-                    onSelected: (_) => setState(() {
-                      _mode = 0;
-                      _ky = null;
-                    }),
+                    onSelected: (_) => setState(() => _mode = 0),
                   ),
                   ChoiceChip(
                     label: const Text('Theo CTĐT'),
@@ -323,21 +317,6 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                   ),
                 ],
               ),
-              if (_mode == 1) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: 280,
-                  child: LabeledDropdown<int?>(
-                    label: 'Kỳ trong chương trình đào tạo',
-                    value: _ky,
-                    options: [
-                      (null, 'Tất cả các kỳ'),
-                      for (final k in ky) (k, 'Kỳ $k'),
-                    ],
-                    onChanged: (v) => setState(() => _ky = v),
-                  ),
-                ),
-              ],
               const SizedBox(height: 12),
               if (hienThi.isEmpty)
                 Text(
@@ -382,122 +361,112 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
   Widget _monTile(_Data d, MonChon m) {
     final daDat = d.daDat[m.id] == true;
     final gv = <int, String>{for (final l in m.lop) l.giaoVienId: l.giaoVien};
-    return Container(
-      margin: const EdgeInsets.only(top: 10),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: _chon.contains(m.id) ? AppColors.primary : AppColors.divider,
-          width: _chon.contains(m.id) ? 1.5 : 1,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ExpansionTile(
-        key: PageStorageKey('tkb-mon-${m.id}'),
-        shape: const Border(),
-        collapsedShape: const Border(),
-        leading: Checkbox(
-          value: _chon.contains(m.id),
-          onChanged: daDat
-              ? null
-              : (v) => setState(() {
-                  v == true ? _chon.add(m.id) : _chon.remove(m.id);
-                }),
-        ),
-        title: Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              m.lop.first.tenMon,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-            ),
-            Text(
-              '${m.tinChi} TC',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
-            ),
-            StatusChip.of(
-              loaiMonText(m.batBuoc ? 'bat_buoc' : 'tu_chon'),
-              StatusChip.indigo,
-            ),
-            if (daDat) StatusChip.of('Đã đạt', StatusChip.green),
-            if (m.kyGoiY != null)
-              Text(
-                'Kỳ ${m.kyGoiY}',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
-              ),
-          ],
-        ),
-        subtitle: Text(
-          '${m.lop.length} lớp đang mở',
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        expandedCrossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Giáo viên mong muốn',
-            style: TextStyle(fontSize: 12, color: AppColors.muted),
+    // Môn đã đạt: làm mờ để phân biệt với môn còn học được.
+    return Opacity(
+      opacity: daDat ? 0.55 : 1,
+      child: Container(
+        margin: const EdgeInsets.only(top: 10),
+        decoration: BoxDecoration(
+          color: _chon.contains(m.id) ? const Color(0xFFF4F6FE) : Colors.white,
+          border: Border.all(
+            color: _chon.contains(m.id) ? AppColors.primary : AppColors.divider,
+            width: _chon.contains(m.id) ? 1.5 : 1,
           ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              ChoiceChip(
-                label: const Text('Tự động chọn'),
-                selected: _gv[m.id] == null,
-                onSelected: (_) => setState(() => _gv.remove(m.id)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ExpansionTile(
+          key: PageStorageKey('tkb-mon-${m.id}'),
+          shape: const Border(),
+          collapsedShape: const Border(),
+          leading: Checkbox(
+            value: _chon.contains(m.id),
+            onChanged: daDat
+                ? null
+                : (v) => setState(() {
+                    v == true ? _chon.add(m.id) : _chon.remove(m.id);
+                  }),
+          ),
+          title: TieuDeMon(
+            ten: m.lop.first.tenMon,
+            nhan: [
+              StatusChip.of('${m.tinChi} TC', StatusChip.gray),
+              StatusChip.of(
+                loaiMonText(m.batBuoc ? 'bat_buoc' : 'tu_chon'),
+                m.batBuoc ? StatusChip.indigo : StatusChip.yellow,
               ),
-              for (final e in gv.entries)
-                ChoiceChip(
-                  label: Text(e.value),
-                  selected: _gv[m.id] == e.key,
-                  onSelected: daDat
-                      ? null
-                      : (_) => setState(() {
-                          _gv[m.id] = e.key;
-                          _chon.add(m.id); // chọn giáo viên thì tự tick môn
-                        }),
-                ),
+              if (daDat) StatusChip.of('Đã đạt', StatusChip.green),
+              Text(
+                '${m.lop.length} lớp đang mở',
+                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            _gv[m.id] == null
-                ? 'Để hệ thống tự chọn lớp phù hợp nhất với ưu tiên của bạn.'
-                : 'Lớp của giáo viên đã chọn được ưu tiên xếp.',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
-          ),
-          const SizedBox(height: 8),
-          for (final l in m.lop) _lopRow(l, _gv[m.id]),
-        ],
-      ),
-    );
-  }
-
-  Widget _lopRow(Lop l, int? gvChon) {
-    final mo = gvChon != null && l.giaoVienId != gvChon;
-    return Opacity(
-      opacity: mo ? 0.45 : 1,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.divider)),
-        ),
-        child: Wrap(
-          spacing: 16,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          // Mặc định ExpansionTile căn GIỮA khối nội dung đã co theo chiều rộng → neo sát trái.
+          expandedAlignment: Alignment.centerLeft,
+          expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(width: 110, child: Text(l.maLop, style: monoStyle)),
-            SizedBox(
-              width: 150,
-              child: Text(l.giaoVien, style: const TextStyle(fontSize: 13)),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
+              child: Text(
+                'Giáo viên mong muốn',
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
             ),
-            Text(l.lichText, style: const TextStyle(fontSize: 13)),
-            if (gvChon != null && !mo)
-              StatusChip.of('Đã chọn', StatusChip.green),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Tự động chọn'),
+                    selected: _gv[m.id] == null,
+                    onSelected: (_) => setState(() => _gv.remove(m.id)),
+                  ),
+                  for (final e in gv.entries)
+                    ChoiceChip(
+                      label: Text(e.value),
+                      selected: _gv[m.id] == e.key,
+                      onSelected: daDat
+                          ? null
+                          : (_) => setState(() {
+                              _gv[m.id] = e.key;
+                              _chon.add(m.id); // chọn giáo viên thì tự tick môn
+                            }),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                _gv[m.id] == null
+                    ? 'Để hệ thống tự chọn lớp phù hợp nhất với ưu tiên của bạn.'
+                    : 'Lớp của giáo viên đã chọn được ưu tiên xếp.',
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ),
+            const SizedBox(height: 4),
+            BangLop(
+              dong: [
+                for (final l in m.lop)
+                  DongLop(
+                    maLop: l.maLop,
+                    giaoVien: l.giaoVien,
+                    lich: l.lichText,
+                    phong: l.phong,
+                    siSo: l.siSo,
+                    siSoToiDa: l.siSoToiDa,
+                    mo: _gv[m.id] != null && l.giaoVienId != _gv[m.id],
+                    nhan: _gv[m.id] != null && l.giaoVienId == _gv[m.id]
+                        ? StatusChip.of('Đã chọn', StatusChip.green)
+                        : null,
+                  ),
+              ],
+            ),
           ],
         ),
       ),
@@ -524,15 +493,13 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       children: [
         Text(tieuDe, style: const TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
+        HangChip(
+          muc: [
             for (final (v, nhan) in ngay)
-              FilterChip(
-                label: Text(nhan),
-                selected: tap.contains(v),
-                onSelected: (b) => setState(() {
+              (
+                nhan: nhan,
+                chon: tap.contains(v),
+                onChon: (b) => setState(() {
                   if (b) {
                     tap.add(v);
                     doiLap.remove(
@@ -584,15 +551,14 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
+          HangChip(
+            chonMot: true,
+            muc: [
               for (final c in Ca.values)
-                ChoiceChip(
-                  label: Text('${c.nhan} (tiết ${c.tietDau}–${c.tietCuoi})'),
-                  selected: _ca == c,
-                  onSelected: (b) => setState(() => _ca = b ? c : null),
+                (
+                  nhan: '${c.nhan} (tiết ${c.tietDau}–${c.tietCuoi})',
+                  chon: _ca == c,
+                  onChon: (b) => setState(() => _ca = b ? c : null),
                 ),
             ],
           ),

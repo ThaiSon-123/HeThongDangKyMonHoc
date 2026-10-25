@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/api_failure.dart';
 import '../../core/download/save_file_provider.dart';
 import '../../core/format.dart';
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
@@ -47,6 +48,7 @@ class TeacherAttendanceScreen extends ConsumerStatefulWidget {
 class _TeacherAttendanceScreenState
     extends ConsumerState<TeacherAttendanceScreen> {
   late Future<List<Json>> _classes = _loadClasses();
+  String? _hocKy; // tên học kỳ đang lọc (null = học kỳ mới nhất)
   Json? _lop;
   Future<_LopData>? _data;
   int _tab = 0;
@@ -67,7 +69,10 @@ class _TeacherAttendanceScreenState
     _classes
         .then((l) {
           final lop = l.where((c) => c.id == id).firstOrNull;
-          if (mounted && lop != null) _pick(lop);
+          if (mounted && lop != null) {
+            _hocKy = lop.str('ten_hk'); // mở đúng học kỳ của lớp được chọn sẵn
+            _pick(lop);
+          }
         })
         .catchError((_) {});
   }
@@ -130,13 +135,20 @@ class _TeacherAttendanceScreenState
           },
         );
       }
-      final classes = snap.data;
-      if (classes == null) return const ListSkeleton();
+      final tatCa = snap.data;
+      if (tatCa == null) return const ListSkeleton();
+      // Lớp tôi phụ trách xếp mới nhất trước → danh sách học kỳ cũng mới nhất trước.
+      final hocKy = {for (final c in tatCa) c.str('ten_hk')}.toList();
+      final hk = _hocKy ?? (hocKy.isEmpty ? '' : hocKy.first);
+      final classes = [
+        for (final c in tatCa)
+          if (c.str('ten_hk') == hk) c,
+      ];
       return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _picker(classes),
+            _picker(classes, hocKy, hk),
             const SizedBox(height: 16),
             if (_lop == null)
               const _Hint(
@@ -151,7 +163,11 @@ class _TeacherAttendanceScreenState
     },
   );
 
-  Widget _picker(List<Json> classes) => Container(
+  Widget _picker(
+    List<Json> classes,
+    List<String> hocKy,
+    String hk,
+  ) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: Colors.white,
@@ -163,8 +179,22 @@ class _TeacherAttendanceScreenState
       runSpacing: 12,
       crossAxisAlignment: WrapCrossAlignment.end,
       children: [
+        // Chọn học kỳ trước, rồi mới chọn lớp của học kỳ đó.
+        if (hocKy.length > 1)
+          SizedBox(
+            width: isCompact(context) ? double.infinity : 300,
+            child: LabeledDropdown<String>(
+              label: 'Học kỳ',
+              value: hk,
+              options: [for (final h in hocKy) (h, h)],
+              onChanged: (v) {
+                setState(() => _hocKy = v);
+                _pick(null); // đổi kỳ thì bỏ lớp đang chọn
+              },
+            ),
+          ),
         SizedBox(
-          width: 360,
+          width: isCompact(context) ? double.infinity : 360,
           child: LabeledDropdown<int?>(
             label: 'Lớp học phần',
             value: _lop?.id,
@@ -277,25 +307,33 @@ class _TeacherAttendanceScreenState
             'Lớp chưa có buổi nào',
             'Buổi được sinh sẵn khi lớp mở theo lịch học.',
           ),
-        for (final s in shown) _sessionTile(s),
+        for (final s in shown) ...[
+          _sessionTile(s),
+          // Bảng điểm danh mở ngay dưới buổi vừa bấm (bấm lại để đóng).
+          if (_session?.id == s.id) _roster(),
+        ],
         if (!_showAll && sorted.length > shown.length)
           TextButton(
             onPressed: () => setState(() => _showAll = true),
             child: Text('… và ${sorted.length - shown.length} buổi trước đó'),
           ),
-        if (_session != null) ...[
-          const SizedBox(height: 16),
-          _Roster(
-            key: ValueKey(_session!.id),
-            session: _session!,
-            onSaved: () {
-              _reload();
-            },
-          ),
-        ],
+        // Buổi đang chọn nằm trong phần "buổi trước đó" còn ẩn: hiện ở cuối để không mất bảng.
+        if (_session != null && !shown.any((s) => s.id == _session!.id))
+          _roster(),
       ],
     );
   }
+
+  Widget _roster() => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: _Roster(
+      key: ValueKey(_session!.id),
+      session: _session!,
+      onSaved: () {
+        _reload();
+      },
+    ),
+  );
 
   Widget _sessionTile(Json s) {
     final selected = _session?.id == s.id;
@@ -304,7 +342,7 @@ class _TeacherAttendanceScreenState
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => setState(() => _session = s),
+        onTap: () => setState(() => _session = selected ? null : s),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
@@ -619,9 +657,13 @@ class _RosterState extends ConsumerState<_Roster> {
               const SizedBox(height: 10),
               AlertBanner(
                 kind: BannerKind.info,
-                message: d.str('lop_trang_thai') == 'DANG_HOC'
-                    ? 'Buổi chưa tới ngày học nên chưa điểm danh được.'
-                    : 'Chỉ điểm danh được khi lớp đang học. Bạn đang xem dữ liệu đã lưu.',
+                message: d.str('lop_trang_thai') != 'DANG_HOC'
+                    ? 'Chỉ điểm danh được khi lớp đang học. Bạn đang xem dữ liệu đã lưu.'
+                    : d['con_han_sua'] == false
+                    ? (d.num0('so_ngay_xin_sua') == 0
+                          ? 'Chỉ sửa được điểm danh trong ngày học. Bạn đang xem dữ liệu đã lưu.'
+                          : 'Đã quá hạn sửa điểm danh (${d.num0('so_ngay_xin_sua')} ngày kể từ buổi học). Bạn đang xem dữ liệu đã lưu.')
+                    : 'Buổi chưa tới ngày học nên chưa điểm danh được.',
               ),
             ],
             const SizedBox(height: 12),

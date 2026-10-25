@@ -1,4 +1,5 @@
 import 'package:dang_ky_mon_hoc/features/grades/grade_calc.dart';
+import 'package:dang_ky_mon_hoc/features/grades/grade_sheet_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -88,7 +89,10 @@ void main() {
       expect(xepLoai(845).$1, 'B');
       expect(xepLoai(695).$1, 'C');
       expect(xepLoai(545).$1, 'D');
-      expect(xepLoai(850), ('A', 4.0));
+      expect(xepLoai(850), ('A', 3.4)); // hệ 4 = tổng kết × 0.4
+      expect(xepLoai(857), ('A', 3.43));
+      expect(xepLoai(965), ('A', 3.86));
+      expect(xepLoai(1000), ('A', 4.0));
       expect(xepLoai(700).$1, 'B');
       expect(xepLoai(550).$1, 'C');
       expect(xepLoai(400).$1, 'D');
@@ -140,6 +144,62 @@ void main() {
       await t.pumpAndSettle();
     }
 
+    testWidgets('lọc theo học kỳ trước, rồi mới chọn lớp của học kỳ đó', (
+      t,
+    ) async {
+      final cu = {
+        ...lopMy(),
+        'id': 4,
+        'ma_lop': 'CNTT100-01',
+        'ten_mon': 'Lập trình cơ bản',
+        'trang_thai': 'DA_DONG',
+        'ten_hk': 'Học kỳ 1',
+      };
+      final api = gv(
+        () => sheet([]),
+        extra: {
+          'GET /class-sections/my/': (_) => reply(
+            200,
+            pageOf([
+              {...lopMy(), 'ten_hk': 'Học kỳ 2'}, // mới nhất trước
+              cu,
+            ]),
+          ),
+        },
+      );
+      await pumpApp(
+        t,
+        router: webRouterProvider,
+        adapter: api,
+        tokens: signedIn,
+        size: bigScreen,
+      );
+      GoRouter.of(t.element(find.byType(Scaffold).first)).go('/teacher/grades');
+      await t.pumpAndSettle();
+      expect(find.text('Học kỳ'), findsOneWidget);
+      // Mặc định là học kỳ mới nhất: chỉ có lớp của học kỳ đó.
+      await tapText(t, '— Chọn lớp để nhập điểm —');
+      expect(find.text('CNTT100-01 · Lập trình cơ bản'), findsNothing);
+      await t.tap(find.text('CNTT101-01 · Nhập môn lập trình').last);
+      await t.pumpAndSettle();
+
+      await tapText(t, 'Học kỳ 2'); // mở ô học kỳ → đổi sang học kỳ cũ
+      await t.tap(find.text('Học kỳ 1').last);
+      await t.pumpAndSettle();
+      expect(
+        find.text(
+          'Điểm đã khóa vẫn chưa hiển thị cho sinh viên cho tới khi Phòng đào tạo duyệt.',
+        ),
+        findsOneWidget,
+      );
+      await tapText(
+        t,
+        '— Chọn lớp để nhập điểm —',
+      ); // đổi kỳ thì bỏ chọn lớp cũ
+      expect(find.text('CNTT100-01 · Lập trình cơ bản'), findsWidgets);
+      expect(find.text('CNTT101-01 · Nhập môn lập trình'), findsNothing);
+    });
+
     testWidgets(
       'gõ điểm → xem trước tổng kết + chữ ngay; Lưu nháp gửi chuỗi 2 chữ số, chỉ dòng sửa được',
       (t) async {
@@ -174,30 +234,31 @@ void main() {
           },
         );
         await open(t, api);
-        expect(
-          find.textContaining('Tổng kết 8.10 · B'),
-          findsOneWidget,
-        ); // dữ liệu server
+        expect(find.text('8.10'), findsOneWidget); // tổng kết từ server
+        expect(find.text('B'), findsOneWidget); // chip điểm chữ
         expect(find.text('Chính thức'), findsOneWidget);
 
+        // Ô nhập theo thứ tự trong bảng: mỗi dòng 3 ô QT, GK, CK.
         Future<void> nhap(String label, int idx, String v) async {
-          await t.enterText(find.widgetWithText(TextField, label).at(idx), v);
+          final cot = {'QT (10%)': 0, 'GK (40%)': 1, 'CK (50%)': 2}[label]!;
+          await t.enterText(find.byType(TextField).at(idx * 3 + cot), v);
           await t.pump();
         }
 
         // dòng 2 (chưa nhập): QT 8, CK 6, thiếu GK → 20/80 = 6.40 → C
         await nhap('QT (10%)', 1, '8');
         await nhap('CK (50%)', 1, '6');
-        expect(find.textContaining('Tổng kết 6.40 · C'), findsOneWidget);
+        expect(find.text('6.40'), findsOneWidget);
+        expect(find.text('GHI CHÚ'), findsNothing); // không còn cột ghi chú
         await nhap(
           'GK (40%)',
           1,
           '0',
         ); // GK = 0 đã nhập → công thức thường = 3.80 → F
-        expect(find.textContaining('Tổng kết 3.80 · F'), findsOneWidget);
+        expect(find.text('3.80'), findsOneWidget);
         await nhap('GK (40%)', 1, '');
         await nhap('QT (10%)', 0, '10.5'); // sai định dạng
-        expect(find.text('0–10'), findsOneWidget);
+        expect(find.textContaining('Ô viền đỏ sai định dạng'), findsOneWidget);
         await tapText(t, 'Lưu nháp');
         expect(api.bodies['PUT /class-sections/3/grades/'], isNull);
         await nhap('QT (10%)', 0, '8.5');
@@ -262,7 +323,7 @@ void main() {
         },
       );
       await open(t, api);
-      await tapText(t, 'Khóa điểm');
+      await tapText(t, 'Khóa điểm cả lớp');
       expect(api.bodies['POST /class-sections/3/grades/lock/'], {
         'action': 'lock',
       });
@@ -290,7 +351,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Lưu nháp'), findsNothing);
-      final f = t.widget<TextField>(find.widgetWithText(TextField, 'QT (10%)'));
+      final f = t.widget<TextField>(find.byType(TextField).first);
       expect(f.enabled, isFalse);
     });
 
@@ -308,7 +369,7 @@ void main() {
           },
         );
         await open(t, api);
-        await t.enterText(find.widgetWithText(TextField, 'QT (10%)'), '7');
+        await t.enterText(find.byType(TextField).first, '7');
         await tapText(t, 'Lưu nháp');
         expect(
           find.text('Không thực hiện được, vui lòng thử lại.'),
@@ -384,14 +445,21 @@ void main() {
           find.textContaining('Chính thức 2 · Đã khóa 0 · Chưa nhập 0'),
           findsOneWidget,
         );
-        expect(
-          find.text(
-            'Chọn một lớp ở bảng trên để xem bảng điểm cả lớp và các thao tác.',
-          ),
-          findsOneWidget,
-        );
+        expect(find.byType(GradeSheetPanel), findsNothing);
+        expect(find.text('Học kỳ'), findsWidgets);
+        expect(find.text('Ngành'), findsWidgets);
 
         await tapText(t, 'Nhập môn lập trình');
+        expect(find.byType(GradeSheetPanel), findsOneWidget);
+        // Chi tiết nằm ngay dưới dòng lớp, trong bảng (không phải cuối trang).
+        expect(
+          t.getTopLeft(find.byType(GradeSheetPanel)).dy,
+          greaterThan(t.getTopLeft(find.text('Nhập môn lập trình')).dy),
+        );
+        expect(
+          t.getTopLeft(find.byType(GradeSheetPanel)).dy,
+          lessThan(t.getTopLeft(find.textContaining('bản ghi')).dy),
+        );
         expect(find.text('Duyệt cả lớp'), findsOneWidget);
         await tapText(t, 'Duyệt cả lớp');
         expect(find.textContaining('không sửa được nữa'), findsOneWidget);
@@ -439,7 +507,15 @@ void main() {
         await openPdt(t, api, '/pdt/grade-sheets');
         await tapText(t, 'Nhập môn lập trình');
         expect(find.text('Lưu điểm chính thức'), findsOneWidget);
-        await t.enterText(find.widgetWithText(TextField, 'CK (50%)'), '6');
+        await t.enterText(
+          find
+              .descendant(
+                of: find.byType(GradeSheetPanel),
+                matching: find.byType(TextField),
+              )
+              .at(2), // ô CK của dòng duy nhất (bảng có 3 ô/dòng)
+          '6',
+        );
         await tapText(t, 'Lưu điểm chính thức');
         expect(
           ((api.bodies['PUT /class-sections/3/grades/'] as Map)['records']
@@ -533,11 +609,14 @@ void main() {
       expect(find.text('Nhập môn lập trình'), findsOneWidget);
       expect(find.text('Giải tích'), findsOneWidget);
       expect(
-        find.textContaining('Tín chỉ đạt: 0', findRichText: true),
-        findsOneWidget,
-      );
+        find.text('Tín chỉ đạt'),
+        findsNWidgets(2),
+      ); // ô thống kê của 2 học kỳ
+      expect(find.text('GHI CHÚ'), findsNothing); // không có cột ghi chú
 
-      await tapText(t, 'Học kỳ 1, 2025–2026');
+      await tapText(t, 'Tất cả học kỳ'); // ô chọn học kỳ
+      await t.tap(find.text('Học kỳ 1, 2025–2026').last);
+      await t.pumpAndSettle();
       expect(find.text('Giải tích'), findsNothing);
       expect(find.text('Nhập môn lập trình'), findsOneWidget);
     });

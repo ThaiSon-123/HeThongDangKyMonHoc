@@ -161,6 +161,34 @@ void main() {
     expect(hanNhapDiemInfo('', _homNay).$1, '—');
   });
 
+  testWidgets(
+    'lọc theo học kỳ: mặc định kỳ mới nhất, đổi kỳ thì hiện lớp của kỳ đó',
+    (t) async {
+      final cu = {
+        ...lop(8, 'CNTT090-01', 'Toán rời rạc', tt: 'DA_DONG'),
+        'ten_hk': 'HK2 2025–2026',
+      };
+      await openClasses(
+        t,
+        gvApi({
+          'GET /class-sections/my/': (_) => reply(
+            200,
+            pageOf([lop(3, 'CNTT101-01', 'Lập trình hướng đối tượng'), cu]),
+          ),
+        }),
+      );
+      expect(find.text('Học kỳ'), findsOneWidget);
+      expect(find.text('Lập trình hướng đối tượng'), findsOneWidget);
+      expect(find.text('Toán rời rạc'), findsNothing);
+
+      await tapText(t, 'HK1 2026–2027'); // mở ô học kỳ
+      await t.tap(find.text('HK2 2025–2026').last);
+      await t.pumpAndSettle();
+      expect(find.text('Toán rời rạc'), findsOneWidget);
+      expect(find.text('Lập trình hướng đối tượng'), findsNothing);
+    },
+  );
+
   testWidgets('danh sách lớp: thẻ lớp, hạn nhập điểm, lọc theo trạng thái', (
     t,
   ) async {

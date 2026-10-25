@@ -5,6 +5,7 @@ from datetime import date
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
+from apps.attendance import services
 from apps.attendance.models import Attendance, AttendanceRequest, AttendanceSession
 from apps.attendance.services import chi_so_vang, dong_bo_buoi
 from apps.audit.models import AuditLog
@@ -38,8 +39,10 @@ def tao_lop(tu, den, thu=(5,), trang_thai=TrangThaiLop.DANG_HOC, n_sv=3, **kw):
 
 
 @pytest.fixture
-def lop_cu():
-    """Lớp 03/09–08/10/2020, chỉ thứ 5 → 6 buổi (03, 10, 17, 24/09, 01, 08/10), đều ở quá khứ."""
+def lop_cu(monkeypatch):
+    """Lớp 03/09–08/10/2020, chỉ thứ 5 → 6 buổi (03, 10, 17, 24/09, 01, 08/10), đều ở quá khứ.
+    "Hạn sửa điểm danh" (BR-20e) tính từ 04/09/2020 để các test không vướng hạn; test hạn tự đổi lại."""
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 4))
     lop, sv = tao_lop(date(2020, 9, 3), date(2020, 10, 8))
     dong_bo_buoi(lop, hom_nay=date(2020, 9, 1))
     return lop, sv
@@ -345,6 +348,7 @@ def test_ty_le_vang_tren_records_va_attendance_my(login_as, lop_cu):
     trang_thai = [b["trang_thai"] for b in mon["buoi"]]
     assert trang_thai == ["VANG_KHONG_PHEP"] * 3 + [None] * 3  # buổi chưa điểm danh = null
     assert me.data["ten_hk"] == lop.hoc_ky.ten_hk
+    assert me.data["cac_hoc_ky"] == [{"id": lop.hoc_ky_id, "ten_hk": lop.hoc_ky.ten_hk}]  # kỳ tôi có đăng ký
     assert timezone.now()
     assert login_as(UserFactory(role=Role.GIAO_VIEN)).get("/api/attendance/my/").status_code == 403
 
@@ -353,8 +357,9 @@ def test_ty_le_vang_tren_records_va_attendance_my(login_as, lop_cu):
 
 
 @pytest.fixture
-def da_diem_danh(login_as, lop_cu):
-    """Buổi đầu đã điểm danh: sv[0] vắng không phép."""
+def da_diem_danh(login_as, lop_cu, monkeypatch):
+    """Buổi đầu (03/09/2020) đã điểm danh: sv[0] vắng không phép. "Hôm nay" giả lập là 04/09/2020 (còn hạn xin sửa)."""
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 4))
     lop, sv = lop_cu
     buoi = lop.buoi_diem_danh.first()
     records = [{"sinh_vien": p.user_id, "trang_thai": "CO_MAT"} for p in sv]
@@ -407,6 +412,59 @@ def test_sv_gui_yeu_cau_kem_minh_chung_gv_lop_do_xem_va_tai(
     )
     assert login_as(TeacherProfileFactory().user).get(REQ).data["count"] == 0  # GV lớp khác
     assert login_as(sv[1].user).get(REQ).data["count"] == 0
+
+
+def test_xin_sua_chi_trong_n_ngay_ke_tu_buoi_hoc(login_as, da_diem_danh, monkeypatch):
+    lop, sv, att = da_diem_danh  # buổi học 03/09/2020, mặc định N = 7
+    api = login_as(sv[0].user)
+    cua_so = lambda: api.get(f"/api/attendance/my/?hoc_ky={lop.hoc_ky_id}").data  # noqa: E731
+    buoi = cua_so()["lop_hoc_phan"][0]["buoi"][0]
+    assert cua_so()["so_ngay_xin_sua"] == 7 and buoi["con_han_xin_sua"] is True
+
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 11))  # đúng ngày thứ 8 sau buổi học
+    assert cua_so()["lop_hoc_phan"][0]["buoi"][0]["con_han_xin_sua"] is False
+    qua_han = gui(api, att)
+    assert qua_han.status_code == 409 and qua_han.data["error"]["code"] == "TRANG_THAI_KHONG_HOP_LE"
+    assert "7 ngày" in qua_han.data["error"]["message"]
+    assert not AttendanceRequest.objects.filter(attendance=att).exists()
+
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 10))  # ngày cuối còn hạn (03/09 + 7)
+    assert gui(api, att).status_code == 201
+
+
+def test_gv_chi_luu_sua_diem_danh_trong_n_ngay_ke_tu_buoi_hoc(login_as, lop_cu, monkeypatch):
+    lop, sv = lop_cu
+    gv = api_gv(login_as, lop)
+    buoi = lop.buoi_diem_danh.first()  # 03/09/2020, mặc định N = 7
+    url = f"{SES}{buoi.id}/records/"
+
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 11))  # ngày thứ 8 sau buổi học
+    qua_han = gv.put(url, body(sv), format="json")
+    assert qua_han.status_code == 409 and qua_han.data["error"]["code"] == "TRANG_THAI_KHONG_HOP_LE"
+    assert "7 ngày" in qua_han.data["error"]["message"]
+    ds = gv.get(url).data  # vẫn xem được, nhưng không còn điểm danh/sửa được
+    assert ds["co_the_diem_danh"] is False and ds["con_han_sua"] is False and ds["so_ngay_xin_sua"] == 7
+    assert not Attendance.objects.filter(attendance_session=buoi).exists()
+
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 10))  # ngày cuối còn hạn
+    assert gv.put(url, body(sv), format="json").status_code == 200
+    assert gv.get(url).data["co_the_diem_danh"] is True
+
+    SystemConfig.objects.create(khoa="so_ngay_xin_sua_diem_danh", gia_tri="0")  # chỉ trong ngày học
+    assert gv.put(url, body(sv), format="json").status_code == 409
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 3))
+    assert gv.put(url, body(sv), format="json").status_code == 200
+
+
+def test_so_ngay_xin_sua_doi_theo_cau_hinh_0_la_chi_trong_ngay(login_as, da_diem_danh, monkeypatch):
+    lop, sv, att = da_diem_danh
+    api = login_as(sv[0].user)
+    SystemConfig.objects.create(khoa="so_ngay_xin_sua_diem_danh", gia_tri="0")
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 4))  # hôm sau buổi học
+    res = gui(api, att)
+    assert res.status_code == 409 and "trong ngày học" in res.data["error"]["message"]
+    monkeypatch.setattr(services, "hom_nay", lambda: date(2020, 9, 3))  # chính ngày học
+    assert gui(api, att).status_code == 201
 
 
 def test_rang_buoc_khi_gui_yeu_cau(login_as, da_diem_danh):

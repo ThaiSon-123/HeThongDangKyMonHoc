@@ -436,17 +436,9 @@ class Command(BaseCommand):
     def _tao_diem(self, lop, sv, tong_ket, trang_thai):
         from decimal import ROUND_HALF_UP
 
-        bang_chu = Decimal("8.5"), Decimal("7.0"), Decimal("5.5"), Decimal("4.0")
-        if tong_ket >= bang_chu[0]:
-            chu, g4 = "A", Decimal("4.0")
-        elif tong_ket >= bang_chu[1]:
-            chu, g4 = "B", Decimal("3.0")
-        elif tong_ket >= bang_chu[2]:
-            chu, g4 = "C", Decimal("2.0")
-        elif tong_ket >= bang_chu[3]:
-            chu, g4 = "D", Decimal("1.0")
-        else:
-            chu, g4 = "F", Decimal("0")
+        from apps.grades.services import xep_loai_diem
+
+        chu, g4 = xep_loai_diem(tong_ket)
 
         # Công thức: 40% QT + 60% CK (không có giữa kỳ trong demo này).
         qt = (tong_ket * Decimal("2")).quantize(Decimal("0.01"), ROUND_HALF_UP) - Decimal("6")
@@ -510,6 +502,7 @@ class Command(BaseCommand):
     def _seed_cau_hinh(self, hk_mo):
         configs = [
             ("max_absent_pct", "20", "% vắng không phép vượt ngưỡng thì hiện cờ cảnh báo"),
+            ("so_ngay_xin_sua_diem_danh", "7", "Số ngày sau buổi học SV còn được xin sửa điểm danh"),
             ("so_ngay_cho_phep_nhap_diem", "14", "Hạn nhập điểm sau khi lớp kết thúc (ngày)"),
             ("backup_retention_days", "14", "Số ngày giữ file backup"),
             ("ck_ngan_hang", "Vietcombank", "Ngân hàng nhận chuyển khoản học phí"),

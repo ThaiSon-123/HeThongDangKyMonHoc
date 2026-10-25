@@ -74,12 +74,13 @@ def test_ma_tran_khop_hanh_vi_that(login_as):
 # ------------------------------------------------------------------ cấu hình
 
 
-def test_doc_cau_hinh_du_6_khoa_voi_mac_dinh(admin):
+def test_doc_cau_hinh_du_7_khoa_voi_mac_dinh(admin):
     res = admin.get("/api/admin/config/")
     assert res.status_code == 200
     items = {i["khoa"]: i for i in res.data["items"]}
     assert list(items) == [
         "max_absent_pct",
+        "so_ngay_xin_sua_diem_danh",
         "so_ngay_cho_phep_nhap_diem",
         "backup_retention_days",
         "ck_ngan_hang",

@@ -423,8 +423,16 @@ void main() {
         );
         expect(find.text('Học kỳ 2'), findsOneWidget);
         expect(find.text('Còn nợ'), findsWidgets);
-        expect(find.text('4.500.000 ₫'), findsOneWidget);
-        expect(find.text('Nhập môn lập trình (CNTT101)'), findsOneWidget);
+        expect(
+          find.text('4.500.000 ₫'),
+          findsWidgets,
+        ); // thẻ Còn nợ (+ Phải nộp / thanh đã nộp)
+        expect(find.text('Nhập môn lập trình'), findsOneWidget);
+        expect(find.text('CNTT101'), findsOneWidget);
+        expect(
+          find.text('THÀNH TIỀN'),
+          findsOneWidget,
+        ); // tiêu đề bảng chi tiết
         expect(find.textContaining('BL20270110-000009'), findsOneWidget);
 
         await tapText(t, 'Thanh toán học phí');

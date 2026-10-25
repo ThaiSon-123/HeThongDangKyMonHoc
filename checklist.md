@@ -1,6 +1,6 @@
 # CHECKLIST TRIỂN KHAI — HỆ THỐNG ĐĂNG KÝ MÔN HỌC
 
-> **Nguồn:** `plan.md` v3.13 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
+> **Nguồn:** `plan.md` v3.14 (nguồn duy nhất). File này chỉ để theo dõi tiến độ — **không định nghĩa quy tắc**;
 > mỗi dòng trỏ về mục/BR trong plan. Có chỗ lệch giữa hai file ⇒ plan thắng, sửa checklist.
 > **Cách dùng:** tick `[x]` khi xong; mỗi pha phải đạt **Milestone + DoD** (mục 10) mới sang pha sau.
 > **Thời lượng:** ~10–11 tuần cho đội 4–5 người (plan mục 12).
@@ -115,6 +115,19 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Tỷ lệ vắng = `VANG_KHONG_PHEP` / **tổng số buổi theo lịch** (cố định cả khóa; vắng có phép không tính) + cờ cảnh báo (`max_absent_pct`); `/attendance/my/` trả `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep`; **không** chặn nhập điểm
 - [x] _(model + ràng buộc 1 yêu cầu chờ duyệt/buổi đã xong; còn API)_ `AttendanceRequest`: SV gửi (trạng thái mong muốn + `di_tre_mong_muon`, lý do bắt buộc, `minh_chung` tùy chọn ≤ 5 MB, `multipart`) · **chỉ GV (lớp mình)** xem minh chứng và duyệt → ghi lại `Attendance` (PĐT không duyệt); chỉ gửi/duyệt khi lớp `DANG_HOC`; đóng lớp ⇒ yêu cầu chờ tự `TU_CHOI` (`ghi_chu` quá hạn)
 - [x] `/attendance/my/` · `/attendance/sessions/?lop_hoc_phan=` (danh sách buổi sinh sẵn)
+- [x] GV `/teacher/attendance`: bảng điểm danh mở ngay dưới buổi vừa bấm (bấm lại để đóng), như bên SV
+- [x] **Hạn sửa điểm danh (BR-20e) — cả GV lẫn SV:** GV lưu/sửa (`PUT records`) quá N ngày → `409`; `records` trả `con_han_sua`, `co_the_diem_danh`; giao diện GV khóa + báo số ngày.
+- [x] **Hạn xin sửa điểm danh (BR-20e):** `SystemConfig.so_ngay_xin_sua_diem_danh` (mặc định 7, `0` = chỉ trong ngày học); `tao_yeu_cau` chặn quá hạn → `409 TRANG_THAI_KHONG_HOP_LE`; `/attendance/my/` trả `so_ngay_xin_sua`, `con_han_xin_sua` (từng buổi), `cac_hoc_ky`
+- [x] Flutter SV: ẩn nút *Xin sửa* khi quá hạn + dòng báo số ngày; (Web) ô chọn học kỳ ở `/student/attendance`; Admin sửa số ngày ở `/admin/config`
+- [x] Web `/student/attendance` theo mockup `SV-Web-DiemDanh`: 6 ô thống kê (Tổng · Đã điểm danh · Có mặt · Đi trễ · Vắng có phép · Vắng không phép) + thanh tỷ lệ vắng so với ngưỡng cờ; danh sách buổi trong một thẻ có tab gạch chân; chi tiết mở ngay dưới buổi; App dùng cùng bố cục (6 ô xếp 3 × 2, tab chia đôi) và cũng có ô chọn học kỳ
+- [x] Sửa lỗi tìm kiếm `class-sections/my` (ô chọn lớp khi GV gửi thông báo) + test; dò toàn bộ endpoint có `?search=` (không còn endpoint nào bỏ qua); Thông báo làm lại cho cả 5 vai trò (SV, GV, PĐT, KT, Admin dùng chung một màn): một thẻ, tab gạch chân Hộp thư · Đã gửi, nút soạn theo quyền từng vai trò, bộ lọc Tất cả · Chưa đọc, chấm chưa đọc; đã chụp web + 390px
+- [ ] Tìm kiếm chưa bỏ dấu: gõ "mang" không ra "mạng" (Postgres `icontains` phân biệt dấu) — cần `unaccent` nếu muốn
+- [x] Lọc theo học kỳ (chọn kỳ → rồi chọn lớp): `/teacher/classes`, `/teacher/attendance`, `/teacher/grades`; Thời khóa biểu SV + GV có ô chọn học kỳ (`timetable/my` thêm `cac_hoc_ky`, kỳ ngoài hôm nay mở tuần đầu của kỳ); test backend + widget
+- [x] `/teacher/grades` theo mockup `Web-NhapDiem` (Web + App): lọc học kỳ rồi chọn lớp; bảng nhập điểm có xem trước tổng kết, chip điểm chữ (không có cột ghi chú), ô sai định dạng viền đỏ; footer Lưu nháp / Khóa điểm cả lớp; `xepLoai` client dùng hệ 4 tuyến tính
+- [x] `/student/tuition` theo mockup `SV-Web-HocPhi` (Web + App): chọn học kỳ (`cac_hoc_ky`), thanh Đã nộp, thẻ số tiền, bảng chi tiết môn + giao dịch
+- [x] `/student/register` + `/student/auto-schedule`: bảng lớp dùng chung `BangLop` (cột thẳng hàng, sĩ số có thanh lấp đầy, App xếp dọc), dòng môn có mã + chip; môn đã đạt làm mờ
+- [x] `/student/grades` theo mockup `SV-Web-Diem` (Web + App): ô chọn học kỳ thay cho dãy chip; 3 thẻ tổng kết (tín chỉ tích lũy kèm `/ yêu cầu CTĐT` từ `profiles/me`); mỗi học kỳ 6 ô thống kê + bảng chip điểm chữ, không có cột ghi chú (App: dòng từng môn)
+- [x] Test: còn hạn / ngày cuối còn hạn / quá hạn (ngày thứ N+1) / cấu hình `0` = chỉ trong ngày; widget test buổi quá hạn
 - [x] Flutter (PĐT): tab *Điểm danh* (chỉ xem) trong ngăn chi tiết lớp
 - [x] Flutter: GV điểm danh cả lớp; SV xem + xin sửa (chọn trạng thái mong muốn, lý do bắt buộc, minh chứng tùy chọn); **chỉ GV (lớp mình)** xem minh chứng và duyệt
 - [x] Flutter: GV xem thời khóa biểu theo tuần (`/teacher/schedule`, dùng `/timetable/my/`); bản Web có nút **In** (`window.print()`, A4 ngang)
@@ -133,6 +146,9 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Flutter: GV nhập điểm (lưới) + xem trước; PĐT duyệt; SV xem điểm **kèm thống kê từng học kỳ** (tín chỉ học/đạt, điểm TB, GPA, xếp loại; `grades/my.thong_ke[]`, BR-25g)
 - [x] **Milestone:** nhập → khóa → đóng lớp → duyệt → SV xem; GPA đúng
 - [x] _Bổ sung:_ `GET /api/grade-sheets/` (danh sách lớp + số dòng điểm theo trạng thái cho PĐT duyệt); `failureText` hiện nguyên thông điệp lỗi nghiệp vụ của server
+- [x] PĐT Duyệt điểm: lọc theo **học kỳ** và **ngành** (`?hoc_ky=&nganh=`); bấm lớp → bảng điểm mở **ngay dưới dòng đó** (bấm lại để đóng), không còn ở cuối trang *(`ResourceList.rowDetail`; có test)*
+- [x] Admin Tổng quan: thẻ sức khỏe có biểu tượng, tài khoản theo vai trò dạng thanh tỉ lệ cạnh khối sao lưu (web rộng), nhật ký gần đây dạng bảng có chip hành động
+- [x] Admin Cấu hình hệ thống: mỗi nhóm một card có biểu tượng, web rộng xếp 2 cột cao bằng nhau, nút Đặt lại / Lưu nằm đáy card, banner lưu ý có icon
 
 ## 7. PHA 6 — HỌC PHÍ (1.5 tuần) ✅
 
@@ -176,7 +192,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 **Pha 10 — Hoàn thiện (1 tuần)**
 - [x] Backup: `POST/GET /admin/backups/` (tạo chạy nền + liệt kê `BACKUP_DIR`, không restore) · job `backup_daily` (`pg_dump -Fc`, ghi `.partial` rồi đổi tên, dọn quá `backup_retention_days`) · image có `postgresql-client-16`, volume `backups` dùng chung web/worker *(đã chạy thật trên Docker; thử restore tay vào DB tạm: đủ 43 bảng, 18 tài khoản)*
-- [x] `GET /admin/permissions/` (ma trận chỉ đọc, có nhóm) · `GET/PATCH /admin/config/` (6 khóa, kiểm tra theo khóa, một khóa sai không lưu khóa nào, audit từng khóa đổi, trả người sửa gần nhất)
+- [x] `GET /admin/permissions/` (ma trận chỉ đọc, có nhóm) · `GET/PATCH /admin/config/` (7 khóa, kiểm tra theo khóa, một khóa sai không lưu khóa nào, audit từng khóa đổi, trả người sửa gần nhất)
 - [x] Rà rate limit / phân trang / mã lỗi: giới hạn **ghi chung 120/phút/user** (trước đó chỉ khai báo, chưa áp dụng) · quét mọi `business_error` chỉ dùng mã trong mục 8.4 · phân trang 25/50 · `health?full=1` (Redis + worker)
 - [x] Test phân quyền theo bảng: mọi endpoint trong Swagger phải có dòng vai trò (thiếu → fail); vai trò sai → `403`, chưa đăng nhập → `401`; phạm vi dữ liệu GV/SV (BR-23); ma trận mục 9 đối chiếu hành vi thật
 - [x] E2E (backend, qua API): đăng ký → điểm danh → điểm → duyệt → học phí/thu tiền · load test `locustfile.py` đăng ký đồng thời (lớp 3 chỗ, ~8 000 yêu cầu, ~440 req/s, 0 lỗi, sĩ số cuối đúng 3/3)
@@ -253,7 +269,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 | BR-17 | LT = giá gốc; TH = `GIA_TH` nếu có | 6 | [x] |
 | BR-18 | Miễn giảm do KT, có audit log | 6 | [x] |
 | BR-19 | 3 trạng thái điểm danh + cờ `di_tre` (chỉ khi `CO_MAT`; UI 4 nút) | 4 | [x] |
-| BR-20 | Buổi điểm danh sinh sẵn theo lịch; tỷ lệ vắng = vắng KP / tổng số buổi theo lịch + cờ cảnh báo | 4 | [x] |
+| BR-20 | Buổi điểm danh sinh sẵn theo lịch; tỷ lệ vắng = vắng KP / tổng số buổi theo lịch + cờ cảnh báo; (e) SV chỉ xin sửa trong N ngày kể từ ngày học | 4 | [x] |
 | BR-21 | Phân quyền 5 vai trò | 1–10 | [x] |
 | BR-22 | JWT; khóa tài khoản chặn login + refresh | 1 | [x] |
 | BR-23 | SV chỉ dữ liệu mình; GV chỉ lớp mình | 1–10 | [x] |
@@ -296,7 +312,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] BR-07: vượt tối đa · dưới tối thiểu → 201 + warning · GPA < 2.0 vượt 14 · GPA NULL không bị giới hạn
 - [x] Hủy: SV khi lớp `DANG_HOC` → `409`; PĐT hủy hộ lớp `DANG_HOC` OK (lý do bắt buộc, sĩ số giảm, học phí tính lại)
 - [x] BR-10: thiếu GK → 20/80; CK NULL vs 0
-- [x] BR-11: 8.45/6.95/5.45 → B/C/D · biên 8.50/7.00/5.50/4.00 → A/B/C/D · 3.99 → F · `DAT_KHONG_DAT` → P (ngoài GPA) · F trong mẫu GPA
+- [x] BR-11: 8.45/6.95/5.45 → B/C/D · biên 8.50/7.00/5.50/4.00 → A/B/C/D · 3.99 → F · **hệ 4 = tổng kết × 0.4** (8.57 → 3.43, 9.65 → 3.86) + lệnh `tinh_lai_diem_he_4` · `DAT_KHONG_DAT` → P (ngoài GPA) · F trong mẫu GPA
 - [x] BR-25: học lại môn F chỉ tính lần mới nhất (theo `hoc_ky.ngay_bat_dau`); điểm D cộng tín chỉ tích lũy
 - [x] BR-13: fallback `ngay_ket_thuc` NULL; `QUA_HAN_NHAP_DIEM`; gia hạn / nhập hộ có audit log
 - [x] BR-14: unlock chỉ khi `DANG_HOC` + trong hạn; `KHOA` bất biến
@@ -308,6 +324,16 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 - [x] Token: khóa chặn request + refresh; logout / đổi / reset blacklist refresh cũ; reset token 30 phút 1 lần; forgot-password không lộ email
 - [x] Phân quyền: mỗi endpoint một test sai role (`core/tests/test_phan_quyen.py`, bảng bắt buộc đủ endpoint); SV không xem SV khác; GV không xem lớp khác (`test_pham_vi.py`)
 - [ ] Flutter: widget test Web + App; mọi route nằm dưới prefix vai trò (đã có); E2E đăng ký → điểm → học phí *(widget test đã có cho từng màn; E2E đã làm ở backend `core/tests/test_e2e.py`, còn `integration_test` của Flutter)*
+
+## 14b. DỮ LIỆU MẪU HỌC KỲ ĐANG MỞ & GIAO DIỆN WEB (v3.14)
+
+- [x] `seed_hoc_ky_hien_tai` (chạy sau `seed_lich_su_hoc_tap` → `seed_diem_danh` → `seed_hoc_phi`; chạy lại an toàn): đăng ký theo "lớp thứ (i mod 3)" (không trùng lịch, đủ tiên quyết, ≤ 24 TC), sĩ số khớp đăng ký, `tinh_hoc_phi` + thu một phần (đủ / một nửa / chưa), buổi sinh bằng `dong_bo_buoi`, điểm danh các buổi trước hôm nay, 6 yêu cầu sửa (4 chờ · 1 duyệt · 1 từ chối); tự kiểm tra trùng lịch / tiên quyết / sĩ số
+- [x] Lớp có sinh viên → `DANG_HOC` (chỉ lớp đang học mới điểm danh / nhập điểm được); lớp chưa có ai vẫn `MO`; 4 SV cuối mỗi ngành chưa đăng ký để thử luồng đăng ký
+- [x] Web (`kIsWeb`, Android giữ nguyên): thẻ số liệu / nút lối tắt / thẻ tình trạng Admin / thẻ lớp GV / bảng điểm SV / nhóm chip (`HangChip`) giãn hết bề ngang; 7 thẻ chia 4 + 3; chip to hơn
+- [ ] `seed_hoc_ky_hien_tai` chưa nằm trong quy trình khởi tạo chung (README) — chạy tay: `docker compose exec web python manage.py seed_hoc_ky_hien_tai`
+- [ ] Học kỳ đang mở có cửa sổ đăng ký (15/10–15/11) nằm sau ngày bắt đầu (07/09) nên job `classes_transition_daily` sẽ chuyển **mọi** lớp `MO` sang `DANG_HOC` và chặn đăng ký — cần chỉnh ngày học kỳ mẫu hoặc rà lại BR-01/05
+
+---
 
 ## 15. TRIỂN KHAI
 
@@ -322,4 +348,4 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 
 ---
 
-*Tạo từ `plan.md` v3.11 (cập nhật 2026-10-14). Cập nhật khi plan đổi.*
+*Tạo từ `plan.md` v3.11; cập nhật theo `plan.md` v3.14 (2026-10-24). Cập nhật khi plan đổi.*

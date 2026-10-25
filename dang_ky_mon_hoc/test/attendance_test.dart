@@ -65,10 +65,12 @@ Map<String, dynamic> yeuCau({String tt = 'CHO_DUYET', bool coFile = true}) => {
   'ghi_chu': '',
 };
 
-Map<String, dynamic> records({bool can = true}) => {
+Map<String, dynamic> records({bool can = true, bool conHan = true}) => {
   'session': buoi(11, '2027-01-07'),
   'lop_trang_thai': 'DANG_HOC',
-  'co_the_diem_danh': can,
+  'co_the_diem_danh': can && conHan,
+  'con_han_sua': conHan,
+  'so_ngay_xin_sua': 7,
   'tong_so_buoi': 6,
   'max_absent_pct': 20,
   'records': [
@@ -221,6 +223,43 @@ void main() {
       },
     );
 
+    testWidgets('lọc theo học kỳ trước, rồi mới chọn lớp của học kỳ đó', (
+      t,
+    ) async {
+      final cu = {
+        ...lopGv(),
+        'id': 9,
+        'ma_lop': 'CNTT100-01',
+        'ten_mon': 'Lập trình cơ bản',
+        'trang_thai': 'DA_DONG',
+        'ten_hk': 'Học kỳ 1',
+      };
+      final api = gvApi(
+        extra: {
+          'GET /class-sections/my/': (_) => reply(
+            200,
+            pageOf([
+              {...lopGv(), 'ten_hk': 'Học kỳ 2'}, // mới nhất trước
+              cu,
+            ]),
+          ),
+        },
+      );
+      await openTeacher(t, api);
+      expect(find.text('Học kỳ'), findsOneWidget);
+      await tapText(t, '— Chọn lớp để bắt đầu —');
+      expect(find.text('CNTT100-01 · Lập trình cơ bản'), findsNothing);
+      await t.tap(find.text('CNTT101-01 · Nhập môn lập trình').last);
+      await t.pumpAndSettle();
+
+      await tapText(t, 'Học kỳ 2'); // mở ô học kỳ → đổi sang học kỳ cũ
+      await t.tap(find.text('Học kỳ 1').last);
+      await t.pumpAndSettle();
+      await tapText(t, '— Chọn lớp để bắt đầu —'); // đổi kỳ thì bỏ lớp cũ
+      expect(find.text('CNTT100-01 · Lập trình cơ bản'), findsWidgets);
+      expect(find.text('CNTT101-01 · Nhập môn lập trình'), findsNothing);
+    });
+
     testWidgets('buổi chưa tới ngày: không điểm danh được, nút Lưu khóa', (
       t,
     ) async {
@@ -241,6 +280,31 @@ void main() {
       );
       expect(save.onPressed, isNull);
     });
+
+    testWidgets(
+      'buổi quá hạn sửa (> N ngày): khóa điểm danh và nút Lưu, báo số ngày',
+      (t) async {
+        final api = gvApi(
+          extra: {
+            'GET /attendance/sessions/12/records/': (_) =>
+                reply(200, records(conHan: false)),
+          },
+        );
+        await openTeacher(t, api);
+        await tapText(t, '— Chọn lớp để bắt đầu —');
+        await t.tap(find.text('CNTT101-01 · Nhập môn lập trình').last);
+        await t.pumpAndSettle();
+        await tapText(t, 'Thứ 5, 14/01/2027');
+        expect(
+          find.textContaining('Đã quá hạn sửa điểm danh (7 ngày'),
+          findsOneWidget,
+        );
+        final save = t.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Lưu điểm danh'),
+        );
+        expect(save.onPressed, isNull);
+      },
+    );
 
     testWidgets(
       'tab Yêu cầu sửa: xem minh chứng, Duyệt → PATCH, Từ chối kèm ghi chú',
@@ -355,6 +419,7 @@ void main() {
         'hoc_ky': 7,
         'ten_hk': 'Học kỳ 2, 2026–2027',
         'max_absent_pct': 20,
+        'so_ngay_xin_sua': 7,
         'lop_hoc_phan': [lopSv(lopTt: lopTt, buoiList: buoiList)],
       }),
       'GET /attendance/requests/': (_) => reply(200, pageOf([])),
@@ -392,10 +457,7 @@ void main() {
         await t.pumpAndSettle();
 
         expect(find.text('Nguy cơ cấm thi'), findsOneWidget);
-        expect(
-          find.text('Tỷ lệ vắng không phép: 2/6 buổi (33%)'),
-          findsOneWidget,
-        );
+        expect(find.text('2/6 buổi (33.3%)'), findsOneWidget);
         expect(find.textContaining('Đã vượt ngưỡng 20%'), findsOneWidget);
         expect(find.text('Chưa điểm danh'), findsOneWidget);
         expect(find.text('Vắng không phép'), findsWidgets);
@@ -465,6 +527,30 @@ void main() {
       },
     );
 
+    testWidgets('buổi quá hạn xin sửa: ẩn nút, báo số ngày', (t) async {
+      final quaHan = [
+        {
+          'session': 11,
+          'attendance': 70,
+          'ngay_hoc': '2027-01-07',
+          'buoi': 'SANG',
+          'tiet_bat_dau': 1,
+          'trang_thai': 'VANG_KHONG_PHEP',
+          'di_tre': false,
+          'ghi_chu': '',
+          'yeu_cau': null,
+          'con_han_xin_sua': false,
+        },
+      ];
+      await open(t, svApi2(buoiList: quaHan));
+      await tapText(t, 'Thứ 5, 07/01/2027');
+      expect(
+        find.textContaining('Đã quá hạn xin sửa điểm danh'),
+        findsOneWidget,
+      );
+      expect(find.text('Xin sửa điểm danh buổi này'), findsNothing);
+    });
+
     testWidgets(
       'đã có yêu cầu chờ duyệt: hiện nhãn Chờ duyệt, không gửi thêm',
       (t) async {
@@ -494,10 +580,7 @@ void main() {
 
     testWidgets('bố cục App 390 px: không tràn', (t) async {
       await open(t, svApi2(), size: const Size(390, 844));
-      expect(
-        find.text('Tỷ lệ vắng không phép: 2/6 buổi (33%)'),
-        findsOneWidget,
-      );
+      expect(find.text('2/6 buổi (33.3%)'), findsOneWidget);
       expect(t.takeException(), isNull);
     });
   });

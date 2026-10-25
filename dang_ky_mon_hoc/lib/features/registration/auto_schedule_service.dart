@@ -63,6 +63,9 @@ class Lop {
     required this.giaoVienId,
     required this.giaoVien,
     required this.lich,
+    this.phong = '—',
+    this.siSo,
+    this.siSoToiDa,
   });
 
   factory Lop.fromJson(Json j) => Lop(
@@ -77,7 +80,18 @@ class Lop {
       for (final b in (j['lich_hoc'] as List? ?? const []))
         Buoi.fromJson(Json.from(b as Map)),
     ],
+    phong: _phongCua(j['lich_hoc'] as List? ?? const []),
+    siSo: (j['si_so_hien_tai'] as num?)?.toInt(),
+    siSoToiDa: (j['si_so_toi_da'] as num?)?.toInt(),
   );
+
+  static String _phongCua(List<dynamic> lich) {
+    final p = {
+      for (final b in lich)
+        if ((b as Map)['phong'] != null) b['phong'].toString(),
+    };
+    return p.isEmpty ? '—' : p.join(', ');
+  }
 
   final int id;
   final String maLop;
@@ -87,6 +101,9 @@ class Lop {
   final int giaoVienId;
   final String giaoVien;
   final List<Buoi> lich;
+  final String phong;
+  final int? siSo;
+  final int? siSoToiDa;
 
   bool trungVoi(Iterable<Buoi> khac) =>
       lich.any((a) => khac.any((b) => a.trung(b)));

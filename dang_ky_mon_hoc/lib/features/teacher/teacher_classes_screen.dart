@@ -6,6 +6,7 @@ import '../../core/format.dart';
 import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/labeled_dropdown.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../dashboard/dashboard_widgets.dart' show soNgayDen;
 import '../registration/registration_format.dart';
@@ -65,6 +66,7 @@ class TeacherClassesScreen extends ConsumerStatefulWidget {
 class _TeacherClassesScreenState extends ConsumerState<TeacherClassesScreen> {
   late Future<List<Json>> _classes = _load();
   String _filter = '';
+  String? _hocKy; // tên học kỳ đang lọc (null = học kỳ mới nhất)
   int? _selected;
 
   Future<List<Json>> _load() =>
@@ -82,8 +84,15 @@ class _TeacherClassesScreenState extends ConsumerState<TeacherClassesScreen> {
     future: _classes,
     builder: (context, snap) {
       if (snap.hasError) return ListErrorCard(onRetry: _retry);
-      final all = snap.data;
-      if (all == null) return const ListSkeleton();
+      final tatCa = snap.data;
+      if (tatCa == null) return const ListSkeleton();
+      // Lớp tôi phụ trách xếp mới nhất trước → danh sách học kỳ cũng mới nhất trước.
+      final hocKy = {for (final c in tatCa) c.str('ten_hk')}.toList();
+      final hk = _hocKy ?? (hocKy.isEmpty ? '' : hocKy.first);
+      final all = [
+        for (final c in tatCa)
+          if (c.str('ten_hk') == hk) c,
+      ];
       final shown = [
         for (final c in all)
           if (_filter.isEmpty || c.str('trang_thai') == _filter) c,
@@ -93,6 +102,12 @@ class _TeacherClassesScreenState extends ConsumerState<TeacherClassesScreen> {
         classes: shown,
         total: all.length,
         filter: _filter,
+        hocKy: hocKy,
+        hk: hk,
+        onHocKy: (v) => setState(() {
+          _hocKy = v;
+          _selected = null;
+        }),
         selected: compact ? null : _selected,
         onFilter: (f) => setState(() => _filter = f),
         onSelect: (id) => setState(() => _selected = id),
@@ -159,6 +174,9 @@ class _ClassList extends ConsumerWidget {
     required this.classes,
     required this.total,
     required this.filter,
+    required this.hocKy,
+    required this.hk,
+    required this.onHocKy,
     required this.selected,
     required this.onFilter,
     required this.onSelect,
@@ -167,6 +185,9 @@ class _ClassList extends ConsumerWidget {
   final List<Json> classes;
   final int total;
   final String filter;
+  final List<String> hocKy;
+  final String hk;
+  final ValueChanged<String> onHocKy;
   final int? selected;
   final ValueChanged<String> onFilter;
   final ValueChanged<int> onSelect;
@@ -177,6 +198,22 @@ class _ClassList extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Chọn học kỳ trước, rồi lọc theo trạng thái lớp trong kỳ đó.
+        if (hocKy.length > 1) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: isCompact(context) ? double.infinity : 320,
+              child: LabeledDropdown<String>(
+                label: 'Học kỳ',
+                value: hk,
+                options: [for (final h in hocKy) (h, h)],
+                onChanged: onHocKy,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Wrap(
           spacing: 8,
           children: [

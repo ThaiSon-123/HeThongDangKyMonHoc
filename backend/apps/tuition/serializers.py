@@ -197,8 +197,14 @@ class TuitionDetailSerializer(TuitionRowSerializer):
     payments = PaymentSerializer(many=True)
 
 
+class HocKyCoHocPhiSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    ten_hk = serializers.CharField()
+
+
 class MyTuitionSerializer(TuitionDetailSerializer):
     thanh_toan = ThanhToanSerializer()
+    cac_hoc_ky = HocKyCoHocPhiSerializer(many=True)  # kỳ tôi có học phí (+ kỳ đang xem), mới nhất trước
 
 
 class CalculateResultSerializer(serializers.Serializer):
