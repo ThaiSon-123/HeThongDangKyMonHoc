@@ -468,22 +468,61 @@ void main() {
     Map<String, dynamic> my({
       String conNo = '1000000.00',
       String hienThi = 'CON_NO',
-      bool cauHinh = true,
+      String hinhThuc = 'MOT_LAN',
+      bool coDot = true,
+      bool dotTiep = false,
     }) => {
       ...detail(
         row: tuitionRow(conNo: conNo, hienThi: hienThi),
         payments: [payment()],
       ),
-      'thanh_toan': {
-        'ngan_hang': cauHinh ? 'Vietcombank' : '',
-        'so_tai_khoan': cauHinh ? '0123456789' : '',
-        'chu_tai_khoan': cauHinh ? 'TRUONG DAI HOC X' : '',
-        'noi_dung_ck': 'HOCPHI SV2023014 HK7',
-      },
+      'hinh_thuc': hinhThuc,
+      'cac_dot': coDot
+          ? [
+              {
+                'thu_tu': 1,
+                'han_dong': '2027-01-01',
+                'phai_nop': '400000.00',
+                'luy_ke': '400000.00',
+                'da_dong': true,
+              },
+              {
+                'thu_tu': 2,
+                'han_dong': '2027-02-01',
+                'phai_nop': '300000.00',
+                'luy_ke': '700000.00',
+                'da_dong': false,
+              },
+              {
+                'thu_tu': 3,
+                'han_dong': '2027-03-01',
+                'phai_nop': '300000.00',
+                'luy_ke': '1000000.00',
+                'da_dong': false,
+              },
+            ]
+          : [],
+      'dot_tiep_theo': dotTiep ? {'thu_tu': 2, 'can_dong': '300000.00'} : null,
+    };
+
+    bool nutBiKhoa(WidgetTester t, String nhan) =>
+        t.widget<AppButton>(find.widgetWithText(AppButton, nhan)).onPressed ==
+        null;
+
+    Map<String, dynamic> choThanhToan(String soTien) => {
+      'txn_ref': 'abc',
+      'trang_thai': 'CHO',
+      'so_tien': soTien,
+    };
+
+    Map<String, dynamic> taoGiaoDich(String soTien) => {
+      'payment_url': 'https://sandbox.vnpayment.vn/x',
+      'txn_ref': 'abc',
+      'so_tien': soTien,
     };
 
     testWidgets(
-      'tổng hợp: số tiền, công nợ, chi tiết môn, giao dịch; nút Thanh toán dẫn tới trang QR',
+      'tổng hợp: số tiền, công nợ, chi tiết môn, giao dịch; nút Thanh toán dẫn tới trang thanh toán',
       (t) async {
         await openStudent(
           t,
@@ -521,40 +560,139 @@ void main() {
       expect(find.text('Thanh toán học phí'), findsNothing);
     });
 
+    testWidgets('đổi sang Chia 3 đợt gọi PATCH rồi hiện đợt tiếp theo', (
+      t,
+    ) async {
+      var hinhThuc = 'MOT_LAN';
+      final api = svApi({
+        'GET /tuition/my/': (_) =>
+            reply(200, my(hinhThuc: hinhThuc, dotTiep: hinhThuc == 'CHIA_DOT')),
+        'PATCH /tuition/my/plan/': (_) {
+          hinhThuc = 'CHIA_DOT';
+          return reply(200, {'hinh_thuc': 'CHIA_DOT'});
+        },
+      });
+      await openStudent(t, api, '/student/tuition/pay');
+      expect(
+        find.text('Đợt 1'),
+        findsOneWidget,
+      ); // lịch hiện khi học kỳ đã cấu hình đợt
+      expect(find.text('Đợt tiếp theo'), findsNothing);
+
+      await tapText(t, 'Chia 3 đợt');
+      expect(api.bodies['PATCH /tuition/my/plan/'], {'hinh_thuc': 'CHIA_DOT'});
+      expect(find.text('Đợt tiếp theo'), findsOneWidget);
+      expect(find.text('Đã đóng'), findsOneWidget);
+    });
+
+    testWidgets('chưa cấu hình đợt: không chọn được Chia 3 đợt', (t) async {
+      final api = svApi({
+        'GET /tuition/my/': (_) => reply(200, my(coDot: false)),
+      });
+      await openStudent(t, api, '/student/tuition/pay');
+      expect(find.text('Học kỳ này chưa cấu hình chia đợt.'), findsOneWidget);
+      await tapText(t, 'Chia 3 đợt');
+      expect(api.log.any((l) => l.startsWith('PATCH')), isFalse);
+    });
+
+    testWidgets('tạo mã: sinh QR chứa payment_url, chưa tạo thì không có QR', (
+      t,
+    ) async {
+      final api = svApi({
+        'GET /tuition/my/': (_) =>
+            reply(200, my(hinhThuc: 'CHIA_DOT', dotTiep: true)),
+        'POST /tuition/my/pay/': (_) => reply(201, taoGiaoDich('300000.00')),
+        'GET /tuition/my/pay/abc/': (_) =>
+            reply(200, choThanhToan('300000.00')),
+      });
+      await openStudent(t, api, '/student/tuition/pay');
+      expect(find.byType(QrImageView), findsNothing);
+      expect(find.text('300.000 ₫'), findsWidgets);
+
+      await tapText(t, 'Tạo mã thanh toán');
+      expect(api.bodies['POST /tuition/my/pay/'], {'muc': 'DOT_TIEP'});
+      expect(
+        find.byKey(const ValueKey('https://sandbox.vnpayment.vn/x')),
+        findsOneWidget,
+      ); // key của QR là payment_url (QrImageView không lộ `data`)
+      expect(find.byType(QrImageView), findsOneWidget);
+      expect(find.text('Mở trang thanh toán VNPay'), findsOneWidget);
+      expect(find.textContaining('Đang chờ thanh toán'), findsOneWidget);
+    });
+
     testWidgets(
-      'trang QR: toàn bộ công nợ sinh QR; một phần vượt công nợ → lỗi, không QR; sao chép',
+      'chờ xong: poll thấy THANH_CONG thì báo thành công và tải lại học phí',
       (t) async {
-        await openStudent(
-          t,
-          svApi({'GET /tuition/my/': (_) => reply(200, my())}),
-          '/student/tuition/pay',
+        var lanPoll = 0;
+        final api = svApi({
+          'GET /tuition/my/': (_) => reply(200, my()),
+          'POST /tuition/my/pay/': (_) => reply(201, taoGiaoDich('1000000.00')),
+          'GET /tuition/my/pay/abc/': (_) {
+            lanPoll++;
+            return reply(200, {
+              ...choThanhToan('1000000.00'),
+              'trang_thai': lanPoll < 2 ? 'CHO' : 'THANH_CONG',
+            });
+          },
+        });
+        await openStudent(t, api, '/student/tuition/pay');
+        await tapText(t, 'Tạo mã thanh toán');
+        await t.pump(const Duration(seconds: 3));
+        await t.pump();
+        expect(
+          find.text('Thanh toán thành công.'),
+          findsNothing,
+        ); // poll đầu vẫn CHO
+        await t.pump(const Duration(seconds: 3));
+        await t.pumpAndSettle();
+        expect(find.text('Thanh toán thành công.'), findsOneWidget);
+        expect(find.byType(QrImageView), findsNothing);
+        // học phí được tải lại đúng một lần sau khi giao dịch kết thúc (lần đầu + lần tải lại)
+        expect(
+          api.log.where((l) => l.startsWith('GET /tuition/my/ ')).length,
+          2,
         );
-        expect(find.text('1.000.000 ₫'), findsWidgets);
-        expect(find.byType(QrImageView), findsOneWidget);
-        expect(find.text('HOCPHI SV2023014 HK7'), findsOneWidget);
-
-        await tapText(t, 'Một phần');
-        expect(find.text('Nhập số tiền hợp lệ để tạo mã QR.'), findsOneWidget);
-        expect(find.byType(QrImageView), findsNothing);
-        await enterField(t, 'Số tiền muốn thanh toán (₫)', '2000000');
-        expect(find.textContaining('không vượt quá công nợ'), findsOneWidget);
-        expect(find.byType(QrImageView), findsNothing);
-
-        await enterField(t, 'Số tiền muốn thanh toán (₫)', '400000');
-        expect(find.byType(QrImageView), findsOneWidget);
-        expect(find.text('400.000 ₫'), findsWidgets);
       },
     );
 
-    testWidgets('chưa cấu hình tài khoản nhận tiền: cảnh báo thay cho QR', (
+    testWidgets(
+      'Số tiền khác: vượt công nợ → lỗi và khóa nút; hợp lệ → gửi TUY_Y',
+      (t) async {
+        final api = svApi({
+          'GET /tuition/my/': (_) => reply(200, my()),
+          'POST /tuition/my/pay/': (_) => reply(201, taoGiaoDich('400000.00')),
+          'GET /tuition/my/pay/abc/': (_) =>
+              reply(200, choThanhToan('400000.00')),
+        });
+        await openStudent(t, api, '/student/tuition/pay');
+        await tapText(t, 'Số tiền khác');
+        expect(nutBiKhoa(t, 'Tạo mã thanh toán'), isTrue);
+        await enterField(t, 'Số tiền muốn thanh toán (₫)', '2000000');
+        expect(find.textContaining('không vượt quá công nợ'), findsOneWidget);
+        expect(nutBiKhoa(t, 'Tạo mã thanh toán'), isTrue);
+
+        await enterField(t, 'Số tiền muốn thanh toán (₫)', '400000');
+        expect(nutBiKhoa(t, 'Tạo mã thanh toán'), isFalse);
+        await tapText(t, 'Tạo mã thanh toán');
+        expect(api.bodies['POST /tuition/my/pay/'], {
+          'muc': 'TUY_Y',
+          'so_tien': 400000,
+        });
+      },
+    );
+
+    testWidgets('chưa cấu hình VNPay: hiện lỗi của server, không có QR', (
       t,
     ) async {
-      await openStudent(
-        t,
-        svApi({'GET /tuition/my/': (_) => reply(200, my(cauHinh: false))}),
-        '/student/tuition/pay',
-      );
-      expect(find.textContaining('chưa cấu hình tài khoản'), findsOneWidget);
+      final api = svApi({
+        'GET /tuition/my/': (_) => reply(200, my()),
+        'POST /tuition/my/pay/': (_) => reply(400, {
+          'vnpay': ['Chưa cấu hình cổng thanh toán VNPay.'],
+        }),
+      });
+      await openStudent(t, api, '/student/tuition/pay');
+      await tapText(t, 'Tạo mã thanh toán');
+      expect(find.text('Chưa cấu hình cổng thanh toán VNPay.'), findsOneWidget);
       expect(find.byType(QrImageView), findsNothing);
     });
 
@@ -569,6 +707,27 @@ void main() {
       );
       expect(find.text('Bạn không còn công nợ học phí.'), findsOneWidget);
       expect(find.byType(QrImageView), findsNothing);
+    });
+
+    testWidgets('trang kết quả: hiện đúng thông báo theo status', (t) async {
+      final api = svApi({});
+      const cases = {
+        'thanh_cong': 'Thanh toán thành công.',
+        'that_bai': 'Thanh toán không thành công.',
+        'loi': 'Đã nhận tiền nhưng chưa ghi được học phí',
+        'xyz': 'Kết quả thanh toán không hợp lệ.',
+      };
+      await openStudent(
+        t,
+        api,
+        '/student/tuition/pay-result?status=thanh_cong',
+      );
+      for (final e in cases.entries) {
+        GoRouter.of(t.element(find.byType(Scaffold).first))
+            .go('/student/tuition/pay-result?status=${e.key}');
+        await t.pumpAndSettle();
+        expect(find.textContaining(e.value), findsOneWidget, reason: e.key);
+      }
     });
   });
 }

@@ -235,8 +235,8 @@ VNPAY_HASH_SECRET = env("VNPAY_HASH_SECRET")
 VNPAY_URL = env("VNPAY_URL", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
 # Địa chỉ backend mà trình duyệt của người thanh toán (kể cả điện thoại) truy cập được
 VNPAY_RETURN_URL = env("VNPAY_RETURN_URL", "http://localhost:8000/api/tuition/vnpay/return/")
-# Trang kết quả của app Flutter Web mà return URL chuyển hướng về
-APP_RESULT_URL = env("APP_RESULT_URL", "http://localhost:8080/student/tuition/pay-result")
+# Trang kết quả của app Flutter Web mà return URL chuyển hướng về (router dùng URL kiểu hash `/#/...`)
+APP_RESULT_URL = env("APP_RESULT_URL", "http://localhost:8080/#/student/tuition/pay-result")
 
 # --- Observability ---
 SENTRY_DSN = env("SENTRY_DSN")
