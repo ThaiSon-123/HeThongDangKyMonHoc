@@ -39,6 +39,8 @@ SCOPE_FINANCE = {
     "Discount",
     "Payment",
     "Tuition",
+    "TuitionInstallment",
+    "OnlineTransaction",
 }
 
 

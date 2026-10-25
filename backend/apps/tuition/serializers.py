@@ -204,7 +204,9 @@ class HocKyCoHocPhiSerializer(serializers.Serializer):
 
 class MyTuitionSerializer(TuitionDetailSerializer):
     thanh_toan = ThanhToanSerializer()
-    cac_hoc_ky = HocKyCoHocPhiSerializer(many=True)  # kỳ tôi có học phí (+ kỳ đang xem), mới nhất trước
+    cac_hoc_ky = HocKyCoHocPhiSerializer(
+        many=True
+    )  # kỳ tôi có học phí (+ kỳ đang xem), mới nhất trước
 
 
 class CalculateResultSerializer(serializers.Serializer):
