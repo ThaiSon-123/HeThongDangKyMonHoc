@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/labeled_dropdown.dart';
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
@@ -19,6 +20,7 @@ class TeacherGradesScreen extends ConsumerStatefulWidget {
 
 class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
   late Future<List<Json>> _classes = _load();
+  String? _hocKy; // tên học kỳ đang lọc (null = học kỳ mới nhất)
   int? _lopId;
   bool _init = false;
 
@@ -34,7 +36,15 @@ class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
     if (id == null) return;
     _classes
         .then((l) {
-          if (mounted && l.any((c) => c.id == id)) setState(() => _lopId = id);
+          final lop = l.where((c) => c.id == id).firstOrNull;
+          if (mounted && lop != null) {
+            setState(() {
+              _lopId = id;
+              _hocKy = lop.str(
+                'ten_hk',
+              ); // mở đúng học kỳ của lớp được chọn sẵn
+            });
+          }
         })
         .catchError((_) {});
   }
@@ -63,8 +73,15 @@ class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
           },
         );
       }
-      final classes = snap.data;
-      if (classes == null) return const ListSkeleton();
+      final tatCa = snap.data;
+      if (tatCa == null) return const ListSkeleton();
+      // Lớp tôi phụ trách xếp mới nhất trước → danh sách học kỳ cũng mới nhất trước.
+      final hocKy = {for (final c in tatCa) c.str('ten_hk')}.toList();
+      final hk = _hocKy ?? (hocKy.isEmpty ? '' : hocKy.first);
+      final classes = [
+        for (final c in tatCa)
+          if (c.str('ten_hk') == hk) c,
+      ];
       return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -76,21 +93,51 @@ class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: AppColors.cardShadow,
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: 380,
-                  child: LabeledDropdown<int?>(
-                    label: 'Lớp học phần',
-                    value: _lopId,
-                    options: [
-                      (null, '— Chọn lớp để nhập điểm —'),
-                      for (final c in classes)
-                        (c.id, '${c.str('ma_lop')} · ${c.str('ten_mon')}'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
+                    children: [
+                      // Chọn học kỳ trước, rồi mới chọn lớp của học kỳ đó.
+                      if (hocKy.length > 1)
+                        SizedBox(
+                          width: isCompact(context) ? double.infinity : 320,
+                          child: LabeledDropdown<String>(
+                            label: 'Học kỳ',
+                            value: hk,
+                            options: [for (final h in hocKy) (h, h)],
+                            onChanged: (v) => setState(() {
+                              _hocKy = v;
+                              _lopId = null;
+                            }),
+                          ),
+                        ),
+                      SizedBox(
+                        width: isCompact(context) ? double.infinity : 380,
+                        child: LabeledDropdown<int?>(
+                          label: 'Lớp học phần',
+                          value: _lopId,
+                          options: [
+                            (null, '— Chọn lớp để nhập điểm —'),
+                            for (final c in classes)
+                              (
+                                c.id,
+                                '${c.str('ma_lop')} · ${c.str('ten_mon')}',
+                              ),
+                          ],
+                          onChanged: (v) => setState(() => _lopId = v),
+                        ),
+                      ),
                     ],
-                    onChanged: (v) => setState(() => _lopId = v),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Điểm đã khóa vẫn chưa hiển thị cho sinh viên cho tới khi Phòng đào tạo duyệt.',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

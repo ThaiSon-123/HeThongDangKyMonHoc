@@ -8,6 +8,8 @@ import '../../core/auth/auth_user.dart';
 import '../../core/download/print_html.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/layout.dart';
+import '../../shared/widgets/labeled_dropdown.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
@@ -72,8 +74,25 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
   late Future<Json> _data = _fetch();
   bool _weekly = true;
   int _offset = 0; // số tuần lệch so với tuần chứa hôm nay
+  int? _hocKy; // null = học kỳ mặc định của hệ thống
+  int? _kyDaChinh; // học kỳ đã đặt tuần mở đầu (đổi kỳ thì đặt lại)
 
-  Future<Json> _fetch() => ref.read(trainingApiProvider).get('/timetable/my/');
+  Future<Json> _fetch() => ref
+      .read(trainingApiProvider)
+      .get('/timetable/my/', query: {'hoc_ky': _hocKy});
+
+  /// Hôm nay nằm trong học kỳ → tuần này; ngoài học kỳ (kỳ cũ/kỳ sau) → tuần đầu của học kỳ.
+  int _tuanMoDau(Json d) {
+    final nay = ref.read(clockProvider)();
+    final hom = DateTime(nay.year, nay.month, nay.day);
+    DateTime? ngay(String s) =>
+        s.length < 10 ? null : DateTime.tryParse(s.substring(0, 10));
+    final bd = ngay(d.str('ngay_bat_dau'));
+    final kt = ngay(d.str('ngay_ket_thuc'));
+    if (bd == null || kt == null) return 0;
+    if (!hom.isBefore(bd) && !hom.isAfter(kt)) return 0;
+    return (_monday(bd).difference(_monday(hom)).inDays / 7).round();
+  }
 
   void _reload() {
     final next = _fetch();
@@ -92,6 +111,10 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
       final lop = [
         for (final l in d['lop_hoc_phan'] as List) Json.from(l as Map),
       ];
+      if (_kyDaChinh != d.num0('hoc_ky')) {
+        _kyDaChinh = d.num0('hoc_ky');
+        _offset = _tuanMoDau(d);
+      }
       return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,14 +149,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
         alignment: WrapAlignment.spaceBetween,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(
-            d.str('ten_hk'),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.navy,
-            ),
-          ),
+          _kyChon(d),
           Wrap(
             spacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -184,6 +200,36 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
               ],
             ),
         ],
+      ),
+    );
+  }
+
+  /// Tên học kỳ; có từ 2 kỳ trở lên thì là ô chọn học kỳ để xem lại kỳ cũ.
+  Widget _kyChon(Json d) {
+    final hocKy = [
+      for (final h in (d['cac_hoc_ky'] as List? ?? const []))
+        Json.from(h as Map),
+    ];
+    if (hocKy.length < 2) {
+      return Text(
+        d.str('ten_hk'),
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: AppColors.navy,
+        ),
+      );
+    }
+    return SizedBox(
+      width: isCompact(context) ? double.infinity : 300,
+      child: LabeledDropdown<int>(
+        label: 'Học kỳ',
+        value: d.num0('hoc_ky'),
+        options: [for (final h in hocKy) (h.num0('id'), h.str('ten_hk'))],
+        onChanged: (v) {
+          _hocKy = v;
+          _reload();
+        },
       ),
     );
   }
@@ -486,41 +532,47 @@ class _BlockView extends StatelessWidget {
   final _Block b;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(6),
-    decoration: BoxDecoration(
-      color: b.color.$1,
-      borderRadius: BorderRadius.circular(8),
-      border: Border(left: BorderSide(color: b.color.$2, width: 3)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          b.lop.str('ten_mon'),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: b.color.$2,
+  Widget build(BuildContext context) {
+    // Ô cao _rowH × số tiết: 1 tiết chỉ đủ tên môn, 2 tiết đủ tên (1 dòng) + mã lớp + GV, từ 3 tiết tên được 2 dòng.
+    final tiet = b.end - b.start + 1;
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: b.color.$1,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(left: BorderSide(color: b.color.$2, width: 3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            b.lop.str('ten_mon'),
+            maxLines: tiet >= 3 ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: b.color.$2,
+            ),
           ),
-        ),
-        Text(
-          '${b.lop.str('ma_lop')} · ${b.phong}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 11, color: b.color.$2),
-        ),
-        Text(
-          'GV ${b.lop.str('giao_vien_ten')}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 11, color: b.color.$2),
-        ),
-      ],
-    ),
-  );
+          if (tiet >= 2)
+            Text(
+              '${b.lop.str('ma_lop')} · ${b.phong}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: b.color.$2),
+            ),
+          if (tiet >= 2)
+            Text(
+              'GV ${b.lop.str('giao_vien_ten')}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: b.color.$2),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Empty extends StatelessWidget {

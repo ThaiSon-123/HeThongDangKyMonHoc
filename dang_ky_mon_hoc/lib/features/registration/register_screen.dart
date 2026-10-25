@@ -13,6 +13,7 @@ import '../../shared/widgets/labeled_dropdown.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
+import 'bang_lop.dart';
 import 'registration_format.dart';
 
 const _regPath = '/registrations/';
@@ -48,8 +49,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   late Future<_RegData> _data = _fetch();
   int _tab = 0;
   int _mode = 0; // 0 = tất cả môn đang mở, 1 = theo CTĐT (lọc theo kỳ)
-  int? _ky;
   bool _chuaHoc = false;
+  int? _hkLichSu; // lọc tab Lịch sử theo học kỳ (null = tất cả)
+  String _ttLichSu = ''; // '' = tất cả · DA_DANG_KY · DA_HUY
   int? _busy; // id lớp / đăng ký đang gọi API
 
   Future<_RegData> _fetch() async {
@@ -226,7 +228,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget _openClasses(_RegData d) {
     final lop = [
       for (final l in d.lop)
-        if ((_mode == 0 || _ky == null || l['hoc_ky_goi_y'] == _ky) &&
+        // "Theo CTĐT": chỉ môn có trong chương trình đào tạo của mình.
+        if ((_mode == 0 || l['hoc_ky_goi_y'] != null) &&
             !(_chuaHoc && d.daDat[l.num0('mon_hoc')] == true))
           l,
     ];
@@ -234,10 +237,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     for (final l in lop) {
       groups.putIfAbsent(l.num0('mon_hoc'), () => []).add(l);
     }
-    final ky = {
-      for (final l in d.lop)
-        if (l['hoc_ky_goi_y'] != null) l.num0('hoc_ky_goi_y'),
-    }.toList()..sort();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -263,21 +262,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ],
         ),
-        if (_mode == 1) ...[
-          const SizedBox(height: 12),
-          SizedBox(
-            width: 280,
-            child: LabeledDropdown<int?>(
-              label: 'Kỳ trong chương trình đào tạo',
-              value: _ky,
-              options: [
-                (null, 'Tất cả các kỳ'),
-                for (final k in ky) (k, 'Kỳ $k'),
-              ],
-              onChanged: (v) => setState(() => _ky = v),
-            ),
-          ),
-        ],
         const SizedBox(height: 12),
         Text(
           '${groups.length} môn · ${lop.length} lớp học phần đang mở',
@@ -300,107 +284,68 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Widget _courseTile(_RegData d, List<Json> classes) {
     final c = classes.first;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: _Card(
-        padding: 0,
-        child: ExpansionTile(
-          key: PageStorageKey('mon-${c.num0('mon_hoc')}'),
-          shape: const Border(),
-          collapsedShape: const Border(),
-          title: Text(
-            c.str('ten_mon'),
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-          ),
-          subtitle: Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                '${c.str('ma_mon')} · ${c.num0('tong_tin_chi')} TC',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
-              ),
-              if (c['loai_mon'] != null)
-                StatusChip.of(
-                  loaiMonText(c.str('loai_mon')),
-                  StatusChip.indigo,
-                ),
-              if (c['khoi_kien_thuc'] != null)
-                StatusChip.of(
-                  khoiText(c.str('khoi_kien_thuc')),
-                  StatusChip.gray,
-                ),
-              if (c['hoc_ky_goi_y'] != null)
+    final daDat = d.daDat[c.num0('mon_hoc')] == true;
+    // Môn đã đạt: làm mờ để phân biệt với môn còn học được.
+    return Opacity(
+      opacity: daDat ? 0.55 : 1,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: _Card(
+          padding: 0,
+          child: ExpansionTile(
+            key: PageStorageKey('mon-${c.num0('mon_hoc')}'),
+            shape: const Border(),
+            collapsedShape: const Border(),
+            title: TieuDeMon(
+              maMon: c.str('ma_mon'),
+              ten: c.str('ten_mon'),
+              nhan: [
+                StatusChip.of('${c.num0('tong_tin_chi')} TC', StatusChip.gray),
+                if (c['loai_mon'] != null)
+                  StatusChip.of(
+                    loaiMonText(c.str('loai_mon')),
+                    StatusChip.indigo,
+                  ),
+                if (c['khoi_kien_thuc'] != null)
+                  StatusChip.of(
+                    khoiText(c.str('khoi_kien_thuc')),
+                    StatusChip.gray,
+                  ),
+                if (daDat) StatusChip.of('Đã đạt', StatusChip.green),
                 Text(
-                  'Kỳ ${c.num0('hoc_ky_goi_y')}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  '${classes.length} lớp',
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
+              ],
+            ),
+            // Mặc định ExpansionTile căn GIỮA khối nội dung đã co theo chiều rộng → neo trái, dòng lớp giãn hết.
+            expandedAlignment: Alignment.centerLeft,
+            expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BangLop(
+                dong: [
+                  for (final l in classes)
+                    DongLop(
+                      maLop: l.str('ma_lop'),
+                      giaoVien: l.str('giao_vien_ten'),
+                      lich: lichText(l['lich_hoc'] as List),
+                      phong: phongText(l['lich_hoc'] as List),
+                      siSo: l.num0('si_so_hien_tai'),
+                      siSoToiDa: l.num0('si_so_toi_da'),
+                      hanhDong: AppButton(
+                        label: 'Đăng ký',
+                        height: 40,
+                        loading: _busy == l.id,
+                        onPressed: d.trongCuaSo && _busy == null
+                            ? () => _register(l)
+                            : null,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
-          trailing: Text(
-            '${classes.length} lớp',
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
-          ),
-          children: [for (final l in classes) _classRow(d, l)],
         ),
-      ),
-    );
-  }
-
-  Widget _classRow(_RegData d, Json l) {
-    final lich = l['lich_hoc'] as List;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.divider)),
-      ),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 8,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              l.str('ma_lop'),
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 150,
-            child: Text(
-              'GV ${l.str('giao_vien_ten')}',
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
-          SizedBox(
-            width: 230,
-            child: Text(
-              '${lichText(lich)} · ${phongText(lich)}',
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
-          Text(
-            '${l.num0('si_so_hien_tai')}/${l.num0('si_so_toi_da')}',
-            style: const TextStyle(fontSize: 13),
-          ),
-          SizedBox(
-            width: 110,
-            child: AppButton(
-              label: 'Đăng ký',
-              height: 40,
-              loading: _busy == l.id,
-              onPressed: d.trongCuaSo && _busy == null
-                  ? () => _register(l)
-                  : null,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -499,9 +444,69 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ),
       );
     }
+    final hocKy = <int, String>{
+      for (final h in d.history) h.num0('hoc_ky'): h.str('ten_hk'),
+    };
+    final maHk = hocKy.keys.toList()
+      ..sort((a, b) => b.compareTo(a)); // học kỳ mới nhất trước
+    final ds = [
+      for (final h in d.history)
+        if ((_hkLichSu == null || h.num0('hoc_ky') == _hkLichSu) &&
+            (_ttLichSu.isEmpty || h.str('trang_thai') == _ttLichSu))
+          h,
+    ];
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final h in d.history)
+        Wrap(
+          spacing: 16,
+          runSpacing: 10,
+          crossAxisAlignment: WrapCrossAlignment.end,
+          children: [
+            SizedBox(
+              width: 320,
+              child: LabeledDropdown<int?>(
+                label: 'Học kỳ',
+                value: _hkLichSu,
+                options: [
+                  (null, 'Tất cả học kỳ'),
+                  for (final k in maHk) (k, hocKy[k]!),
+                ],
+                onChanged: (v) => setState(() => _hkLichSu = v),
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (ma, nhan) in const [
+                  ('', 'Tất cả'),
+                  ('DA_DANG_KY', 'Đã đăng ký'),
+                  ('DA_HUY', 'Đã hủy'),
+                ])
+                  ChoiceChip(
+                    label: Text(nhan),
+                    selected: _ttLichSu == ma,
+                    onSelected: (_) => setState(() => _ttLichSu = ma),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '${ds.length} đăng ký',
+          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+        ),
+        const SizedBox(height: 8),
+        if (ds.isEmpty)
+          const _Card(
+            child: Text(
+              'Không có đăng ký nào phù hợp với bộ lọc.',
+              style: TextStyle(color: AppColors.muted, fontSize: 14),
+            ),
+          ),
+        for (final h in ds)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: _Card(

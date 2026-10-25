@@ -13,11 +13,12 @@ from apps.grades.services import cap_nhat_ho_so, tinh_tong_ket, tong_hop_diem, x
 from apps.notifications.models import Notification
 from apps.profiles.models import StudentProfile
 from apps.registration.models import Registration
-from apps.training.models import TrangThaiLop
+from apps.training.models import CurriculumCourse, TrangThaiLop
 from apps.training.services import dong_lop
 from core.factories import (
     ClassSectionFactory,
     CourseFactory,
+    CurriculumFactory,
     SemesterFactory,
     StudentProfileFactory,
     TeacherProfileFactory,
@@ -57,15 +58,17 @@ def test_null_khac_khong_o_giua_ky():
 @pytest.mark.parametrize(
     "tong,chu,gpa",
     [
-        ("8.45", "B", "3.0"),
-        ("6.95", "C", "2.0"),
-        ("5.45", "D", "1.0"),
-        ("8.50", "A", "4.0"),
-        ("7.00", "B", "3.0"),
-        ("5.50", "C", "2.0"),
-        ("4.00", "D", "1.0"),
+        ("8.45", "B", "3.38"),
+        ("6.95", "C", "2.78"),
+        ("5.45", "D", "2.18"),
+        ("8.50", "A", "3.40"),
+        ("7.00", "B", "2.80"),
+        ("5.50", "C", "2.20"),
+        ("4.00", "D", "1.60"),
         ("3.99", "F", "0.0"),
-        ("10", "A", "4.0"),
+        ("10", "A", "4.00"),
+        ("8.57", "A", "3.43"),  # hệ 4 tuyến tính: tổng kết × 0.4
+        ("9.65", "A", "3.86"),
     ],
 )
 def test_thang_chu_br11_band_lien_tuc(tong, chu, gpa):
@@ -314,15 +317,15 @@ def test_luong_day_du_nhap_khoa_dong_duyet_sv_xem_gpa_dung(login_as, pdt):
     assert Notification.objects.filter(tieu_de="Có điểm mới").count() == 2
 
     ho_so = StudentProfile.objects.get(user=sv[0].user)
-    assert ho_so.gpa == D("4.00") and ho_so.tin_chi_tich_luy == 3
+    assert ho_so.gpa == D("3.60") and ho_so.tin_chi_tich_luy == 3  # 9.0 → 9.0 × 0.4
     me = login_as(sv[1].user).get("/api/grades/my/")
     assert me.status_code == 200
-    assert D(me.data["gpa"]) == D("1.00") and me.data["xep_loai"] == "Yếu"  # 5.0 → D = 1.0
+    assert D(me.data["gpa"]) == D("2.00") and me.data["xep_loai"] == "Trung bình"  # 5.0 → 2.00
     assert me.data["tin_chi_tich_luy"] == 3  # D vẫn tích lũy tín chỉ
     assert len(me.data["diem"]) == 1 and me.data["diem"][0]["diem_chu"] == "D"
     st = me.data["thong_ke"][0]
     assert (st["so_mon"], st["tin_chi_hoc"], st["tin_chi_dat"]) == (1, 3, 3)
-    assert D(st["diem_tb"]) == D("5.00") and D(st["gpa"]) == D("1.00")
+    assert D(st["diem_tb"]) == D("5.00") and D(st["gpa"]) == D("2.00")
 
 
 def test_duyet_chan_khi_con_nhap_tam(pdt):
@@ -443,3 +446,16 @@ def test_danh_sach_bang_diem_cho_pdt(pdt, login_as):
     assert pdt.get("/api/grade-sheets/?trang_thai=DANG_HOC").data["count"] == 0
     assert pdt.get(f"/api/grade-sheets/?search={lop.ma_lop}").data["count"] == 1
     assert login_as(UserFactory(role=Role.GIAO_VIEN)).get("/api/grade-sheets/").status_code == 403
+
+
+def test_danh_sach_bang_diem_loc_nganh_va_hoc_ky(pdt):
+    lop_a, _ = tao_lop(trang_thai=TrangThaiLop.DA_DONG)
+    lop_b, _ = tao_lop(trang_thai=TrangThaiLop.DA_DONG)
+    nganh_a, nganh_b = CurriculumFactory(), CurriculumFactory()
+    CurriculumCourse.objects.create(ctdt=nganh_a, mon_hoc=lop_a.mon_hoc)
+    CurriculumCourse.objects.create(ctdt=nganh_b, mon_hoc=lop_b.mon_hoc)
+
+    res = pdt.get(f"/api/grade-sheets/?nganh={nganh_a.nganh_id}")
+    assert [r["ma_lop"] for r in res.data["results"]] == [lop_a.ma_lop]
+    res = pdt.get(f"/api/grade-sheets/?nganh={nganh_a.nganh_id}&hoc_ky={lop_b.hoc_ky_id}")
+    assert res.data["count"] == 0  # đúng ngành nhưng khác học kỳ

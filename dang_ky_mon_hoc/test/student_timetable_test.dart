@@ -153,6 +153,77 @@ void main() {
     },
   );
 
+  testWidgets(
+    'khối 1–2 tiết với tên môn dài: không tràn (nội dung co theo số tiết)',
+    (t) async {
+      await open(
+        t,
+        tkb([
+          lop(
+            1,
+            'KTPM009.L01-2627.1',
+            'Thực hành Phát triển phần mềm hướng dịch vụ',
+            [lich(4, 1, 2, 'LAB04'), lich(6, 8, 1, 'LAB02')],
+          ),
+        ]),
+      );
+      expect(t.takeException(), isNull); // tràn dọc sẽ ném overflow trong test
+      expect(
+        find.text('KTPM009.L01-2627.1 · LAB04'),
+        findsOneWidget,
+      ); // 2 tiết: đủ mã lớp
+      expect(
+        find.text('KTPM009.L01-2627.1 · LAB02'),
+        findsNothing,
+      ); // 1 tiết: chỉ tên môn
+    },
+  );
+
+  testWidgets('chọn học kỳ khác: gọi lại theo kỳ đó và mở tuần đầu của kỳ', (
+    t,
+  ) async {
+    final moi = {
+      ...tkb([
+        lop(1, 'A-01', 'Môn mới', [lich(2, 1, 3, 'A101')]),
+      ]),
+      'cac_hoc_ky': [
+        {'id': 7, 'ten_hk': 'Học kỳ 2, 2026–2027'},
+        {'id': 6, 'ten_hk': 'Học kỳ 1, 2025–2026'},
+      ],
+    };
+    final cu = {
+      ...moi,
+      'hoc_ky': 6,
+      'ten_hk': 'Học kỳ 1, 2025–2026',
+      'ngay_bat_dau': '2025-09-01',
+      'ngay_ket_thuc': '2026-01-10',
+      'lop_hoc_phan': [
+        lop(2, 'B-01', 'Môn cũ', [lich(3, 1, 3, 'B1')]),
+      ],
+    };
+    final api = svApi({
+      'GET /timetable/my/': (o) =>
+          reply(200, '${o.queryParameters['hoc_ky']}' == '6' ? cu : moi),
+    });
+    await openStudent(
+      t,
+      api,
+      '/student/schedule',
+      overrides: [clockProvider.overrideWithValue(() => _homNay)],
+    );
+    expect(find.text('Học kỳ'), findsOneWidget);
+    expect(find.textContaining('Môn mới'), findsWidgets);
+
+    await tapText(t, 'Học kỳ 2, 2026–2027'); // mở ô học kỳ
+    await t.tap(find.text('Học kỳ 1, 2025–2026').last);
+    await t.pumpAndSettle();
+    expect(
+      find.textContaining('Môn cũ'),
+      findsWidgets,
+    ); // tuần đầu của kỳ cũ đã có lớp
+    expect(find.textContaining('Môn mới'), findsNothing);
+  });
+
   testWidgets('chưa đăng ký lớp nào → thông báo trống', (t) async {
     await open(t, tkb([]));
     expect(find.text('Chưa có lớp nào trong thời khóa biểu'), findsOneWidget);

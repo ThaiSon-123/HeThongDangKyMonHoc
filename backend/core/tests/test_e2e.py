@@ -51,7 +51,7 @@ def test_dang_ky_diem_danh_diem_hoc_phi(login_as):
         ngay_bat_dau=hom_nay - timedelta(days=30),
         ngay_ket_thuc=hom_nay - timedelta(days=1),
     )
-    ScheduleFactory(lop_hoc_phan=lop, thu=hom_nay.isoweekday() % 7 + 1, phong="B201")
+    ScheduleFactory(lop_hoc_phan=lop, thu=hom_nay.isoweekday() + 1, phong="B201")
     ctdt = CurriculumFactory()
     sv = StudentProfileFactory(nganh=ctdt.nganh, ctdt=ctdt)
 
@@ -75,7 +75,7 @@ def test_dang_ky_diem_danh_diem_hoc_phi(login_as):
     training.dong_bo_buoi_diem_danh(lop)
     buoi = gv_api.get("/api/attendance/sessions/", {"lop_hoc_phan": lop.id}).data
     assert buoi["tong_so_buoi"] >= 4
-    dau = buoi["results"][0]
+    dau = buoi["results"][-1]  # buổi gần nhất (còn trong hạn sửa điểm danh, BR-20e)
 
     # 3. GV điểm danh cả lớp; SV thấy bản ghi của mình
     ds = gv_api.get(f"/api/attendance/sessions/{dau['id']}/records/").data
@@ -119,7 +119,7 @@ def test_dang_ky_diem_danh_diem_hoc_phi(login_as):
     assert res.status_code == 200
     diem = sv_api.get("/api/grades/my/").data
     assert diem["diem"][0]["diem_chu"] == "B" and diem["tin_chi_tich_luy"] == 3
-    assert Decimal(diem["gpa"]) == Decimal("3.00")
+    assert Decimal(diem["gpa"]) == Decimal("3.24")  # tổng kết 8.10 × 0.4 (hệ 4 tuyến tính, BR-11)
 
     # 6. KT thu đủ học phí (replay cùng Idempotency-Key không thu thêm) → hết nợ
     key = uuid.uuid4()

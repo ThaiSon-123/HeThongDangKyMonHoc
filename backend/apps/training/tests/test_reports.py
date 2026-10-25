@@ -160,6 +160,16 @@ def test_lop_cua_toi_kem_thoi_han_va_trang_thai_duyet_diem(login_as):
     assert gv.get("/api/class-sections/my/").data["results"][0]["diem_da_duyet"] is True
 
 
+def test_lop_cua_toi_tim_theo_ma_lop_hoac_mon(login_as):
+    lop, gv = gv_lop(login_as)
+    ma = lop.ma_lop
+    url = "/api/class-sections/my/"
+    assert gv.get(url, {"search": ma[:4].lower()}).data["count"] == 1  # không phân biệt hoa thường
+    assert gv.get(url, {"search": lop.mon_hoc.ten_mon[:3]}).data["count"] == 1
+    assert gv.get(url, {"search": lop.mon_hoc.ma_mon}).data["count"] == 1
+    assert gv.get(url, {"search": "zzqqxx"}).data["count"] == 0  # không khớp → danh sách rỗng, không bỏ qua bộ lọc
+
+
 def test_gv_danh_sach_sv_chi_gom_dang_dang_ky(login_as):
     lop, gv = gv_lop(login_as, si_so_toi_da=40)
     a, b = StudentProfileFactory(ma_sv="SV001"), StudentProfileFactory(ma_sv="SV002")

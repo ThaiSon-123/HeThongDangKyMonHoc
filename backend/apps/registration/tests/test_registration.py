@@ -536,10 +536,12 @@ def test_thoi_khoa_bieu_sv_la_lop_da_dang_ky_gv_la_lop_phu_trach(sv_api, login_a
     assert res.status_code == 200
     assert [x["ma_lop"] for x in res.data["lop_hoc_phan"]] == [lop_a.ma_lop]
     assert res.data["lop_hoc_phan"][0]["lich_hoc"][0]["tiet_ket_thuc"] == 3
+    assert [h["id"] for h in res.data["cac_hoc_ky"]] == [hk.id]  # kỳ tôi có lớp, để chọn xem kỳ khác
 
     gv_api = login_as(lop_b.giao_vien.user)
     res = gv_api.get("/api/timetable/my/")
     assert [x["ma_lop"] for x in res.data["lop_hoc_phan"]] == [lop_b.ma_lop]
+    assert [h["id"] for h in res.data["cac_hoc_ky"]] == [hk.id]
     assert login_as(UserFactory(role=Role.KE_TOAN)).get("/api/timetable/my/").status_code == 403
 
 

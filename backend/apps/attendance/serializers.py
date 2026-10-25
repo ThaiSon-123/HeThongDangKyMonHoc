@@ -51,6 +51,8 @@ class RecordsSerializer(serializers.Serializer):
     session = SessionSerializer()
     lop_trang_thai = serializers.CharField()
     co_the_diem_danh = serializers.BooleanField()
+    con_han_sua = serializers.BooleanField()  # còn trong hạn sửa điểm danh (BR-20e)
+    so_ngay_xin_sua = serializers.IntegerField()
     tong_so_buoi = serializers.IntegerField()
     max_absent_pct = serializers.IntegerField()
     records = RecordRowSerializer(many=True)
@@ -66,6 +68,7 @@ class MyBuoiSerializer(serializers.Serializer):
     di_tre = serializers.BooleanField()
     ghi_chu = serializers.CharField()
     yeu_cau = serializers.DictField(allow_null=True)
+    con_han_xin_sua = serializers.BooleanField()
 
 
 class MyLopSerializer(serializers.Serializer):
@@ -85,10 +88,17 @@ class MyLopSerializer(serializers.Serializer):
     buoi = MyBuoiSerializer(many=True)
 
 
+class HocKyCoDangKySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    ten_hk = serializers.CharField()
+
+
 class MyAttendanceSerializer(serializers.Serializer):
     hoc_ky = serializers.IntegerField()
     ten_hk = serializers.CharField()
+    cac_hoc_ky = HocKyCoDangKySerializer(many=True)  # kỳ tôi có đăng ký, mới nhất trước — để chọn xem kỳ khác
     max_absent_pct = serializers.IntegerField()
+    so_ngay_xin_sua = serializers.IntegerField()
     lop_hoc_phan = MyLopSerializer(many=True)
 
 

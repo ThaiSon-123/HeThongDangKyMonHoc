@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/page_result.dart';
 import '../../core/format.dart';
+import '../../core/layout.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
+import '../../shared/widgets/status_chip.dart';
 import '../admin/system/backups_screen.dart' show formatBytes;
 import '../notifications/audit_log_screen.dart' show hanhDongLabel, tomTat;
 import '../registration/timetable_screen.dart' show clockProvider;
@@ -93,6 +95,8 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                   DateTime.parse((file as Map)['tao_luc'] as String).toLocal(),
                 )
                 .inHours;
+      final taiKhoan = _khoiTaiKhoan(d);
+      final saoLuu = _khoiSaoLuu(file as Map?, gio);
       return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -102,17 +106,17 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
               phu: ngayDayDu(now),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 16,
-              runSpacing: 16,
+            HangThe(
               children: [
                 _Suc(
                   'Máy chủ ứng dụng',
+                  Icons.dns_outlined,
                   d.suc != null,
                   d.suc != null ? 'Phản hồi bình thường' : 'Không phản hồi',
                 ),
                 _Suc(
                   'Cơ sở dữ liệu',
+                  Icons.storage_outlined,
                   d.suc?['db'] == true,
                   d.suc?['db'] == true
                       ? 'Kết nối ổn định'
@@ -120,6 +124,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                 ),
                 _Suc(
                   'Bộ nhớ đệm',
+                  Icons.bolt_outlined,
                   d.suc?['redis'] == true,
                   d.suc?['redis'] == true
                       ? 'Kết nối ổn định'
@@ -127,6 +132,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                 ),
                 _Suc(
                   'Tác vụ chạy nền',
+                  Icons.sync_outlined,
                   d.suc?['worker'] == true,
                   d.suc?['worker'] == true
                       ? 'Đang chạy'
@@ -135,171 +141,300 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
               ],
             ),
             const SizedBox(height: 16),
-            PanelCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Tài khoản theo vai trò',
-                          style: sectionTitleStyle,
-                        ),
-                      ),
-                      Text(
-                        d.dangKhoa == 0
-                            ? 'Không có tài khoản bị khóa'
-                            : '${d.dangKhoa} tài khoản đang khóa',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: d.dangKhoa == 0
-                              ? AppColors.muted
-                              : AppColors.danger,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      for (final (ma, ten) in _vaiTro)
-                        Container(
-                          width: 140,
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF4F5FA),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                ten,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.muted,
-                                ),
-                              ),
-                              Text(
-                                '${d.soTaiKhoan[ma]}',
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
             const LoiTat([
               ('Tài khoản', '/admin/accounts'),
               ('Cấu hình', '/admin/config'),
               ('Sao lưu', '/admin/backups'),
             ]),
             const SizedBox(height: 16),
-            PanelCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Sao lưu gần nhất', style: sectionTitleStyle),
-                  const SizedBox(height: 10),
-                  if (file == null)
-                    const Text(
-                      'Chưa có bản sao lưu nào.',
-                      style: TextStyle(color: AppColors.muted),
-                    )
-                  else ...[
-                    _dong('Tên tệp', (file as Map)['ten'] as String),
-                    _dong('Thời gian', formatIso(file['tao_luc'] as String)),
-                    _dong('Dung lượng', formatBytes(file['dung_luong'] as num)),
+            // Web rộng: tài khoản và sao lưu cạnh nhau; hẹp/điện thoại: xếp dọc.
+            if (isWide(context))
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(flex: 3, child: taiKhoan),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 2, child: saoLuu),
                   ],
-                  if (file == null || (gio ?? 0) >= _canhBaoSauGio) ...[
-                    const SizedBox(height: 10),
-                    AlertBanner(
-                      kind: BannerKind.warning,
-                      message: file == null
-                          ? 'Chưa có bản sao lưu nào. Hãy kiểm tra lịch sao lưu tự động hoặc tạo bản sao lưu ngay.'
-                          : 'Đã hơn $_canhBaoSauGio giờ chưa có bản sao lưu mới. Hãy kiểm tra lịch sao lưu tự động hoặc tạo bản sao lưu ngay.',
-                    ),
-                  ],
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => context.go('/admin/backups'),
-                      child: const Text('Mở trang Sao lưu ›'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              )
+            else ...[
+              taiKhoan,
+              const SizedBox(height: 16),
+              saoLuu,
+            ],
             const SizedBox(height: 16),
-            PanelCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Hoạt động gần đây', style: sectionTitleStyle),
-                  const SizedBox(height: 10),
-                  if (d.nhatKy.isEmpty)
-                    const Text(
-                      'Chưa có thao tác nào được ghi nhận.',
-                      style: TextStyle(color: AppColors.muted),
-                    ),
-                  for (final l in d.nhatKy)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Wrap(
-                        spacing: 12,
-                        runSpacing: 2,
-                        children: [
-                          Text(
-                            formatIso(l.str('thoi_gian')),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.muted,
-                            ),
-                          ),
-                          Text(
-                            l.str('nguoi_thuc_hien'),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          Text(hanhDongLabel(l.str('hanh_dong'))),
-                          Text(
-                            '${l.str('doi_tuong')} · ${tomTat(l)}',
-                            style: const TextStyle(color: AppColors.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => context.go('/admin/logs'),
-                      child: const Text('Xem toàn bộ nhật ký ›'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _khoiNhatKy(d.nhatKy),
           ],
         ),
       );
     },
   );
 
+  /// Mỗi vai trò một dòng: tên, số tài khoản, thanh tỉ lệ so với tổng.
+  Widget _khoiTaiKhoan(_Data d) {
+    final tong = d.soTaiKhoan.values.fold<int>(0, (a, b) => a + b);
+    return PanelCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              const Text('Tài khoản theo vai trò', style: sectionTitleStyle),
+              d.dangKhoa == 0
+                  ? StatusChip.of(
+                      'Không có tài khoản bị khóa',
+                      StatusChip.green,
+                    )
+                  : StatusChip.of(
+                      '${d.dangKhoa} tài khoản đang khóa',
+                      StatusChip.red,
+                    ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Tổng $tong tài khoản',
+            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
+          const SizedBox(height: 14),
+          for (final (ma, ten) in _vaiTro)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: isCompact(context) ? 100 : 130,
+                    child: Text(
+                      ten,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.label,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: tong == 0 ? 0 : d.soTaiKhoan[ma]! / tong,
+                        minHeight: 10,
+                        backgroundColor: const Color(0xFFECEFF5),
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 52,
+                    child: Text(
+                      '${d.soTaiKhoan[ma]}',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _khoiSaoLuu(Map? file, int? gio) {
+    final cu = file == null || (gio ?? 0) >= _canhBaoSauGio;
+    return PanelCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Sao lưu gần nhất', style: sectionTitleStyle),
+              ),
+              if (file != null)
+                cu
+                    ? StatusChip.of('Đã cũ', StatusChip.yellow)
+                    : StatusChip.of('Mới', StatusChip.green),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (file == null)
+            const Text(
+              'Chưa có bản sao lưu nào.',
+              style: TextStyle(color: AppColors.muted),
+            )
+          else ...[
+            _dong('Tên tệp', file['ten'] as String),
+            _dong('Thời gian', formatIso(file['tao_luc'] as String)),
+            _dong('Dung lượng', formatBytes(file['dung_luong'] as num)),
+          ],
+          if (cu) ...[
+            const SizedBox(height: 10),
+            AlertBanner(
+              kind: BannerKind.warning,
+              message: file == null
+                  ? 'Chưa có bản sao lưu nào. Hãy kiểm tra lịch sao lưu tự động hoặc tạo bản sao lưu ngay.'
+                  : 'Đã hơn $_canhBaoSauGio giờ chưa có bản sao lưu mới. Hãy kiểm tra lịch sao lưu tự động hoặc tạo bản sao lưu ngay.',
+            ),
+          ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 40),
+              ),
+              onPressed: () => context.go('/admin/backups'),
+              child: const Text('Mở trang Sao lưu ›'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _khoiNhatKy(List<Json> nhatKy) {
+    final compact = isCompact(context);
+    return PanelCard(
+      padding: 0,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 20, 24, 12),
+            child: Text('Hoạt động gần đây', style: sectionTitleStyle),
+          ),
+          if (nhatKy.isEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: Text(
+                'Chưa có thao tác nào được ghi nhận.',
+                style: TextStyle(color: AppColors.muted),
+              ),
+            ),
+          for (final l in nhatKy)
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 16 : 24,
+                vertical: 10,
+              ),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.divider)),
+              ),
+              child: compact ? _dongNhatKyHep(l) : _dongNhatKy(l),
+            ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 16),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: AppColors.divider)),
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => context.go('/admin/logs'),
+                child: const Text('Xem toàn bộ nhật ký ›'),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static (Color, Color) _mauHanhDong(String h) => switch (h) {
+    'CREATE' => StatusChip.green,
+    'DELETE' => StatusChip.red,
+    'UPDATE' => StatusChip.indigo,
+    _ => StatusChip.gray,
+  };
+
+  Widget _dongNhatKy(Json l) => Row(
+    children: [
+      SizedBox(
+        width: 140,
+        child: Text(
+          formatIso(l.str('thoi_gian')),
+          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+        ),
+      ),
+      SizedBox(
+        width: 170,
+        child: Text(
+          l.str('nguoi_thuc_hien'),
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+      SizedBox(
+        width: 120,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: StatusChip.of(
+            hanhDongLabel(l.str('hanh_dong')),
+            _mauHanhDong(l.str('hanh_dong')),
+          ),
+        ),
+      ),
+      Expanded(
+        child: Text(
+          '${l.str('doi_tuong')} · ${tomTat(l)}',
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: AppColors.muted),
+        ),
+      ),
+    ],
+  );
+
+  Widget _dongNhatKyHep(Json l) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              l.str('nguoi_thuc_hien'),
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(width: 8),
+          StatusChip.of(
+            hanhDongLabel(l.str('hanh_dong')),
+            _mauHanhDong(l.str('hanh_dong')),
+          ),
+        ],
+      ),
+      const SizedBox(height: 2),
+      Text(
+        '${l.str('doi_tuong')} · ${tomTat(l)}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: AppColors.muted, fontSize: 13),
+      ),
+      Text(
+        formatIso(l.str('thoi_gian')),
+        style: const TextStyle(fontSize: 12, color: AppColors.muted),
+      ),
+    ],
+  );
+
   Widget _dong(String nhan, String giaTri) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
+    padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 110,
+          width: 100,
           child: Text(
             nhan,
             style: const TextStyle(color: AppColors.muted, fontSize: 13),
@@ -316,55 +451,82 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
   );
 }
 
-/// Thẻ tình trạng một thành phần hệ thống: chấm xanh/đỏ + trạng thái + ghi chú.
+/// Thẻ tình trạng một thành phần hệ thống: biểu tượng + chấm xanh/đỏ + trạng thái + ghi chú.
 class _Suc extends StatelessWidget {
-  const _Suc(this.ten, this.tot, this.ghiChu);
+  const _Suc(this.ten, this.icon, this.tot, this.ghiChu);
 
   final String ten;
+  final IconData icon;
   final bool tot;
   final String ghiChu;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 240,
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: AppColors.cardShadow,
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(ten, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: tot ? AppColors.success : AppColors.danger,
-              ),
+  Widget build(BuildContext context) {
+    final mau = tot ? AppColors.success : AppColors.danger;
+    return Container(
+      width: isCompact(context) ? MediaQuery.sizeOf(context).width - 32 : 240,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: mau.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-            const SizedBox(width: 8),
-            Text(
-              tot ? 'Hoạt động' : 'Có sự cố',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: tot ? AppColors.navy : AppColors.danger,
-              ),
+            child: Icon(icon, size: 22, color: mau),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ten,
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: mau,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        tot ? 'Hoạt động' : 'Có sự cố',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: tot ? AppColors.navy : AppColors.danger,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  ghiChu,
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          ghiChu,
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
-      ],
-    ),
-  );
+          ),
+        ],
+      ),
+    );
+  }
 }

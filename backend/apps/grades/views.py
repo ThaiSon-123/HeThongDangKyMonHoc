@@ -160,6 +160,7 @@ class GradeSheetListView(APIView):
     @extend_schema(
         parameters=[
             OpenApiParameter("hoc_ky", int),
+            OpenApiParameter("nganh", int),
             OpenApiParameter("trang_thai", str),
             OpenApiParameter("search", str),
             OpenApiParameter("page", int),
@@ -183,6 +184,8 @@ class GradeSheetListView(APIView):
         p = request.query_params
         if p.get("hoc_ky"):
             qs = qs.filter(hoc_ky=p["hoc_ky"])
+        if p.get("nganh"):
+            qs = qs.filter(mon_hoc__mon_ctdt__ctdt__nganh=p["nganh"]).distinct()
         if p.get("trang_thai"):
             qs = qs.filter(trang_thai=p["trang_thai"])
         if p.get("search"):

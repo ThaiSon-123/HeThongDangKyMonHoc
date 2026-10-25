@@ -4,6 +4,7 @@
 import uuid
 
 import django_filters
+from django.db.models import Q
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -27,7 +28,13 @@ from apps.registration.serializers import (
     RegistrationSerializer,
     TimetableSerializer,
 )
-from apps.training.models import ClassSection, CurriculumCourse, Prerequisite, TrangThaiHocKy
+from apps.training.models import (
+    ClassSection,
+    CurriculumCourse,
+    Prerequisite,
+    Semester,
+    TrangThaiHocKy,
+)
 from apps.training.services import chon_hoc_ky
 from core.export import XLSX, xlsx_response
 from core.mixins import write_audit
@@ -325,11 +332,23 @@ class MyTimetableView(APIView):
             .prefetch_related("lich_hoc")
             .order_by("ma_lop")
         )
+        if request.user.role == Role.SINH_VIEN:
+            cua_toi = Registration.objects.filter(
+                sinh_vien=request.user, trang_thai=TrangThaiDangKy.DA_DANG_KY
+            ).values("lop_hoc_phan__hoc_ky_id")
+        else:
+            cua_toi = ClassSection.objects.filter(giao_vien__user=request.user).values("hoc_ky_id")
+        cac_hoc_ky = (
+            Semester.objects.filter(Q(id=hoc_ky.id) | Q(id__in=cua_toi))
+            .order_by("-ngay_bat_dau")
+            .values("id", "ten_hk")
+        )
         return Response(
             TimetableSerializer(
                 {
                     "hoc_ky": hoc_ky.id,
                     "ten_hk": hoc_ky.ten_hk,
+                    "cac_hoc_ky": cac_hoc_ky,
                     "ngay_bat_dau": hoc_ky.ngay_bat_dau,
                     "ngay_ket_thuc": hoc_ky.ngay_ket_thuc,
                     "lop_hoc_phan": qs,

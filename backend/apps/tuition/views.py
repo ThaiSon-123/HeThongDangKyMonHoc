@@ -16,6 +16,7 @@ from apps.audit.models import HanhDong
 from apps.profiles.models import StudentProfile
 from apps.registration.models import TrangThaiDangKy
 from apps.registration.services import ho_so_sinh_vien
+from apps.training.models import Semester
 from apps.training.services import chon_hoc_ky
 from apps.tuition import services
 from apps.tuition.models import (
@@ -388,6 +389,14 @@ class MyTuitionView(APIView):
         row["chi_tiet"] = chi_tiet
         row["payments"] = payments
         row["thanh_toan"] = services.thong_tin_chuyen_khoan(ho_so, hoc_ky)
+        row["cac_hoc_ky"] = (
+            Semester.objects.filter(
+                Q(id=hoc_ky.id)
+                | Q(id__in=Tuition.objects.filter(sinh_vien=user).values("hoc_ky_id"))
+            )
+            .order_by("-ngay_bat_dau")
+            .values("id", "ten_hk")
+        )
         return Response(MyTuitionSerializer(row).data)
 
 

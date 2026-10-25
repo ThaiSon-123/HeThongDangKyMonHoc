@@ -46,7 +46,7 @@ def _chu_hoa_khong_dau(v):
     return s
 
 
-# (khóa, nhóm, mô tả, mặc định, hàm kiểm tra) — đúng 6 khóa (design.md 9.3)
+# (khóa, nhóm, mô tả, mặc định, hàm kiểm tra) — 7 khóa (design.md 9.3)
 CAU_HINH = [
     (
         "max_absent_pct",
@@ -54,6 +54,13 @@ CAU_HINH = [
         "% buổi vắng không phép tối đa; vượt thì hiện cờ cảnh báo (BR-20)",
         "20",
         _so_nguyen(0, 100),
+    ),
+    (
+        "so_ngay_xin_sua_diem_danh",
+        "Điểm danh",
+        "Số ngày sau buổi học còn được sửa điểm danh: giáo viên lưu/sửa, sinh viên xin sửa (BR-20e); 0 = chỉ trong ngày học",
+        "7",
+        _so_nguyen(0, 365),
     ),
     (
         "so_ngay_cho_phep_nhap_diem",
@@ -95,7 +102,7 @@ _THEO_KHOA = {c[0]: c for c in CAU_HINH}
 
 
 def doc_cau_hinh():
-    """6 khóa cấu hình kèm giá trị hiện tại (chưa đặt thì là mặc định) và lần sửa gần nhất."""
+    """7 khóa cấu hình kèm giá trị hiện tại (chưa đặt thì là mặc định) và lần sửa gần nhất."""
     luu = {c.khoa: c for c in SystemConfig.objects.filter(khoa__in=_THEO_KHOA)}
     return [
         {

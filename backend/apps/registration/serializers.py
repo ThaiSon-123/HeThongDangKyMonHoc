@@ -170,9 +170,15 @@ class MyCurriculumSerializer(serializers.Serializer):
     mon = MyCurriculumCourseSerializer(many=True)
 
 
+class HocKyCoLopSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    ten_hk = serializers.CharField()
+
+
 class TimetableSerializer(serializers.Serializer):
     hoc_ky = serializers.IntegerField()
     ten_hk = serializers.CharField()
+    cac_hoc_ky = HocKyCoLopSerializer(many=True)  # kỳ tôi có lớp (+ kỳ đang xem), mới nhất trước
     ngay_bat_dau = serializers.DateField()
     ngay_ket_thuc = serializers.DateField()
     lop_hoc_phan = ClassBriefSerializer(many=True)
