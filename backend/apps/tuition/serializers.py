@@ -247,6 +247,23 @@ class MyPlanSerializer(serializers.Serializer):
     hinh_thuc = serializers.ChoiceField(choices=HinhThucDong.choices)
 
 
+class MyPaySerializer(serializers.Serializer):
+    muc = serializers.ChoiceField(choices=["DOT_TIEP", "TOAN_BO", "TUY_Y"])
+    so_tien = serializers.DecimalField(required=False, **TIEN)
+
+
+class MyPayResultSerializer(serializers.Serializer):
+    payment_url = serializers.CharField()
+    txn_ref = serializers.CharField()
+    so_tien = serializers.DecimalField(**TIEN)
+
+
+class MyPayStatusSerializer(serializers.Serializer):
+    txn_ref = serializers.CharField()
+    trang_thai = serializers.CharField()
+    so_tien = serializers.DecimalField(**TIEN)
+
+
 class MyTuitionSerializer(TuitionDetailSerializer):
     thanh_toan = ThanhToanSerializer()
     cac_dot = DotMySerializer(many=True)  # lịch 3 đợt nếu học kỳ đã cấu hình, ngược lại []

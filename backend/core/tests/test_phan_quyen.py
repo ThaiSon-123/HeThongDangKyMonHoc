@@ -125,6 +125,8 @@ QUYEN = {
     ("GET", "/api/grades/my/"): "S",
     ("GET", "/api/tuition/my/"): "S",
     ("PATCH", "/api/tuition/my/plan/"): "S",
+    ("POST", "/api/tuition/my/pay/"): "S",
+    ("GET", "/api/tuition/my/pay/{txn_ref}/"): "S",
     # --- PĐT theo dõi / hủy hộ
     ("GET", "/api/registrations/"): "P",
     ("GET", "/api/registrations/export/"): "P",

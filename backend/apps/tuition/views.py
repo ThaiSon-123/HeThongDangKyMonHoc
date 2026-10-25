@@ -25,6 +25,7 @@ from apps.tuition.models import (
     HinhThucDong,
     HocPhanGia,
     LoaiThanhToan,
+    OnlineTransaction,
     Payment,
     TrangThaiHocPhi,
     Tuition,
@@ -38,6 +39,9 @@ from apps.tuition.serializers import (
     InstallmentSerializer,
     InstallmentsPutSerializer,
     InstallmentsSerializer,
+    MyPayResultSerializer,
+    MyPaySerializer,
+    MyPayStatusSerializer,
     MyPlanSerializer,
     MyTuitionSerializer,
     PaymentCreateSerializer,
@@ -52,7 +56,7 @@ from core.export import XLSX, xlsx_response
 from core.mixins import AuditLogMixin, write_audit
 from core.pagination import StandardPagination
 from core.permissions import IsKeToan, IsSinhVien
-from core.utils import int_param
+from core.utils import client_ip, int_param
 
 HOC_KY = OpenApiParameter("hoc_ky", int, description="Mặc định: học kỳ hiện tại / `MO` gần nhất")
 
@@ -487,6 +491,54 @@ class MyPlanView(APIView):
             {"hanh_dong": "doi_hinh_thuc", "hinh_thuc": hinh_thuc},
         )
         return Response({"hinh_thuc": hinh_thuc})
+
+
+class MyPayView(APIView):
+    """`POST /api/tuition/my/pay/?hoc_ky=`: tạo giao dịch VNPay, trả `payment_url` để mở/quét QR."""
+
+    permission_classes = [IsSinhVien]
+
+    @extend_schema(
+        parameters=[HOC_KY], request=MyPaySerializer, responses={201: MyPayResultSerializer}
+    )
+    def post(self, request):
+        hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
+        s = MyPaySerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        giao_dich, url = services.tao_giao_dich_vnpay(
+            request.user,
+            hoc_ky,
+            s.validated_data["muc"],
+            s.validated_data.get("so_tien"),
+            client_ip(request),
+        )
+        write_audit(
+            request,
+            HanhDong.CREATE,
+            "OnlineTransaction",
+            giao_dich.id,
+            {"tuition": giao_dich.tuition_id, "so_tien": str(giao_dich.so_tien)},
+        )
+        data = {"payment_url": url, "txn_ref": giao_dich.txn_ref.hex, "so_tien": giao_dich.so_tien}
+        return Response(MyPayResultSerializer(data).data, status=201)
+
+
+class MyPayStatusView(APIView):
+    """`GET /api/tuition/my/pay/<txn_ref>/`: trạng thái giao dịch của tôi (người khác → `404`)."""
+
+    permission_classes = [IsSinhVien]
+
+    @extend_schema(responses=MyPayStatusSerializer)
+    def get(self, request, txn_ref):
+        try:
+            ref = uuid.UUID(txn_ref)
+        except ValueError:
+            raise NotFound("Không tìm thấy giao dịch.") from None
+        gd = OnlineTransaction.objects.filter(txn_ref=ref, tuition__sinh_vien=request.user).first()
+        if gd is None:
+            raise NotFound("Không tìm thấy giao dịch.")
+        data = {"txn_ref": gd.txn_ref.hex, "trang_thai": gd.trang_thai, "so_tien": gd.so_tien}
+        return Response(MyPayStatusSerializer(data).data)
 
 
 def _hang_chua_co(t, ds, hoc_ky, ho_so):

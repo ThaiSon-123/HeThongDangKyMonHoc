@@ -16,11 +16,13 @@ from apps.notifications.services import gui_cho_nguoi_dung
 from apps.profiles.models import StudentProfile
 from apps.registration.models import Registration, TrangThaiDangKy
 from apps.training.models import CurriculumCourse, Semester
+from apps.tuition import vnpay
 from apps.tuition.models import (
     Discount,
     HinhThucDong,
     HocPhanGia,
     LoaiThanhToan,
+    OnlineTransaction,
     Payment,
     TrangThaiHocPhi,
     Tuition,
@@ -302,6 +304,37 @@ def thong_tin_chuyen_khoan(ho_so, hoc_ky):
         # KT đối soát theo nội dung này (KT-08)
         "noi_dung_ck": f"HOCPHI {ho_so.ma_sv} HK{hoc_ky.id}",
     }
+
+
+def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip):
+    """Tạo `OnlineTransaction` `CHO` và URL VNPay. `muc`: `TOAN_BO` (toàn bộ `con_no`), `DOT_TIEP` (đợt
+    chưa đóng đầu tiên nếu đang `CHIA_DOT`, ngược lại toàn bộ), `TUY_Y` (`0 < so_tien ≤ con_no`).
+    Trả `(giao_dich, payment_url)`."""
+    if not vnpay.da_cau_hinh():
+        raise ValidationError({"vnpay": ["Chưa cấu hình cổng thanh toán VNPay."]})
+    t = Tuition.objects.filter(sinh_vien=sv_user, hoc_ky=hoc_ky).first()
+    if t is None or t.trang_thai != TrangThaiHocPhi.DA_TINH:
+        raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Học phí chưa được tính.")
+    dx = dan_xuat_cua(t)
+    con_no = dx["con_no"]
+    if con_no <= 0:
+        raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Bạn không còn công nợ học phí.")
+    if muc == "TUY_Y":
+        if so_tien is None or not 0 < so_tien <= con_no:
+            raise business_error(
+                Codes.SO_TIEN_KHONG_HOP_LE,
+                f"Số tiền phải lớn hơn 0 và không vượt công nợ ({con_no}).",
+            )
+    elif muc == "DOT_TIEP" and t.hinh_thuc == HinhThucDong.CHIA_DOT:
+        lich = lich_dot(dx["phai_nop"], dx["thuc_thu"], dot_cua_hoc_ky(hoc_ky.id))
+        tiep = dot_tiep_theo(lich, dx["thuc_thu"])
+        so_tien = min(tiep["can_dong"], con_no) if tiep else con_no
+    else:
+        so_tien = con_no
+    giao_dich = OnlineTransaction.objects.create(tuition=t, so_tien=so_tien)
+    order_info = f"HOCPHI {sv_user.sinh_vien.ma_sv} HK{hoc_ky.id}"
+    url = vnpay.tao_url(giao_dich.txn_ref.hex, so_tien, order_info, ip, timezone.now())
+    return giao_dich, url
 
 
 # ----------------------------------------------------------------- job quá hạn (mục 7.8)
