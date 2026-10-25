@@ -1,5 +1,7 @@
 """Học phí (BR-15..18, BR-26): tính theo bảng giá, giá trị dẫn xuất, thu/hoàn tiền, công nợ quá hạn."""
 
+from collections.abc import Sequence
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import IntegrityError, transaction
@@ -16,12 +18,14 @@ from apps.registration.models import Registration, TrangThaiDangKy
 from apps.training.models import CurriculumCourse
 from apps.tuition.models import (
     Discount,
+    HinhThucDong,
     HocPhanGia,
     LoaiThanhToan,
     Payment,
     TrangThaiHocPhi,
     Tuition,
     TuitionConfig,
+    TuitionInstallment,
 )
 from apps.tuition.pricing import tra_bang_gia
 from core.exceptions import Codes, business_error
@@ -173,6 +177,55 @@ def dan_xuat_cua(tuition):
 def han_dong(hoc_ky_id):
     cfg = TuitionConfig.objects.filter(hoc_ky_id=hoc_ky_id).first()
     return cfg.han_dong if cfg else None
+
+
+def dot_cua_hoc_ky(hoc_ky_id):
+    """3 đợt đã cấu hình của học kỳ theo `thu_tu`; `[]` nếu chưa đủ 3 đợt."""
+    dots = list(TuitionInstallment.objects.filter(hoc_ky_id=hoc_ky_id).order_by("thu_tu"))
+    return dots if len(dots) == 3 else []
+
+
+def lich_dot(
+    phai_nop: Decimal, thuc_thu: Decimal, dots: Sequence[TuitionInstallment]
+) -> list[dict]:
+    """Lịch đợt dẫn xuất: `luy_ke` đợt n = phai_nop × Σ ty_le[1..n]/100 (đợt cuối = phai_nop).
+    Tiền chảy từ đợt 1 xuống: đợt n đã đóng khi `thuc_thu ≥ luy_ke`."""
+    lich, ty_le_luy_ke, luy_ke_truoc = [], D(0), D(0)
+    for i, d in enumerate(dots):
+        ty_le_luy_ke += D(d.ty_le)
+        luy_ke = phai_nop if i == len(dots) - 1 else _lam_tron(phai_nop * ty_le_luy_ke / 100)
+        lich.append(
+            {
+                "thu_tu": d.thu_tu,
+                "ty_le": D(d.ty_le),
+                "han_dong": d.han_dong,
+                "phai_nop": luy_ke - luy_ke_truoc,
+                "luy_ke": luy_ke,
+                "da_dong": thuc_thu >= luy_ke,
+            }
+        )
+        luy_ke_truoc = luy_ke
+    return lich
+
+
+def dot_tiep_theo(lich: list[dict], thuc_thu: Decimal):
+    """Đợt đầu tiên chưa đóng: `{"thu_tu", "can_dong"}`; `None` nếu đã đóng hết / không có lịch."""
+    for d in lich:
+        if not d["da_dong"]:
+            return {"thu_tu": d["thu_tu"], "can_dong": d["luy_ke"] - thuc_thu}
+    return None
+
+
+def han_va_qua_han(
+    hinh_thuc: str, dx: dict, han_mot_lan: date | None, lich: list[dict], hom_nay: date
+) -> tuple[date | None, bool]:
+    """Hạn đang áp dụng và cờ quá hạn. `CHIA_DOT` có lịch: hạn của đợt chưa đóng đầu tiên (đợt cuối
+    nếu đã đóng hết), quá hạn khi có đợt chưa đóng đã qua hạn. Còn lại: hạn một lần của học kỳ."""
+    if hinh_thuc == HinhThucDong.CHIA_DOT and lich:
+        chua = [d for d in lich if not d["da_dong"]]
+        han = (chua[0] if chua else lich[-1])["han_dong"]
+        return han, any(d["han_dong"] < hom_nay for d in chua)
+    return han_mot_lan, bool(han_mot_lan and hom_nay > han_mot_lan and dx["con_no"] > 0)
 
 
 # ----------------------------------------------------------------- thu / hoàn tiền (BR-26)
