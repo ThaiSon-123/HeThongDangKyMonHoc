@@ -47,6 +47,10 @@ class InstallmentsPutSerializer(serializers.Serializer):
         return dots
 
 
+class InstallmentsSerializer(InstallmentsPutSerializer):
+    hoc_ky = serializers.IntegerField(read_only=True)
+
+
 class HocPhanGiaSerializer(serializers.ModelSerializer):
     ten_hk = serializers.CharField(source="hoc_ky.ten_hk", read_only=True, default=None)
 

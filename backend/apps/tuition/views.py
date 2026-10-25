@@ -37,6 +37,7 @@ from apps.tuition.serializers import (
     HocPhanGiaSerializer,
     InstallmentSerializer,
     InstallmentsPutSerializer,
+    InstallmentsSerializer,
     MyPlanSerializer,
     MyTuitionSerializer,
     PaymentCreateSerializer,
@@ -83,11 +84,13 @@ class InstallmentsView(APIView):
         dots = TuitionInstallment.objects.filter(hoc_ky=hoc_ky).order_by("thu_tu")
         return Response({"hoc_ky": hoc_ky.id, "dots": InstallmentSerializer(dots, many=True).data})
 
-    @extend_schema(parameters=[HOC_KY], responses=InstallmentsPutSerializer)
+    @extend_schema(parameters=[HOC_KY], responses=InstallmentsSerializer)
     def get(self, request):
         return self._tra(chon_hoc_ky(request.query_params.get("hoc_ky")))
 
-    @extend_schema(parameters=[HOC_KY], request=InstallmentsPutSerializer)
+    @extend_schema(
+        parameters=[HOC_KY], request=InstallmentsPutSerializer, responses=InstallmentsSerializer
+    )
     def put(self, request):
         hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
         s = InstallmentsPutSerializer(data=request.data)

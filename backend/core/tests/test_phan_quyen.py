@@ -124,6 +124,7 @@ QUYEN = {
     ("GET", "/api/attendance/my/"): "S",
     ("GET", "/api/grades/my/"): "S",
     ("GET", "/api/tuition/my/"): "S",
+    ("PATCH", "/api/tuition/my/plan/"): "S",
     # --- PĐT theo dõi / hủy hộ
     ("GET", "/api/registrations/"): "P",
     ("GET", "/api/registrations/export/"): "P",
@@ -167,6 +168,8 @@ QUYEN = {
     ("GET", "/api/tuition/debts/"): "K",
     ("GET", "/api/tuition/students/"): "K",
     ("POST", "/api/tuition/calculate/"): "K",
+    ("GET", "/api/tuition/installments/"): "K",
+    ("PUT", "/api/tuition/installments/"): "K",
     ("GET", "/api/tuition/payments/"): "K",
     ("POST", "/api/tuition/payments/"): "K",
     ("GET", "/api/tuition/payments/{id}/receipt/"): "K",
