@@ -15,7 +15,7 @@ ngành đào tạo, chương trình đào tạo, môn học, học kỳ, lớp h
 
 - Học lại / cải thiện điểm khi đã có điểm `KHOA`: điền đơn qua PĐT xử lý thủ công (phiên bản
   này không tự động hóa luồng retake).
-- Cổng thanh toán trực tuyến (KT chỉ xác nhận thu tay).
+- Cổng thanh toán trực tuyến thật (chỉ có VNPay **sandbox** thử nghiệm); KT vẫn xác nhận thu tiền mặt / chuyển khoản.
 - Quản lý phòng học chi tiết (phòng chỉ là thuộc tính của lịch học).
 
 Hệ thống bao gồm:
@@ -123,7 +123,7 @@ Sau khi gộp trùng (KT-07↔SYS-08, SV-06↔SYS-05, BR-07↔SYS-06) và chuy�
 | SV-09 | Xem lịch sử đăng ký | Xem môn đã đăng ký / đã hủy / đang học, ngày đăng ký, lý do hủy. | SV |
 | SV-10 | Xem điểm danh & xin sửa điểm danh | Xem trạng thái điểm danh từng buổi; gửi yêu cầu sửa điểm danh (GV/PĐT xử lý). | SV |
 | SV-11 | Xem điểm | Xem QT, GK, CK, tổng kết, điểm chữ, GPA; điểm `KHOA` mới hiển thị chính thức. | SV |
-| SV-12 | Xem học phí | Xem học phí theo học kỳ: tổng tín chỉ, tổng tiền, đã thu, còn nợ, miễn giảm. | SV |
+| SV-12 | Xem và đóng học phí | Xem học phí theo học kỳ: tổng tín chỉ, tổng tiền, đã thu, còn nợ, miễn giảm. Chọn đóng một lần hoặc chia 3 đợt (đổi được bất cứ lúc nào), thanh toán qua mã QR → VNPay sandbox, học phí tự cập nhật. | SV |
 | SV-13 | Nhận thông báo | Nhận + đánh dấu đã đọc thông báo từ PĐT / GV / KT / Admin. | SV |
 
 ### 4.3. Giáo viên (GV-01..12)
@@ -486,6 +486,9 @@ Admin tạo tài khoản (ADM-02) → Gán vai trò (ADM-04)
 | POST | `/api/attendance/requests/` | SV | Xin sửa điểm danh (SV-10). |
 | GET | `/api/grades/my/` | SV | Xem điểm (SV-11). |
 | GET | `/api/tuition/my/` | SV | Xem học phí (SV-12). |
+| PATCH | `/api/tuition/my/plan/` | SV | Đổi hình thức đóng `MOT_LAN` / `CHIA_DOT` (SV-12). |
+| POST | `/api/tuition/my/pay/` | SV | Tạo giao dịch VNPay, trả `payment_url` để mở / quét QR (SV-12). |
+| GET | `/api/tuition/my/pay/{txn_ref}/` | SV | Trạng thái giao dịch của mình. |
 | GET | `/api/notifications/` | Mọi vai trò | Danh sách thông báo của mình (SV-13). |
 | PATCH | `/api/notifications/{id}/read/` | Mọi vai trò | Đánh dấu đã đọc. |
 
@@ -510,6 +513,7 @@ Admin tạo tài khoản (ADM-02) → Gán vai trò (ADM-04)
 | Method | Endpoint | Vai trò | Mô tả |
 | :--- | :--- | :--- | :--- |
 | GET/POST/PATCH | `/api/tuition/config/` | KT | Chính sách học phí (KT-01). |
+| GET/PUT | `/api/tuition/installments/?hoc_ky=` | KT | Cấu hình 3 đợt đóng học phí (tỷ lệ % + hạn) của học kỳ (KT-01). |
 | GET/POST/PATCH | `/api/tuition/pricing/` | KT | Bảng giá (KT-02/03/04/05, BR-16/17). |
 | GET/POST/PATCH | `/api/tuition/discounts/` | KT | Miễn giảm (KT-06, BR-18). |
 | GET | `/api/tuition/` | KT | Danh sách học phí (KT-08). |

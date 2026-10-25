@@ -1,6 +1,6 @@
 # Đóng học phí một lần / chia 3 đợt + quét QR VNPay sandbox
 
-Ngày: 2026-10-25 · Trạng thái: chờ duyệt
+Ngày: 2026-10-25 · Trạng thái: đã triển khai (chưa chạy thử với key VNPay thật, xem mục 9)
 
 ## 1. Mục tiêu
 
