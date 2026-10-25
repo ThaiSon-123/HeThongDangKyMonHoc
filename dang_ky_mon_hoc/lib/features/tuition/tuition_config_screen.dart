@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/api_failure.dart';
 import '../../core/format.dart';
+import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_toast.dart';
+import '../../shared/widgets/labeled_dropdown.dart';
+import '../../shared/widgets/labeled_field.dart';
+import '../admin/accounts/account_dialogs.dart' show failureText;
 import '../training/classes_screen.dart' show hocKyLabel;
 import '../training/curriculums_screen.dart' show khoiKienThuc;
 import '../training/entity_form.dart';
@@ -35,14 +42,20 @@ class _TuitionConfigScreenState extends ConsumerState<TuitionConfigScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TabsRow(
-          labels: const ['Hạn đóng', 'Đơn giá', 'Miễn giảm / học bổng'],
+          labels: const [
+            'Hạn đóng',
+            'Chia đợt',
+            'Đơn giá',
+            'Miễn giảm / học bổng',
+          ],
           index: _tab,
           onChanged: (i) => setState(() => _tab = i),
         ),
         const SizedBox(height: 20),
         switch (_tab) {
           0 => const _HanDong(),
-          1 => const _DonGia(),
+          1 => const _ChiaDot(),
+          2 => const _DonGia(),
           _ => const _MienGiam(),
         },
       ],
@@ -132,6 +145,252 @@ class _HanDongState extends ConsumerState<_HanDong> {
       ),
     ],
   );
+}
+
+// ---------------------------------------------------------------- chia đợt
+/// Cấu hình 3 đợt đóng học phí của một học kỳ (tỷ lệ % + hạn). SV chọn đóng một lần hoặc chia theo
+/// 3 đợt này. Tổng tỷ lệ phải bằng 100% và hạn tăng dần — kiểm ở đây trước khi gửi (server kiểm lại).
+class _ChiaDot extends ConsumerStatefulWidget {
+  const _ChiaDot();
+
+  @override
+  ConsumerState<_ChiaDot> createState() => _ChiaDotState();
+}
+
+class _ChiaDotState extends ConsumerState<_ChiaDot> {
+  static final _ymd = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+  final _ty = List.generate(3, (_) => TextEditingController());
+  final _han = List.generate(3, (_) => TextEditingController());
+  List<Json>? _hocKy;
+  int? _hocKyId;
+  bool _luu = false;
+  bool _loiTai = false;
+  String? _failText;
+
+  @override
+  void initState() {
+    super.initState();
+    _taiHocKy();
+  }
+
+  @override
+  void dispose() {
+    for (final c in [..._ty, ..._han]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  /// `40.00` → `40`, `33.33` giữ nguyên.
+  static String _gon(num v) {
+    final r = (v * 100).round() / 100;
+    return r == r.roundToDouble() ? r.toInt().toString() : r.toString();
+  }
+
+  Future<void> _taiHocKy() async {
+    try {
+      final ds = await ref.read(trainingApiProvider).listAll('/semesters/');
+      if (!mounted) return;
+      setState(() => _hocKy = ds);
+      if (ds.isNotEmpty) await _chon(ds.first.id);
+    } on ApiFailure {
+      if (mounted) setState(() => _loiTai = true);
+    }
+  }
+
+  Future<void> _chon(int id) async {
+    setState(() {
+      _hocKyId = id;
+      _failText = null;
+    });
+    try {
+      final r = await ref
+          .read(trainingApiProvider)
+          .get('/tuition/installments/', query: {'hoc_ky': id});
+      if (!mounted) return;
+      final dots = (r['dots'] as List).map((e) => Json.from(e as Map)).toList();
+      setState(() {
+        for (var i = 0; i < 3; i++) {
+          final co = dots.length == 3;
+          _ty[i].text = co
+              ? _gon(double.parse(dots[i].str('ty_le')))
+              : const ['40', '30', '30'][i];
+          _han[i].text = co ? dots[i].str('han_dong') : '';
+        }
+      });
+    } on ApiFailure {
+      if (mounted) setState(() => _loiTai = true);
+    }
+  }
+
+  double? _tyLe(int i) =>
+      double.tryParse(_ty[i].text.trim().replaceAll(',', '.'));
+
+  DateTime? _ngay(int i) {
+    final t = _han[i].text.trim();
+    return _ymd.hasMatch(t) ? DateTime.tryParse(t) : null;
+  }
+
+  double get _tong =>
+      [for (var i = 0; i < 3; i++) _tyLe(i) ?? 0].reduce((a, b) => a + b);
+
+  bool get _hopLe {
+    for (var i = 0; i < 3; i++) {
+      final t = _tyLe(i);
+      if (t == null || t <= 0 || _ngay(i) == null) return false;
+    }
+    return (_tong * 100).round() == 10000 &&
+        _ngay(0)!.isBefore(_ngay(1)!) &&
+        _ngay(1)!.isBefore(_ngay(2)!);
+  }
+
+  Future<void> _chonNgay(int i) async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _ngay(i) ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (d == null) return;
+    final m = d.month.toString().padLeft(2, '0');
+    final ng = d.day.toString().padLeft(2, '0');
+    setState(() => _han[i].text = '${d.year}-$m-$ng');
+  }
+
+  Future<void> _luuDot() async {
+    setState(() {
+      _luu = true;
+      _failText = null;
+    });
+    try {
+      await ref.read(trainingApiProvider).put(
+        '/tuition/installments/?hoc_ky=$_hocKyId',
+        {
+          'dots': [
+            for (var i = 0; i < 3; i++)
+              {
+                'thu_tu': i + 1,
+                'ty_le': _tyLe(i),
+                'han_dong': _han[i].text.trim(),
+              },
+          ],
+        },
+      );
+      if (mounted) showAppToast(context, 'Đã lưu 3 đợt.');
+    } on ApiFailure catch (f) {
+      if (mounted) {
+        setState(() => _failText = failureText(f, 'Không lưu được 3 đợt.'));
+      }
+    } finally {
+      if (mounted) setState(() => _luu = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loiTai) {
+      return const AlertBanner(
+        kind: BannerKind.error,
+        message: 'Không tải được cấu hình chia đợt. Vui lòng thử lại.',
+      );
+    }
+    final ds = _hocKy;
+    if (ds == null || _hocKyId == null) {
+      return ds != null && ds.isEmpty
+          ? const Text('Chưa có học kỳ nào.')
+          : const ListSkeleton();
+    }
+    final tong = (_tong * 100).round() / 100;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Sinh viên chọn đóng một lần hoặc chia 3 đợt. Tổng tỷ lệ phải bằng 100%, hạn đóng tăng dần.',
+          style: TextStyle(color: AppColors.muted),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: 300,
+          child: LabeledDropdown<int>(
+            label: 'Học kỳ',
+            value: _hocKyId!,
+            options: [for (final h in ds) (h.id, hocKyLabel(h))],
+            onChanged: _luu ? null : _chon,
+          ),
+        ),
+        const SizedBox(height: 16),
+        for (var i = 0; i < 3; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              children: [
+                SizedBox(
+                  width: 70,
+                  height: 48,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Đợt ${i + 1}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 160,
+                  child: LabeledField(
+                    label: 'Tỷ lệ đợt ${i + 1} (%)',
+                    controller: _ty[i],
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                SizedBox(
+                  width: 220,
+                  child: LabeledField(
+                    label: 'Hạn đợt ${i + 1}',
+                    controller: _han[i],
+                    hint: 'YYYY-MM-DD',
+                    onChanged: (_) => setState(() {}),
+                    suffix: IconButton(
+                      tooltip: 'Chọn ngày',
+                      icon: const Icon(Icons.calendar_today_outlined, size: 18),
+                      onPressed: () => _chonNgay(i),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Text(
+          'Tổng: ${_gon(tong)}%',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: (tong * 100).round() == 10000
+                ? AppColors.text
+                : AppColors.danger,
+          ),
+        ),
+        if (_failText != null) ...[
+          const SizedBox(height: 12),
+          AlertBanner(kind: BannerKind.error, message: _failText!),
+        ],
+        const SizedBox(height: 16),
+        SizedBox(
+          width: 220,
+          child: AppButton(
+            label: 'Lưu 3 đợt',
+            loading: _luu,
+            onPressed: _hopLe ? _luuDot : null,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 // ---------------------------------------------------------------- đơn giá

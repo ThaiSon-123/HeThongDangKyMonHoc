@@ -1,6 +1,7 @@
 import 'package:dang_ky_mon_hoc/core/download/save_file_provider.dart';
 import 'package:dang_ky_mon_hoc/core/router/router_web.dart';
 import 'package:dang_ky_mon_hoc/features/tuition/money.dart';
+import 'package:dang_ky_mon_hoc/shared/widgets/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -393,6 +394,74 @@ void main() {
         );
       },
     );
+  });
+
+  group('Kế toán — chia đợt', () {
+    const putKey = 'PUT /tuition/installments/?hoc_ky=7';
+    Map<String, dynamic> dots({String c = '30.00'}) => {
+      'hoc_ky': 7,
+      'dots': [
+        {'thu_tu': 1, 'ty_le': '40.00', 'han_dong': '2027-01-01'},
+        {'thu_tu': 2, 'ty_le': '30.00', 'han_dong': '2027-02-01'},
+        {'thu_tu': 3, 'ty_le': c, 'han_dong': '2027-03-01'},
+      ],
+    };
+
+    Future<FakeAdapter> moTab(WidgetTester t) async {
+      final api = ktApi({
+        'GET /tuition/config/': (_) => reply(200, pageOf([])),
+        'GET /tuition/installments/': (_) => reply(200, dots()),
+        putKey: (_) => reply(200, dots()),
+      });
+      await openKt(t, api, '/accountant/config');
+      await tapText(t, 'Chia đợt');
+      return api;
+    }
+
+    bool luuBiKhoa(WidgetTester t) =>
+        t
+            .widget<AppButton>(find.widgetWithText(AppButton, 'Lưu 3 đợt'))
+            .onPressed ==
+        null;
+
+    testWidgets('hiện 3 đợt đã cấu hình và tổng 100%', (t) async {
+      final api = await moTab(t);
+      expect(api.queries['GET /tuition/installments/']?['hoc_ky'], 7);
+      expect(find.text('Tổng: 100%'), findsOneWidget);
+      expect(find.text('40'), findsOneWidget);
+      expect(find.text('30'), findsNWidgets(2));
+      expect(find.text('2027-01-01'), findsOneWidget);
+      expect(luuBiKhoa(t), isFalse);
+    });
+
+    testWidgets('tổng khác 100% thì không cho lưu', (t) async {
+      await moTab(t);
+      await enterField(t, 'Tỷ lệ đợt 3 (%)', '20');
+      expect(find.text('Tổng: 90%'), findsOneWidget);
+      expect(luuBiKhoa(t), isTrue);
+    });
+
+    testWidgets('hạn không tăng dần thì không cho lưu', (t) async {
+      await moTab(t);
+      await enterField(t, 'Hạn đợt 2', '2026-12-01');
+      expect(luuBiKhoa(t), isTrue);
+    });
+
+    testWidgets('lưu gửi PUT với đủ 3 đợt', (t) async {
+      final api = await moTab(t);
+      await enterField(t, 'Tỷ lệ đợt 2 (%)', '35');
+      await enterField(t, 'Tỷ lệ đợt 3 (%)', '25');
+      expect(find.text('Tổng: 100%'), findsOneWidget);
+      await tapText(t, 'Lưu 3 đợt');
+      expect(api.bodies[putKey], {
+        'dots': [
+          {'thu_tu': 1, 'ty_le': 40, 'han_dong': '2027-01-01'},
+          {'thu_tu': 2, 'ty_le': 35, 'han_dong': '2027-02-01'},
+          {'thu_tu': 3, 'ty_le': 25, 'han_dong': '2027-03-01'},
+        ],
+      });
+      expect(find.text('Đã lưu 3 đợt.'), findsOneWidget);
+    });
   });
 
   group('Sinh viên — học phí', () {
