@@ -73,6 +73,8 @@ urlpatterns = [
     path("tuition/my/plan/", tuition.MyPlanView.as_view()),
     path("tuition/my/pay/", tuition.MyPayView.as_view()),
     path("tuition/my/pay/<str:txn_ref>/", tuition.MyPayStatusView.as_view()),
+    path("tuition/vnpay/ipn/", tuition.VnpayIpnView.as_view()),
+    path("tuition/vnpay/return/", tuition.VnpayReturnView.as_view()),
     path("tuition/debts/", tuition.TuitionDebtsView.as_view()),
     path("tuition/calculate/", tuition.TuitionCalculateView.as_view()),
     path("tuition/students/", tuition.TuitionStudentsView.as_view()),

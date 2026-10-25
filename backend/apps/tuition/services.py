@@ -1,6 +1,8 @@
 """Học phí (BR-15..18, BR-26): tính theo bảng giá, giá trị dẫn xuất, thu/hoàn tiền, công nợ quá hạn."""
 
-from collections.abc import Sequence
+import logging
+import uuid
+from collections.abc import Mapping, Sequence
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -9,6 +11,7 @@ from django.db.models import Q, Sum
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from apps.audit.models import AuditLog, HanhDong
 from apps.auth.models import Role, User
 from apps.config.models import SystemConfig
 from apps.notifications.models import Audience, Notification
@@ -24,14 +27,17 @@ from apps.tuition.models import (
     LoaiThanhToan,
     OnlineTransaction,
     Payment,
+    PhuongThuc,
+    TrangThaiGiaoDich,
     TrangThaiHocPhi,
     Tuition,
     TuitionConfig,
     TuitionInstallment,
 )
 from apps.tuition.pricing import tra_bang_gia
-from core.exceptions import Codes, business_error
+from core.exceptions import BusinessError, Codes, business_error
 
+log = logging.getLogger(__name__)
 D = Decimal
 HAI_SO = D("0.01")
 
@@ -335,6 +341,74 @@ def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip):
     order_info = f"HOCPHI {sv_user.sinh_vien.ma_sv} HK{hoc_ky.id}"
     url = vnpay.tao_url(giao_dich.txn_ref.hex, so_tien, order_info, ip, timezone.now())
     return giao_dich, url
+
+
+def xac_nhan_vnpay(params: Mapping[str, str]):
+    """Xử lý kết quả VNPay (dùng chung cho return URL và IPN). Trả `(RspCode, giao_dich | None)` theo mã
+    IPN: `97` sai chữ ký, `01` không thấy giao dịch, `04` sai số tiền, `02` đã xác nhận, `00` đã xử lý
+    (kể cả khi thanh toán thất bại hoặc `LOI`), `99` lỗi không lường trước. Idempotent theo `txn_ref`.
+    """
+    if not vnpay.kiem_chu_ky(params):
+        return "97", None
+    try:
+        ref = uuid.UUID(params.get("vnp_TxnRef", ""))
+    except ValueError:
+        return "01", None
+    try:
+        with transaction.atomic():
+            gd = (
+                OnlineTransaction.objects.select_for_update()
+                .select_related("tuition__sinh_vien")
+                .filter(txn_ref=ref)
+                .first()
+            )
+            if gd is None:
+                return "01", None
+            if int(params["vnp_Amount"]) != int(gd.so_tien * 100):
+                return "04", gd
+            if gd.trang_thai != TrangThaiGiaoDich.CHO:
+                return "02", gd
+            thanh_cong = (
+                params.get("vnp_ResponseCode") == "00"
+                and params.get("vnp_TransactionStatus") == "00"
+            )
+            gd.vnp_transaction_no = params.get("vnp_TransactionNo", "")[:30]
+            gd.ket_thuc_luc = timezone.now()
+            payment_id = None
+            if not thanh_cong:
+                gd.trang_thai = TrangThaiGiaoDich.THAT_BAI
+            else:
+                try:
+                    with transaction.atomic():
+                        p, _ = ghi_thanh_toan(
+                            gd.tuition.sinh_vien,
+                            gd.tuition_id,
+                            LoaiThanhToan.THU,
+                            gd.so_tien,
+                            PhuongThuc.VNPAY,
+                            gd.txn_ref,
+                        )
+                    gd.trang_thai, payment_id = TrangThaiGiaoDich.THANH_CONG, p.id
+                except (BusinessError, ValidationError):
+                    # con_no đã giảm trong lúc chờ: tiền đã vào nhưng không ghi được; KT xử lý tay
+                    gd.trang_thai = TrangThaiGiaoDich.LOI
+            gd.save()
+            AuditLog.objects.create(
+                user=gd.tuition.sinh_vien,
+                hanh_dong=HanhDong.UPDATE,
+                doi_tuong="OnlineTransaction",
+                doi_tuong_id=str(gd.id),
+                chi_tiet={
+                    "trang_thai": gd.trang_thai,
+                    "so_tien": str(gd.so_tien),
+                    "vnp_transaction_no": gd.vnp_transaction_no,
+                    "payment": payment_id,
+                },
+            )
+            return "00", gd
+    except Exception:
+        log.exception("Lỗi xử lý kết quả VNPay")
+        return "99", None
 
 
 # ----------------------------------------------------------------- job quá hạn (mục 7.8)

@@ -2,14 +2,17 @@
 
 import uuid
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+from django.http import HttpResponseRedirect
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -27,6 +30,7 @@ from apps.tuition.models import (
     LoaiThanhToan,
     OnlineTransaction,
     Payment,
+    TrangThaiGiaoDich,
     TrangThaiHocPhi,
     Tuition,
     TuitionConfig,
@@ -560,3 +564,55 @@ def _hang_chua_co(t, ds, hoc_ky, ho_so):
         "han_dong": services.han_dong(hoc_ky.id),
         "qua_han": False,
     }
+
+
+# ----------------------------------------------------------------- VNPay gọi về
+
+
+IPN_THONG_DIEP = {
+    "00": "Confirm Success",
+    "01": "Order not found",
+    "02": "Order already confirmed",
+    "04": "Invalid amount",
+    "97": "Invalid signature",
+    "99": "Unknown error",
+}
+
+
+def _tham_so_vnp(request):
+    return {k: v for k, v in request.query_params.items() if k.startswith("vnp_")}
+
+
+class _VnpayCallback(APIView):
+    authentication_classes: list = []  # VNPay / trình duyệt đã rời app: chỉ chữ ký làm căn cứ
+    permission_classes = [AllowAny]
+
+
+class VnpayIpnView(_VnpayCallback):
+    """`GET /api/tuition/vnpay/ipn/`: VNPay gọi server-to-server; trả `{RspCode, Message}`."""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        rsp, _ = services.xac_nhan_vnpay(_tham_so_vnp(request))
+        return Response({"RspCode": rsp, "Message": IPN_THONG_DIEP[rsp]})
+
+
+class VnpayReturnView(_VnpayCallback):
+    """`GET /api/tuition/vnpay/return/`: trình duyệt SV được VNPay chuyển về; ghi kết quả (cùng hàm với
+    IPN, idempotent) rồi chuyển tiếp tới trang kết quả của app."""
+
+    @extend_schema(responses={302: None})
+    def get(self, request):
+        rsp, gd = services.xac_nhan_vnpay(_tham_so_vnp(request))
+        if rsp == "97":
+            status = "sai_chu_ky"
+        elif gd is not None and rsp in ("00", "02"):
+            status = {
+                TrangThaiGiaoDich.THANH_CONG: "thanh_cong",
+                TrangThaiGiaoDich.THAT_BAI: "that_bai",
+                TrangThaiGiaoDich.LOI: "loi",
+            }.get(gd.trang_thai, "khong_hop_le")
+        else:
+            status = "khong_hop_le"
+        txn = gd.txn_ref.hex if gd is not None else ""
+        return HttpResponseRedirect(f"{settings.APP_RESULT_URL}?status={status}&txn={txn}")

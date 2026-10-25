@@ -32,6 +32,9 @@ CONG_KHAI = {
     ("POST", "/api/auth/forgot-password/"),
     ("POST", "/api/auth/reset-password/"),
     ("GET", "/api/health/"),
+    # VNPay gọi về: không có token, chỉ chữ ký HMAC làm căn cứ
+    ("GET", "/api/tuition/vnpay/ipn/"),
+    ("GET", "/api/tuition/vnpay/return/"),
 }
 
 QUYEN = {

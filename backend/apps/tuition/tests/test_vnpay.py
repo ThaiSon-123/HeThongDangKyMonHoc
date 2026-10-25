@@ -7,10 +7,12 @@ from decimal import Decimal
 from urllib.parse import parse_qsl, urlsplit
 
 import pytest
+from rest_framework.test import APIClient
 
+from apps.audit.models import AuditLog
 from apps.auth.models import Role
 from apps.tuition import vnpay
-from apps.tuition.models import Discount, OnlineTransaction
+from apps.tuition.models import Discount, OnlineTransaction, Payment
 from apps.tuition.tests.test_installments import cau_hinh_dot, hoc_phi, thu_tien
 from core.factories import SemesterFactory, StudentProfileFactory, UserFactory
 
@@ -187,3 +189,132 @@ def test_pay_chi_sinh_vien(vnp, login_as):
         c = login_as(UserFactory(role=role))
         assert tao(c, hk, muc="TOAN_BO").status_code == 403
         assert c.get(f"{PAY}{'0' * 32}/").status_code == 403
+
+
+# --------------------------------------------------------------- return URL + IPN
+
+IPN = "/api/tuition/vnpay/ipn/"
+RETURN = "/api/tuition/vnpay/return/"
+
+
+def gd_cho(hk=None, tong=1000, so_tien=1000):
+    """SV có học phí `tong` và một giao dịch VNPay đang chờ `so_tien`."""
+    hk, sv = hk or SemesterFactory(), StudentProfileFactory()
+    t = hoc_phi(sv, hk, tong)
+    return sv, t, OnlineTransaction.objects.create(tuition=t, so_tien=D(so_tien))
+
+
+def callback(gd, code="00", status="00", amount=None, **them):
+    """Tham số VNPay gọi về, đã ký đúng."""
+    params = {
+        "vnp_TmnCode": "TESTTMN1",
+        "vnp_Amount": str(amount if amount is not None else int(gd.so_tien * 100)),
+        "vnp_BankCode": "NCB",
+        "vnp_OrderInfo": "HOCPHI test",
+        "vnp_PayDate": "20261025101000",
+        "vnp_ResponseCode": code,
+        "vnp_TransactionNo": "14226112",
+        "vnp_TransactionStatus": status,
+        "vnp_TxnRef": gd.txn_ref.hex,
+        **them,
+    }
+    return {**params, "vnp_SecureHash": vnpay.ky(params)}
+
+
+def test_ipn_thanh_cong_ghi_mot_payment(vnp):
+    sv, t, gd = gd_cho()
+    res = APIClient().get(IPN, callback(gd))
+    assert res.status_code == 200
+    assert res.json() == {"RspCode": "00", "Message": "Confirm Success"}
+    gd.refresh_from_db()
+    assert (gd.trang_thai, gd.vnp_transaction_no) == ("THANH_CONG", "14226112")
+    assert gd.ket_thuc_luc is not None
+    p = Payment.objects.get()
+    assert (p.loai, p.phuong_thuc, p.so_tien, p.nguoi_thu) == ("THU", "VNPAY", D(1000), sv.user)
+    assert p.request_id == gd.txn_ref and p.bien_lai_ma
+    from apps.tuition.services import dan_xuat_cua
+
+    assert dan_xuat_cua(t)["con_no"] == D(0)
+    assert AuditLog.objects.filter(doi_tuong="OnlineTransaction", hanh_dong="UPDATE").count() == 1
+
+
+def test_return_va_ipn_hai_lan_chi_mot_payment(vnp):
+    _, _, gd = gd_cho()
+    c, ps = APIClient(), callback(gd)
+    r1 = c.get(RETURN, ps)
+    assert r1.status_code == 302
+    assert r1["Location"] == f"{vnp.APP_RESULT_URL}?status=thanh_cong&txn={gd.txn_ref.hex}"
+    assert c.get(IPN, ps).json()["RspCode"] == "02"
+    assert c.get(RETURN, ps)["Location"].endswith(f"status=thanh_cong&txn={gd.txn_ref.hex}")
+    assert Payment.objects.count() == 1
+
+
+def test_sai_chu_ky_bi_tu_choi(vnp):
+    _, _, gd = gd_cho()
+    ps = {**callback(gd), "vnp_Amount": "100"}  # đổi số tiền sau khi ký
+    assert APIClient().get(IPN, ps).json()["RspCode"] == "97"
+    gd.refresh_from_db()
+    assert gd.trang_thai == "CHO" and Payment.objects.count() == 0
+
+
+def test_so_tien_lech_nhung_chu_ky_dung(vnp):
+    _, _, gd = gd_cho()
+    res = APIClient().get(IPN, callback(gd, amount=100))  # ký lại với số tiền sai
+    assert res.json()["RspCode"] == "04"
+    gd.refresh_from_db()
+    assert gd.trang_thai == "CHO" and Payment.objects.count() == 0
+
+
+def test_tham_so_vnp_la_van_nam_trong_chu_ky(vnp):
+    _, _, gd = gd_cho()
+    c = APIClient()
+    ps = callback(gd, vnp_Extra="1")
+    assert c.get(IPN, {**ps, "vnp_Extra": "2"}).json()["RspCode"] == "97"  # sửa sau khi ký
+    assert c.get(IPN, {k: v for k, v in ps.items() if k != "vnp_Extra"}).json()["RspCode"] == "97"
+    assert c.get(IPN, ps).json()["RspCode"] == "00"  # tham số lạ đã ký vẫn được chấp nhận
+
+
+@pytest.mark.parametrize("code,status", [("24", "02"), ("00", "02"), ("11", "00")])
+def test_that_bai_khi_khong_phai_00_ca_hai(vnp, code, status):
+    _, _, gd = gd_cho()
+    c = APIClient()
+    ps = callback(gd, code=code, status=status)
+    assert c.get(IPN, ps).json()["RspCode"] == "00"
+    gd.refresh_from_db()
+    assert gd.trang_thai == "THAT_BAI" and Payment.objects.count() == 0
+    assert c.get(RETURN, ps)["Location"].endswith(f"status=that_bai&txn={gd.txn_ref.hex}")
+
+
+def test_con_no_giam_giua_chung_danh_dau_loi(vnp):
+    _, t, gd = gd_cho(so_tien=1000)
+    thu_tien(t, 500)  # KT thu tiền mặt trong lúc SV đang thanh toán → con_no còn 500 < 1000
+    c, ps = APIClient(), callback(gd)
+    assert c.get(IPN, ps).json()["RspCode"] == "00"
+    gd.refresh_from_db()
+    assert gd.trang_thai == "LOI"
+    assert Payment.objects.filter(phuong_thuc="VNPAY").count() == 0
+    assert AuditLog.objects.filter(doi_tuong="OnlineTransaction", doi_tuong_id=str(gd.id)).exists()
+    assert c.get(RETURN, ps)["Location"].endswith(f"status=loi&txn={gd.txn_ref.hex}")
+
+
+def test_khong_thay_giao_dich(vnp):
+    _, _, gd = gd_cho()
+    c = APIClient()
+    xa_la = callback(gd, vnp_TxnRef="f" * 32)
+    # ký lại: callback() đã ghi đè vnp_TxnRef qua **them nên chữ ký khớp
+    assert c.get(IPN, xa_la).json()["RspCode"] == "01"
+    khong_hex = callback(gd, vnp_TxnRef="khong-phai-hex")
+    assert c.get(IPN, khong_hex).json()["RspCode"] == "01"
+    assert c.get(RETURN, xa_la)["Location"] == f"{vnp.APP_RESULT_URL}?status=khong_hop_le&txn="
+
+
+def test_return_redirect_sai_chu_ky(vnp):
+    _, _, gd = gd_cho()
+    res = APIClient().get(RETURN, {**callback(gd), "vnp_Amount": "1"})
+    assert res["Location"] == f"{vnp.APP_RESULT_URL}?status=sai_chu_ky&txn="
+
+
+def test_callback_khong_can_dang_nhap(vnp):
+    _, _, gd = gd_cho()
+    assert APIClient().get(IPN, callback(gd)).status_code == 200
+    assert APIClient().get(RETURN, callback(gd)).status_code == 302
