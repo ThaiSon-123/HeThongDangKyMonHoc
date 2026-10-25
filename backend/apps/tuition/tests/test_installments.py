@@ -7,12 +7,29 @@ from decimal import Decimal
 import pytest
 from django.db import IntegrityError, transaction
 
+from apps.audit.models import AuditLog
+from apps.auth.models import Role
 from apps.tuition.models import OnlineTransaction, Tuition, TuitionInstallment
 from apps.tuition.services import dot_tiep_theo, han_va_qua_han, lich_dot
-from core.factories import SemesterFactory, StudentProfileFactory
+from core.factories import SemesterFactory, StudentProfileFactory, UserFactory
 
 pytestmark = pytest.mark.django_db
 D = Decimal
+URL = "/api/tuition/installments/"
+
+
+@pytest.fixture
+def kt(login_as):
+    return login_as(UserFactory(role=Role.KE_TOAN))
+
+
+def dots_body(a="40", b="30", c="30", han=("2027-01-01", "2027-02-01", "2027-03-01")):
+    return {
+        "dots": [
+            {"thu_tu": i + 1, "ty_le": ty, "han_dong": h}
+            for i, (ty, h) in enumerate(zip((a, b, c), han, strict=False))
+        ]
+    }
 
 
 def hoc_phi(sv, hk, tong, trang_thai="DA_TINH", **kw):
@@ -107,3 +124,60 @@ def test_han_va_qua_han_mot_lan_va_thieu_dot():
     # CHIA_DOT nhưng chưa cấu hình đợt: rơi về hạn một lần
     assert han_va_qua_han("CHIA_DOT", dx, date(2027, 1, 1), [], hom_nay) == (date(2027, 1, 1), True)
     assert han_va_qua_han("MOT_LAN", dx, None, [], hom_nay) == (None, False)
+
+
+# --------------------------------------------------------------- API cấu hình 3 đợt (KT)
+
+
+def test_put_ba_dot_hop_le_roi_get(kt):
+    hk = SemesterFactory()
+    res = kt.put(f"{URL}?hoc_ky={hk.id}", dots_body(), format="json")
+    assert res.status_code == 200, res.data
+    got = kt.get(f"{URL}?hoc_ky={hk.id}").json()
+    assert got["hoc_ky"] == hk.id
+    assert [(d["thu_tu"], d["ty_le"], d["han_dong"]) for d in got["dots"]] == [
+        (1, "40.00", "2027-01-01"),
+        (2, "30.00", "2027-02-01"),
+        (3, "30.00", "2027-03-01"),
+    ]
+    assert AuditLog.objects.filter(doi_tuong="TuitionInstallment").count() == 1
+
+
+def test_get_chua_cau_hinh_tra_danh_sach_rong(kt):
+    hk = SemesterFactory()
+    assert kt.get(f"{URL}?hoc_ky={hk.id}").json()["dots"] == []
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        dots_body("40", "30", "20"),  # tổng 90
+        dots_body("50", "30", "30"),  # tổng 110
+        dots_body(han=("2027-01-01", "2027-01-01", "2027-03-01")),  # hạn không tăng ngặt
+        dots_body(han=("2027-03-01", "2027-02-01", "2027-01-01")),  # hạn giảm dần
+        dots_body("0", "50", "50"),  # tỷ lệ 0
+        {"dots": dots_body()["dots"][:2]},  # thiếu đợt
+        {"dots": [{**d, "thu_tu": 1} for d in dots_body()["dots"]]},  # trùng thứ tự
+    ],
+)
+def test_put_cau_hinh_sai_bi_tu_choi(kt, body):
+    hk = SemesterFactory()
+    assert kt.put(f"{URL}?hoc_ky={hk.id}", body, format="json").status_code == 400
+    assert TuitionInstallment.objects.filter(hoc_ky=hk).count() == 0
+
+
+def test_put_hai_lan_thay_the_khong_nhan_doi(kt):
+    hk = SemesterFactory()
+    kt.put(f"{URL}?hoc_ky={hk.id}", dots_body(), format="json")
+    res = kt.put(f"{URL}?hoc_ky={hk.id}", dots_body("20", "30", "50"), format="json")
+    assert res.status_code == 200
+    assert TuitionInstallment.objects.filter(hoc_ky=hk).count() == 3
+    assert [d["ty_le"] for d in res.json()["dots"]] == ["20.00", "30.00", "50.00"]
+
+
+@pytest.mark.parametrize("role", [Role.SINH_VIEN, Role.PHONG_DAO_TAO, Role.GIAO_VIEN])
+def test_chi_ke_toan_duoc_cau_hinh(login_as, role):
+    hk = SemesterFactory()
+    c = login_as(UserFactory(role=role))
+    assert c.get(f"{URL}?hoc_ky={hk.id}").status_code == 403
+    assert c.put(f"{URL}?hoc_ky={hk.id}", dots_body(), format="json").status_code == 403

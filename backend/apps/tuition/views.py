@@ -2,6 +2,7 @@
 
 import uuid
 
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -26,11 +27,14 @@ from apps.tuition.models import (
     Payment,
     Tuition,
     TuitionConfig,
+    TuitionInstallment,
 )
 from apps.tuition.serializers import (
     CalculateResultSerializer,
     DiscountSerializer,
     HocPhanGiaSerializer,
+    InstallmentSerializer,
+    InstallmentsPutSerializer,
     MyTuitionSerializer,
     PaymentCreateSerializer,
     PaymentSerializer,
@@ -63,6 +67,40 @@ class TuitionConfigViewSet(_KtViewSet):
     filterset_fields = ["hoc_ky"]
     search_fields = ["hoc_ky__ten_hk"]
     ordering_fields = ["id", "han_dong"]
+
+
+class InstallmentsView(APIView):
+    """KT-01: 3 đợt đóng học phí của học kỳ — `GET`/`PUT /api/tuition/installments/?hoc_ky=`."""
+
+    permission_classes = [IsKeToan]
+
+    @staticmethod
+    def _tra(hoc_ky):
+        dots = TuitionInstallment.objects.filter(hoc_ky=hoc_ky).order_by("thu_tu")
+        return Response({"hoc_ky": hoc_ky.id, "dots": InstallmentSerializer(dots, many=True).data})
+
+    @extend_schema(parameters=[HOC_KY], responses=InstallmentsPutSerializer)
+    def get(self, request):
+        return self._tra(chon_hoc_ky(request.query_params.get("hoc_ky")))
+
+    @extend_schema(parameters=[HOC_KY], request=InstallmentsPutSerializer)
+    def put(self, request):
+        hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
+        s = InstallmentsPutSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        with transaction.atomic():
+            TuitionInstallment.objects.filter(hoc_ky=hoc_ky).delete()
+            TuitionInstallment.objects.bulk_create(
+                TuitionInstallment(hoc_ky=hoc_ky, **d) for d in s.validated_data["dots"]
+            )
+        write_audit(
+            request,
+            HanhDong.UPDATE,
+            "TuitionInstallment",
+            f"hk{hoc_ky.id}",
+            {"dots": InstallmentSerializer(s.validated_data["dots"], many=True).data},
+        )
+        return self._tra(hoc_ky)
 
 
 class PricingViewSet(_KtViewSet):

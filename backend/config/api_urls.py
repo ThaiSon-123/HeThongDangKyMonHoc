@@ -68,6 +68,7 @@ urlpatterns = [
     path("reports/training/export/", training_reports.TrainingReportExportView.as_view()),
     path("reports/finance/", tuition_reports.FinanceReportView.as_view()),
     path("reports/finance/export/", tuition_reports.FinanceReportExportView.as_view()),
+    path("tuition/installments/", tuition.InstallmentsView.as_view()),
     path("tuition/my/", tuition.MyTuitionView.as_view()),
     path("tuition/debts/", tuition.TuitionDebtsView.as_view()),
     path("tuition/calculate/", tuition.TuitionCalculateView.as_view()),

@@ -24,6 +24,28 @@ class TuitionConfigSerializer(serializers.ModelSerializer):
         fields = ["id", "hoc_ky", "ten_hk", "han_dong", "ghi_chu"]
 
 
+class InstallmentSerializer(serializers.Serializer):
+    thu_tu = serializers.IntegerField(min_value=1, max_value=3)
+    ty_le = serializers.DecimalField(
+        max_digits=5, decimal_places=2, min_value=Decimal("0.01"), max_value=Decimal(100)
+    )
+    han_dong = serializers.DateField()
+
+
+class InstallmentsPutSerializer(serializers.Serializer):
+    dots = InstallmentSerializer(many=True)
+
+    def validate_dots(self, dots):
+        if sorted(d["thu_tu"] for d in dots) != [1, 2, 3]:
+            raise serializers.ValidationError("Phải có đủ 3 đợt với thứ tự 1, 2, 3.")
+        dots = sorted(dots, key=lambda d: d["thu_tu"])
+        if sum(d["ty_le"] for d in dots) != 100:
+            raise serializers.ValidationError("Tổng tỷ lệ 3 đợt phải bằng 100%.")
+        if not dots[0]["han_dong"] < dots[1]["han_dong"] < dots[2]["han_dong"]:
+            raise serializers.ValidationError("Hạn đóng phải tăng dần theo đợt.")
+        return dots
+
+
 class HocPhanGiaSerializer(serializers.ModelSerializer):
     ten_hk = serializers.CharField(source="hoc_ky.ten_hk", read_only=True, default=None)
 
