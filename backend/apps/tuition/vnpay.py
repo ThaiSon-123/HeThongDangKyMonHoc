@@ -32,7 +32,7 @@ def ky(params: Mapping[str, str]) -> str:
 
 def kiem_chu_ky(params: Mapping[str, str]) -> bool:
     nhan = params.get("vnp_SecureHash")
-    return bool(nhan) and hmac.compare_digest(nhan.lower(), ky(params))
+    return bool(nhan) and hmac.compare_digest((nhan or "").lower(), ky(params))
 
 
 def tao_url(txn_ref: str, so_tien: Decimal, order_info: str, ip: str, now: datetime) -> str:
