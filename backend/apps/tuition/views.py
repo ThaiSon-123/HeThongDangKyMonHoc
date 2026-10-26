@@ -129,6 +129,24 @@ class PricingViewSet(_KtViewSet):
     search_fields = ["tham_chieu"]
     ordering_fields = ["id", "don_gia"]
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "ap_dung_cho",
+                int,
+                description="Học kỳ: giá của kỳ đó + giá 'mọi học kỳ' đang áp dụng",
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if hoc_ky := int_param(self.request, "ap_dung_cho"):
+            qs = qs.filter(Q(hoc_ky=hoc_ky) | Q(hoc_ky__isnull=True))
+        return qs
+
 
 class DiscountViewSet(_KtViewSet):
     """KT-05 / BR-18: miễn giảm, học bổng — mọi thay đổi ghi audit log."""

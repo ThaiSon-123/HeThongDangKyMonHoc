@@ -63,6 +63,50 @@ class _TuitionConfigScreenState extends ConsumerState<TuitionConfigScreen> {
   );
 }
 
+/// Tiêu đề + mô tả ngắn đầu mỗi tab để bốn tab cùng một khuôn.
+class _TieuDe extends StatelessWidget {
+  const _TieuDe(this.tieuDe, this.moTa);
+
+  final String tieuDe;
+  final String moTa;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        tieuDe,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: AppColors.navy,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(moTa, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+    ],
+  );
+}
+
+/// Ô lọc học kỳ dùng chung cho các tab (gõ để tìm; bỏ chọn = tất cả học kỳ).
+class _LocHocKy extends StatelessWidget {
+  const _LocHocKy(this.onChanged);
+
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 240,
+    child: ApiSelect(
+      label: 'Lọc theo học kỳ',
+      path: '/semesters/',
+      labelOf: hocKyLabel,
+      hint: 'Tất cả học kỳ',
+      onChanged: (o) => onChanged(o?.id),
+    ),
+  );
+}
+
 // ---------------------------------------------------------------- hạn đóng
 class _HanDong extends ConsumerStatefulWidget {
   const _HanDong();
@@ -117,8 +161,18 @@ class _HanDongState extends ConsumerState<_HanDong> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      ListToolbar(children: [AddButton('+ Thêm hạn đóng', _form)]),
-      const SizedBox(height: 24),
+      const _TieuDe(
+        'Hạn đóng học phí',
+        'Mỗi học kỳ có một hạn đóng. Sau hạn, sinh viên còn nợ được tính là quá hạn.',
+      ),
+      const SizedBox(height: 16),
+      ListToolbar(
+        children: [
+          _LocHocKy((id) => _ctl.setFilter('hoc_ky', id)),
+          AddButton('+ Thêm hạn đóng', _form),
+        ],
+      ),
+      const SizedBox(height: 16),
       ResourceList(
         controller: _ctl,
         path: _configPath,
@@ -301,91 +355,131 @@ class _ChiaDotState extends ConsumerState<_ChiaDot> {
           : const ListSkeleton();
     }
     final tong = (_tong * 100).round() / 100;
+    final du = (tong * 100).round() == 10000;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        const _TieuDe(
+          'Chia đợt học phí',
           'Sinh viên chọn đóng một lần hoặc chia 3 đợt. Tổng tỷ lệ phải bằng 100%, hạn đóng tăng dần.',
-          style: TextStyle(color: AppColors.muted),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          width: 300,
-          child: LabeledDropdown<int>(
-            label: 'Học kỳ',
-            value: _hocKyId!,
-            options: [for (final h in ds) (h.id, hocKyLabel(h))],
-            onChanged: _luu ? null : _chon,
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppColors.cardShadow,
           ),
-        ),
-        const SizedBox(height: 16),
-        for (var i = 0; i < 3; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Wrap(
-              spacing: 16,
-              runSpacing: 12,
-              crossAxisAlignment: WrapCrossAlignment.end,
-              children: [
-                SizedBox(
-                  width: 70,
-                  height: 48,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 300,
+                child: LabeledDropdown<int>(
+                  label: 'Học kỳ',
+                  value: _hocKyId!,
+                  options: [for (final h in ds) (h.id, hocKyLabel(h))],
+                  onChanged: _luu ? null : _chon,
+                ),
+              ),
+              const SizedBox(height: 20),
+              for (var i = 0; i < 3; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Wrap(
+                    spacing: 16,
+                    runSpacing: 12,
+                    crossAxisAlignment: WrapCrossAlignment.end,
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 48,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.infoBannerBg,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Đợt ${i + 1}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.infoBannerText,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 160,
+                        child: LabeledField(
+                          label: 'Tỷ lệ đợt ${i + 1} (%)',
+                          controller: _ty[i],
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 220,
+                        child: LabeledField(
+                          label: 'Hạn đợt ${i + 1}',
+                          controller: _han[i],
+                          hint: 'YYYY-MM-DD',
+                          onChanged: (_) => setState(() {}),
+                          suffix: IconButton(
+                            tooltip: 'Chọn ngày',
+                            icon: const Icon(
+                              Icons.calendar_today_outlined,
+                              size: 18,
+                            ),
+                            onPressed: () => _chonNgay(i),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const Divider(color: AppColors.divider, height: 32),
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: du ? AppColors.successBg : AppColors.errorBannerBg,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: Text(
-                      'Đợt ${i + 1}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      'Tổng: ${_gon(tong)}%',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: du
+                            ? AppColors.success
+                            : AppColors.errorBannerText,
+                      ),
                     ),
                   ),
-                ),
-                SizedBox(
-                  width: 160,
-                  child: LabeledField(
-                    label: 'Tỷ lệ đợt ${i + 1} (%)',
-                    controller: _ty[i],
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                SizedBox(
-                  width: 220,
-                  child: LabeledField(
-                    label: 'Hạn đợt ${i + 1}',
-                    controller: _han[i],
-                    hint: 'YYYY-MM-DD',
-                    onChanged: (_) => setState(() {}),
-                    suffix: IconButton(
-                      tooltip: 'Chọn ngày',
-                      icon: const Icon(Icons.calendar_today_outlined, size: 18),
-                      onPressed: () => _chonNgay(i),
+                  SizedBox(
+                    width: 220,
+                    child: AppButton(
+                      label: 'Lưu 3 đợt',
+                      loading: _luu,
+                      onPressed: _hopLe ? _luuDot : null,
                     ),
                   ),
-                ),
+                ],
+              ),
+              if (_failText != null) ...[
+                const SizedBox(height: 12),
+                AlertBanner(kind: BannerKind.error, message: _failText!),
               ],
-            ),
-          ),
-        Text(
-          'Tổng: ${_gon(tong)}%',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: (tong * 100).round() == 10000
-                ? AppColors.text
-                : AppColors.danger,
-          ),
-        ),
-        if (_failText != null) ...[
-          const SizedBox(height: 12),
-          AlertBanner(kind: BannerKind.error, message: _failText!),
-        ],
-        const SizedBox(height: 16),
-        SizedBox(
-          width: 220,
-          child: AppButton(
-            label: 'Lưu 3 đợt',
-            loading: _luu,
-            onPressed: _hopLe ? _luuDot : null,
+            ],
           ),
         ),
       ],
@@ -477,8 +571,14 @@ class _DonGiaState extends ConsumerState<_DonGia> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      const _TieuDe(
+        'Đơn giá theo tín chỉ',
+        'Chọn một học kỳ để xem các đơn giá áp dụng cho kỳ đó (gồm cả giá "Mọi học kỳ").',
+      ),
+      const SizedBox(height: 16),
       ListToolbar(
         children: [
+          _LocHocKy((id) => _ctl.setFilter('ap_dung_cho', id)),
           FilterDropdown(
             controller: _ctl,
             filterKey: 'pham_vi',
@@ -500,7 +600,7 @@ class _DonGiaState extends ConsumerState<_DonGia> {
             ),
         ],
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 16),
       ResourceList(
         controller: _ctl,
         path: _pricingPath,
@@ -626,8 +726,14 @@ class _MienGiamState extends ConsumerState<_MienGiam> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
+      const _TieuDe(
+        'Miễn giảm / học bổng',
+        'Mọi thay đổi được ghi vào nhật ký. Miễn giảm trừ vào học phí của sinh viên trong học kỳ đã chọn.',
+      ),
+      const SizedBox(height: 16),
       ListToolbar(
         children: [
+          _LocHocKy((id) => _ctl.setFilter('hoc_ky', id)),
           SearchBox(
             controller: _ctl,
             label: 'Tìm sinh viên',
@@ -636,7 +742,7 @@ class _MienGiamState extends ConsumerState<_MienGiam> {
           AddButton('+ Thêm miễn giảm / học bổng', _form),
         ],
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 16),
       ResourceList(
         controller: _ctl,
         path: _discountPath,

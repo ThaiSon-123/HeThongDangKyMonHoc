@@ -396,6 +396,53 @@ void main() {
     );
   });
 
+  group('Kế toán — lọc theo học kỳ ở Cấu hình học phí', () {
+    Future<void> locHocKy(WidgetTester t) async {
+      await enterField(t, 'Lọc theo học kỳ', 'Học');
+      await t.pumpAndSettle();
+      await t.tap(
+        find.text('Học kỳ 2').last,
+      ); // lựa chọn nằm trong lớp phủ, sau hàng danh sách
+      await t.pumpAndSettle();
+    }
+
+    FakeAdapter api() => ktApi({
+      'GET /tuition/config/': (_) => reply(200, pageOf([])),
+      'GET /tuition/pricing/': (_) => reply(200, pageOf([])),
+      'GET /tuition/discounts/': (_) => reply(200, pageOf([])),
+    });
+
+    testWidgets('Hạn đóng: chọn học kỳ gửi hoc_ky', (t) async {
+      final a = api();
+      await openKt(t, a, '/accountant/config');
+      expect(a.queries['GET /tuition/config/']?['hoc_ky'], isNull);
+      await locHocKy(t);
+      expect(a.queries['GET /tuition/config/']?['hoc_ky'], 7);
+    });
+
+    testWidgets('Đơn giá: chọn học kỳ gửi ap_dung_cho (gồm giá mọi học kỳ)', (
+      t,
+    ) async {
+      final a = api();
+      await openKt(t, a, '/accountant/config');
+      await tapText(t, 'Đơn giá');
+      await locHocKy(t);
+      expect(a.queries['GET /tuition/pricing/']?['ap_dung_cho'], 7);
+      expect(
+        a.queries['GET /tuition/pricing/']?.containsKey('hoc_ky'),
+        isFalse,
+      );
+    });
+
+    testWidgets('Miễn giảm: chọn học kỳ gửi hoc_ky', (t) async {
+      final a = api();
+      await openKt(t, a, '/accountant/config');
+      await tapText(t, 'Miễn giảm / học bổng');
+      await locHocKy(t);
+      expect(a.queries['GET /tuition/discounts/']?['hoc_ky'], 7);
+    });
+  });
+
   group('Kế toán — chia đợt', () {
     const putKey = 'PUT /tuition/installments/?hoc_ky=7';
     Map<String, dynamic> dots({String c = '30.00'}) => {
@@ -558,6 +605,46 @@ void main() {
         '/student/tuition',
       );
       expect(find.text('Thanh toán học phí'), findsNothing);
+    });
+
+    testWidgets('lịch 3 đợt là bảng có tiêu đề cột; có thanh tiến độ đã nộp', (
+      t,
+    ) async {
+      await openStudent(
+        t,
+        svApi({'GET /tuition/my/': (_) => reply(200, my())}),
+        '/student/tuition/pay',
+      );
+      for (final h in ['ĐỢT', 'HẠN ĐÓNG', 'SỐ TIỀN', 'TRẠNG THÁI']) {
+        expect(find.text(h), findsOneWidget, reason: h);
+      }
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.textContaining('Đã nộp'), findsOneWidget);
+    });
+
+    testWidgets('màn rộng chia 2 cột, màn hẹp xếp 1 cột', (t) async {
+      final api = svApi({'GET /tuition/my/': (_) => reply(200, my())});
+      await openStudent(t, api, '/student/tuition/pay');
+      final congNo = t.getTopLeft(find.text('Công nợ hiện tại'));
+      final thanhToan = t.getTopLeft(find.text('Thanh toán qua VNPay'));
+      expect(
+        thanhToan.dx,
+        greaterThan(congNo.dx + 200),
+      ); // khối thanh toán nằm bên phải
+    });
+
+    testWidgets('màn hẹp: khối thanh toán nằm dưới khối công nợ', (t) async {
+      final api = svApi({'GET /tuition/my/': (_) => reply(200, my())});
+      await openStudent(
+        t,
+        api,
+        '/student/tuition/pay',
+        size: const Size(390, 900),
+      );
+      final congNo = t.getTopLeft(find.text('Công nợ hiện tại'));
+      final thanhToan = t.getTopLeft(find.text('Thanh toán qua VNPay'));
+      expect(thanhToan.dy, greaterThan(congNo.dy));
+      expect((thanhToan.dx - congNo.dx).abs(), lessThan(40));
     });
 
     testWidgets('đổi sang Chia 3 đợt gọi PATCH rồi hiện đợt tiếp theo', (
