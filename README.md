@@ -102,6 +102,28 @@ CI (GitHub Actions) chạy đúng các bước trên cho mỗi PR.
   docker compose exec worker sh -c 'pg_restore -c -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" /backups/<tên-file>.dump'
   ```
 
+- **Chuyển toàn bộ dữ liệu sang máy khác** (git chỉ chứa mã nguồn; dữ liệu nằm trong PostgreSQL nên phải chuyển file dump
+  bằng USB/Drive — *không* commit file `.dump` và `.env` vì có dữ liệu người dùng và khóa bí mật, cả hai đã được `.gitignore`):
+
+  ```bash
+  # Máy nguồn: tạo file dump (nằm ở backend/backups/)
+  cd backend
+  docker compose exec -T db sh -c 'pg_dump -Fc -U "$POSTGRES_USER" "$POSTGRES_DB"' > backups/du_lieu.dump
+
+  # Máy đích: lấy mã nguồn, dựng backend (tự tạo bảng), rồi nạp dump
+  git pull
+  cd backend
+  cp .env.example .env                  # hoặc chép .env từ máy nguồn (có khóa VNPay; sửa VNPAY_RETURN_URL/APP_RESULT_URL cho máy mới)
+  docker compose up -d --build
+  docker compose stop web worker beat   # không để ứng dụng ghi trong lúc nạp
+  docker compose cp backups/du_lieu.dump db:/tmp/du_lieu.dump   # chép file dump (từ USB) vào backend/backups/ trước
+  docker compose exec db sh -c 'pg_restore --clean --if-exists --no-owner -U "$POSTGRES_USER" -d "$POSTGRES_DB" /tmp/du_lieu.dump'
+  docker compose up -d
+  ```
+
+  Nạp xong mọi tài khoản, mật khẩu, đăng ký, điểm danh, học phí giống hệt máy nguồn. Muốn dựng dữ liệu mẫu từ đầu thay vì nạp dump
+  thì chạy lần lượt các lệnh `seed_*` (xem `backend/apps/config/management/commands/`); kết quả gần giống nhưng không có các chỉnh sửa tay.
+
 - **Load test đăng ký đồng thời** (cần backend + `seed_demo`; tạo một lớp `MO` ít chỗ rồi chạy):
 
   ```bash

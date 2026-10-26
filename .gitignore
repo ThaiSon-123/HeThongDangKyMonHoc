@@ -38,3 +38,7 @@ node_modules/
 .DS_Store
 *.log
 .review/
+
+# --- Bản sao lưu dữ liệu (chứa dữ liệu người dùng, KHÔNG đưa lên git) ---
+*.dump
+backend/backups/
