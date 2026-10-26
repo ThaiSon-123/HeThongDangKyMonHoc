@@ -35,6 +35,8 @@ Map<String, dynamic> lop(
       'phong': 'A101',
     },
   ],
+  'ngay_bat_dau': '2026-09-07',
+  'ngay_ket_thuc': '2027-01-17',
   'khoi_kien_thuc': 'co_so_nganh',
   'loai_mon': 'bat_buoc',
   'hoc_ky_goi_y': ky,
@@ -52,6 +54,8 @@ Map<String, dynamic> available(
   'meta': {
     'hoc_ky': 7,
     'ten_hk': 'Học kỳ 2, 2026–2027',
+    'ngay_bat_dau': '2026-08-31',
+    'ngay_ket_thuc': '2027-01-10',
     'trong_cua_so': trongCuaSo,
     'tin_chi_toi_thieu': 12,
     'tin_chi_toi_da': 24,
@@ -216,6 +220,129 @@ void main() {
     await tapText(t, 'Môn chưa học'); // kết hợp: M1 đã đạt → ẩn
     expect(find.text('1 môn · 1 lớp học phần đang mở'), findsOneWidget);
     expect(find.text('Cấu trúc dữ liệu'), findsOneWidget);
+  });
+
+  group('thời gian học của lớp', () {
+    testWidgets(
+      'bảng lớp có cột Thời gian học (ngày bắt đầu – kết thúc của lớp)',
+      (t) async {
+        await openStudent(t, api0(), '/student/register');
+        await tapText(t, 'Lập trình cơ bản');
+        expect(find.text('THỜI GIAN HỌC'), findsOneWidget);
+        expect(
+          find.text('07/09/2026 – 17/01/2027'),
+          findsNWidgets(2),
+        ); // hai lớp của môn
+      },
+    );
+
+    testWidgets('lớp chưa có ngày riêng thì lấy theo học kỳ', (t) async {
+      final khongNgay = {
+        ...lop(1, 'M1-01', 1, 'Lập trình cơ bản'),
+        'ngay_bat_dau': null,
+        'ngay_ket_thuc': null,
+      };
+      await openStudent(t, api0(classes: [khongNgay]), '/student/register');
+      await tapText(t, 'Lập trình cơ bản');
+      expect(find.text('31/08/2026 – 10/01/2027'), findsOneWidget);
+    });
+
+    testWidgets('App (390 px): hiện thời gian học dưới lịch học, không tràn', (
+      t,
+    ) async {
+      await openStudent(
+        t,
+        api0(),
+        '/student/register',
+        size: const Size(390, 900),
+      );
+      await tapText(t, 'Lập trình cơ bản');
+      expect(find.textContaining('07/09/2026 – 17/01/2027'), findsWidgets);
+    });
+  });
+
+  group('tìm học phần và lọc học kỳ trong CTĐT', () {
+    FakeAdapter apiBon() => api0(
+      classes: [
+        lop(1, 'M1-01', 1, 'Lập trình cơ bản'),
+        lop(2, 'M1-02', 1, 'Lập trình cơ bản'),
+        lop(3, 'M2-01', 2, 'Cấu trúc dữ liệu', ky: 3),
+        lop(4, 'M3-01', 3, 'Giải tích 2', ky: 3),
+      ],
+    );
+
+    Future<void> chonKy(WidgetTester t, String ky) async {
+      final o = find.byType(DropdownButton<int>);
+      await t.ensureVisible(o);
+      await t.tap(o);
+      await t.pumpAndSettle();
+      await t.tap(find.text(ky).last);
+      await t.pumpAndSettle();
+    }
+
+    testWidgets('tìm theo tên môn không phân biệt hoa thường và dấu', (
+      t,
+    ) async {
+      await openStudent(t, apiBon(), '/student/register');
+      expect(find.text('3 môn · 4 lớp học phần đang mở'), findsOneWidget);
+
+      await enterField(t, 'Tìm học phần', 'cau TRUC');
+      expect(find.text('1 môn · 1 lớp học phần đang mở'), findsOneWidget);
+      expect(find.text('Cấu trúc dữ liệu'), findsOneWidget);
+      expect(find.text('Lập trình cơ bản'), findsNothing);
+
+      await enterField(
+        t,
+        'Tìm học phần',
+        'lap trinh',
+      ); // giữ cả hai lớp của môn
+      expect(find.text('1 môn · 2 lớp học phần đang mở'), findsOneWidget);
+
+      await enterField(t, 'Tìm học phần', 'M1-02'); // theo mã lớp
+      expect(find.text('1 môn · 1 lớp học phần đang mở'), findsOneWidget);
+
+      await enterField(t, 'Tìm học phần', 'khong co mon nay');
+      expect(find.text('Không có môn phù hợp với bộ lọc.'), findsOneWidget);
+
+      await enterField(t, 'Tìm học phần', '');
+      expect(find.text('3 môn · 4 lớp học phần đang mở'), findsOneWidget);
+    });
+
+    testWidgets('lọc theo học kỳ trong CTĐT, kết hợp với tìm kiếm', (t) async {
+      await openStudent(t, apiBon(), '/student/register');
+      await chonKy(t, 'Học kỳ 3');
+      expect(find.text('2 môn · 2 lớp học phần đang mở'), findsOneWidget);
+      expect(find.text('Lập trình cơ bản'), findsNothing);
+
+      await enterField(t, 'Tìm học phần', 'giai tich');
+      expect(find.text('1 môn · 1 lớp học phần đang mở'), findsOneWidget);
+      expect(find.text('Giải tích 2'), findsOneWidget);
+
+      await enterField(t, 'Tìm học phần', '');
+      await chonKy(t, 'Tất cả học kỳ');
+      expect(find.text('3 môn · 4 lớp học phần đang mở'), findsOneWidget);
+    });
+
+    testWidgets('chỉ liệt kê các học kỳ CTĐT có môn đang mở', (t) async {
+      await openStudent(t, apiBon(), '/student/register');
+      final o = find.byType(DropdownButton<int>);
+      await t.tap(o);
+      await t.pumpAndSettle();
+      expect(find.text('Học kỳ 1'), findsWidgets);
+      expect(find.text('Học kỳ 3'), findsWidgets);
+      expect(find.text('Học kỳ 2'), findsNothing);
+    });
+
+    testWidgets('App (390 px): ô tìm và ô chọn học kỳ không tràn', (t) async {
+      await openStudent(
+        t,
+        apiBon(),
+        '/student/register',
+        size: const Size(390, 900),
+      );
+      expect(find.text('Tìm học phần'), findsOneWidget);
+      expect(find.text('Học kỳ trong CTĐT'), findsOneWidget);
+    });
   });
 
   testWidgets(

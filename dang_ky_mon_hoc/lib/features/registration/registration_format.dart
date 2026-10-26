@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../core/format.dart';
 import '../training/training_api.dart';
 
 /// UUID v4 cho header `Idempotency-Key` (mỗi lần bấm "Đăng ký" một key mới).
@@ -13,6 +14,20 @@ String newIdempotencyKey() {
       .map((x) => x.toRadixString(16).padLeft(2, '0'))
       .join();
   return '${hex(0, 4)}-${hex(4, 6)}-${hex(6, 8)}-${hex(8, 10)}-${hex(10, 16)}';
+}
+
+/// `07/09/2026 – 17/01/2027`: thời gian học của lớp. Lớp chưa có ngày riêng thì lấy ngày của học kỳ
+/// ([macDinhBatDau]/[macDinhKetThuc]); thiếu cả hai → `null`.
+String? thoiGianHoc(
+  Object? batDau,
+  Object? ketThuc, {
+  Object? macDinhBatDau,
+  Object? macDinhKetThuc,
+}) {
+  final bd = batDau ?? macDinhBatDau;
+  final kt = ketThuc ?? macDinhKetThuc;
+  if (bd == null || kt == null) return null;
+  return '${formatYmd('$bd')} – ${formatYmd('$kt')}';
 }
 
 String thuText(int thu) => thu == 8 ? 'CN' : 'Thứ $thu';

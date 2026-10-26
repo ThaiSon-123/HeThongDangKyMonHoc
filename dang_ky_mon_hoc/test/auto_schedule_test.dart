@@ -44,6 +44,8 @@ Map<String, dynamic> lop(
   'si_so_hien_tai': 10,
   'trang_thai': 'MO',
   'lich_hoc': lichHoc,
+  'ngay_bat_dau': '2026-09-07',
+  'ngay_ket_thuc': '2027-01-17',
   'loai_mon': loai,
   'khoi_kien_thuc': 'chuyen_nganh',
   'hoc_ky_goi_y': ky,
@@ -83,6 +85,8 @@ FakeAdapter api({
     'meta': {
       'hoc_ky': 7,
       'ten_hk': 'Học kỳ 2, 2026–2027',
+      'ngay_bat_dau': '2026-08-31',
+      'ngay_ket_thuc': '2027-01-10',
       'trong_cua_so': true,
       'tin_chi_toi_thieu': 12,
       'tin_chi_toi_da': 24,
@@ -277,6 +281,313 @@ void main() {
       expect(find.textContaining('CNTT401-01 · GV'), findsNothing);
     },
   );
+
+  group('thời gian học của lớp', () {
+    testWidgets('bước 1: bảng lớp của môn có cột Thời gian học', (t) async {
+      await open(t, api());
+      await tapText(t, 'Trí tuệ nhân tạo'); // mở rộng môn
+      expect(find.text('THỜI GIAN HỌC'), findsOneWidget);
+      expect(find.text('07/09/2026 – 17/01/2027'), findsWidgets);
+    });
+
+    testWidgets('bước 2: mỗi lớp trong thẻ tổ hợp ghi thời gian học', (
+      t,
+    ) async {
+      await open(t, api());
+      await tapText(t, 'Gợi ý tổ hợp');
+      expect(find.text('Thời gian học: 07/09/2026 – 17/01/2027'), findsWidgets);
+    });
+
+    testWidgets('lớp chưa có ngày riêng thì lấy theo học kỳ', (t) async {
+      final khongNgay = {
+        ...lop(11, 'A-01', 1, 'Trí tuệ nhân tạo', [lich(2, 1, 3)]),
+        'ngay_bat_dau': null,
+        'ngay_ket_thuc': null,
+      };
+      await open(t, api(lops: [khongNgay]));
+      await tapText(t, 'Gợi ý tổ hợp');
+      expect(find.text('Thời gian học: 31/08/2026 – 10/01/2027'), findsWidgets);
+    });
+  });
+
+  group('bước 1: tìm học phần và lọc học kỳ trong CTĐT', () {
+    final lopKy = [
+      lop(11, 'A-01', 1, 'Trí tuệ nhân tạo', [lich(2, 1, 3)], ky: 7),
+      lop(21, 'B-01', 2, 'Học máy', [lich(3, 1, 3)]),
+      lop(31, 'C-01', 3, 'An toàn thông tin', [lich(4, 1, 3)], loai: 'tu_chon'),
+    ];
+
+    Future<void> chonKy(WidgetTester t, String ky) async {
+      final o = find.byType(DropdownButton<int>);
+      await t.ensureVisible(o);
+      await t.tap(o);
+      await t.pumpAndSettle();
+      await t.tap(find.text(ky).last);
+      await t.pumpAndSettle();
+    }
+
+    testWidgets('tìm theo tên không dấu; môn đã chọn vẫn được giữ khi bị ẩn', (
+      t,
+    ) async {
+      await open(t, api(lops: lopKy));
+      expect(find.text('Đã chọn 2 môn · 6 tín chỉ'), findsOneWidget);
+
+      await enterField(t, 'Tìm học phần', 'hoc may');
+      expect(find.text('Học máy'), findsOneWidget);
+      expect(find.text('Trí tuệ nhân tạo'), findsNothing);
+      expect(find.text('An toàn thông tin'), findsNothing);
+      expect(
+        find.text('Đã chọn 2 môn · 6 tín chỉ'),
+        findsOneWidget,
+      ); // không đổi
+
+      await enterField(t, 'Tìm học phần', 'zzz');
+      expect(find.text('Không có môn phù hợp với bộ lọc.'), findsOneWidget);
+
+      await enterField(t, 'Tìm học phần', '');
+      expect(find.text('Trí tuệ nhân tạo'), findsOneWidget);
+    });
+
+    testWidgets('lọc theo học kỳ trong CTĐT chỉ hiện môn của kỳ đó', (t) async {
+      await open(t, api(lops: lopKy));
+      await chonKy(t, 'Học kỳ 7');
+      expect(find.text('Trí tuệ nhân tạo'), findsOneWidget);
+      expect(find.text('Học máy'), findsNothing);
+      expect(find.text('Đã chọn 2 môn · 6 tín chỉ'), findsOneWidget);
+
+      await chonKy(t, 'Tất cả học kỳ');
+      expect(find.text('Học máy'), findsOneWidget);
+    });
+
+    testWidgets('chọn bằng bộ lọc rồi gợi ý vẫn xếp đúng các môn đã chọn', (
+      t,
+    ) async {
+      await open(t, api(lops: lopKy));
+      await enterField(t, 'Tìm học phần', 'an toan'); // ẩn hai môn đã chọn sẵn
+      await tapText(t, 'Gợi ý tổ hợp');
+      expect(find.text('Xem tổ hợp gợi ý'), findsOneWidget);
+      expect(find.textContaining('tổ hợp không trùng lịch'), findsOneWidget);
+    });
+  });
+
+  group('bước 2: xem thời khóa biểu của tổ hợp (hộp thoại nổi)', () {
+    // Chỉ môn 1 (hai lớp: Thứ 2 tiết 1–3 và Thứ 5 tiết 6–8) → hai tổ hợp, mỗi tổ hợp một lớp.
+    Future<void> toiBuoc2(WidgetTester t, {Size size = bigScreen}) async {
+      await open(t, api(), size: size);
+      await t.tap(find.byType(Checkbox).at(1)); // bỏ Học máy
+      await t.pumpAndSettle();
+      await tapText(t, 'Gợi ý tổ hợp');
+    }
+
+    /// Khóa các ô đang vẽ trong lưới (`tkb-o-<thứ>-<tiết bắt đầu>`), đã sắp xếp.
+    List<String> oHienCo() =>
+        find
+            .byWidgetPredicate(
+              (w) =>
+                  w.key is ValueKey<String> &&
+                  (w.key! as ValueKey<String>).value.startsWith('tkb-o-'),
+            )
+            .evaluate()
+            .map((e) => (e.widget.key! as ValueKey<String>).value)
+            .toList()
+          ..sort();
+
+    Finder o(String khoa) => find.byKey(ValueKey('tkb-o-$khoa'));
+    final luoi = find.byKey(const ValueKey('tkb-luoi'));
+
+    Future<void> xemTkb(WidgetTester t, int viTri) async {
+      final nut = find.text('Xem TKB').at(viTri);
+      await t.ensureVisible(nut);
+      await t.tap(nut);
+      await t.pumpAndSettle();
+    }
+
+    testWidgets('chưa bấm Xem TKB thì không có lưới ở cuối trang', (t) async {
+      await toiBuoc2(t);
+      expect(find.text('Xem TKB'), findsNWidgets(2)); // mỗi tổ hợp một nút
+      expect(luoi, findsNothing);
+      expect(find.textContaining('Thời khóa biểu — Tổ hợp'), findsNothing);
+    });
+
+    testWidgets(
+      'bấm Xem TKB mở hộp thoại đè lên màn hình: ô đúng cột/tiết, lớp đã đăng ký là ô xám',
+      (t) async {
+        await toiBuoc2(t);
+        await xemTkb(t, 0);
+        expect(find.byType(Dialog), findsOneWidget);
+        expect(find.text('Thời khóa biểu — Tổ hợp 1'), findsOneWidget);
+        expect(luoi, findsOneWidget);
+        // Màn gợi ý vẫn nằm phía dưới hộp thoại (không bị thay thế).
+        expect(find.text('Tổ hợp 2'), findsOneWidget);
+
+        final khoa = oHienCo();
+        // Lịch đã đăng ký (Thứ 2, tiết 6–8) luôn có; cộng đúng một lớp của tổ hợp.
+        expect(khoa.length, 2);
+        expect(khoa, contains('tkb-o-2-6'));
+        expect(
+          find.descendant(of: o('2-6'), matching: find.text('Đã đăng ký')),
+          findsOneWidget,
+        );
+        final lop = khoa.firstWhere((k) => k != 'tkb-o-2-6').substring(6);
+        expect(['2-1', '5-6'], contains(lop));
+        // Cột theo thứ, hàng theo tiết.
+        if (lop == '2-1') {
+          expect(t.getTopLeft(o('2-1')).dx, t.getTopLeft(o('2-6')).dx);
+          expect(
+            t.getTopLeft(o('2-1')).dy,
+            lessThan(t.getTopLeft(o('2-6')).dy),
+          );
+        } else {
+          expect(
+            t.getTopLeft(o('5-6')).dx,
+            greaterThan(t.getTopLeft(o('2-6')).dx),
+          );
+          expect(t.getTopLeft(o('5-6')).dy, t.getTopLeft(o('2-6')).dy);
+        }
+      },
+    );
+
+    testWidgets(
+      'Đóng thì hộp thoại biến mất; mỗi tổ hợp hiện đúng lớp của nó',
+      (t) async {
+        await toiBuoc2(t);
+        await xemTkb(t, 0);
+        final thu1 = oHienCo();
+        await tapText(t, 'Đóng');
+        expect(find.byType(Dialog), findsNothing);
+        expect(luoi, findsNothing);
+
+        await xemTkb(t, 1);
+        expect(find.text('Thời khóa biểu — Tổ hợp 2'), findsOneWidget);
+        expect(oHienCo(), isNot(thu1)); // hai tổ hợp xếp hai lớp khác nhau
+        expect(oHienCo().length, 2);
+      },
+    );
+
+    testWidgets('Chọn tổ hợp này không mở lưới', (t) async {
+      await toiBuoc2(t);
+      await tapText(t, 'Chọn tổ hợp này', index: 0);
+      expect(find.text('Đã chọn tổ hợp này'), findsOneWidget);
+      expect(luoi, findsNothing);
+    });
+
+    testWidgets('đổi lớp thay thế rồi xem: lưới theo lớp mới', (t) async {
+      await toiBuoc2(t);
+      await xemTkb(t, 0);
+      final dangT2 = oHienCo().contains('tkb-o-2-1');
+      await tapText(t, 'Đóng');
+      final dropdown = find.byType(DropdownButton<int>).first;
+      await t.ensureVisible(dropdown);
+      await t.tap(dropdown);
+      await t.pumpAndSettle();
+      // Chọn đúng lớp mà tổ hợp 1 đang không xếp.
+      await t.tap(
+        find
+            .textContaining(
+              dangT2 ? 'CNTT401-03 · Vũ Đức Anh' : 'CNTT401-01 · Nguyễn',
+            )
+            .last,
+      );
+      await t.pumpAndSettle();
+      await xemTkb(t, 0);
+      expect(oHienCo().contains('tkb-o-2-1'), !dangT2);
+      expect(oHienCo().contains('tkb-o-5-6'), dangT2);
+    });
+
+    testWidgets('màn hẹp: hộp thoại dựng được, không tràn', (t) async {
+      await toiBuoc2(t, size: const Size(390, 900));
+      await xemTkb(t, 0);
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(luoi, findsOneWidget);
+    });
+  });
+
+  group('bước 2: nhiều tổ hợp được phân trang', () {
+    // 3 môn × 4 lớp, cùng tiết 1 nhưng mỗi lớp một ngày (Thứ 2..5) → phải khác ngày: 4×3×2 = 24 tổ hợp.
+    final lopNhieu = [
+      for (var m = 1; m <= 3; m++)
+        for (var k = 0; k < 4; k++)
+          lop(m * 10 + k, 'M$m-0$k', m, 'Môn $m', [lich(2 + k, 1, 3)]),
+    ];
+
+    Future<void> bam(WidgetTester t, String tooltip) async {
+      final nut = find.byTooltip(tooltip);
+      await t.ensureVisible(nut);
+      await t.tap(nut);
+      await t.pumpAndSettle();
+    }
+
+    Future<void> toiBuoc2(WidgetTester t) async {
+      await open(t, api(lops: lopNhieu));
+      await tapText(t, 'Gợi ý tổ hợp');
+    }
+
+    testWidgets('chỉ dựng 6 thẻ mỗi trang; chuyển trang đúng thứ tự', (
+      t,
+    ) async {
+      await toiBuoc2(t);
+      expect(find.text('Có 24 tổ hợp không trùng lịch'), findsOneWidget);
+      expect(find.text('Tổ hợp 6'), findsOneWidget);
+      expect(find.text('Tổ hợp 7'), findsNothing);
+      expect(
+        find.text('Chọn tổ hợp này'),
+        findsNWidgets(6),
+      ); // không dựng cả 24 thẻ
+      expect(find.textContaining('Trang 1/4'), findsOneWidget);
+      expect(
+        t
+            .widget<IconButton>(
+              find.widgetWithIcon(IconButton, Icons.chevron_left),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      await bam(t, 'Trang sau');
+      expect(find.textContaining('Trang 2/4'), findsOneWidget);
+      expect(find.text('Tổ hợp 1'), findsNothing);
+      expect(find.text('Tổ hợp 7'), findsOneWidget);
+      expect(find.text('Tổ hợp 12'), findsOneWidget);
+      expect(find.text('Chọn tổ hợp này'), findsNWidgets(6));
+
+      for (var i = 0; i < 2; i++) {
+        await bam(t, 'Trang sau');
+      }
+      expect(find.textContaining('Trang 4/4'), findsOneWidget);
+      expect(find.text('Tổ hợp 24'), findsOneWidget);
+      expect(
+        t
+            .widget<IconButton>(
+              find.widgetWithIcon(IconButton, Icons.chevron_right),
+            )
+            .onPressed,
+        isNull,
+      );
+    });
+
+    testWidgets('tổ hợp đã chọn được giữ khi đổi trang', (t) async {
+      await toiBuoc2(t);
+      await tapText(t, 'Chọn tổ hợp này', index: 2); // Tổ hợp 3
+      await bam(t, 'Trang sau');
+      expect(find.text('Đã chọn tổ hợp này'), findsNothing);
+      await bam(t, 'Trang trước');
+      expect(find.text('Đã chọn tổ hợp này'), findsOneWidget);
+      expect(find.text('Đăng ký tổ hợp đã chọn'), findsOneWidget);
+    });
+
+    testWidgets('xem TKB ở trang sau mở đúng tổ hợp', (t) async {
+      await toiBuoc2(t);
+      await bam(t, 'Trang sau');
+      await tapText(t, 'Xem TKB', index: 0);
+      expect(find.text('Thời khóa biểu — Tổ hợp 7'), findsOneWidget);
+    });
+
+    testWidgets('ít tổ hợp thì không có thanh phân trang', (t) async {
+      await open(t, api());
+      await tapText(t, 'Gợi ý tổ hợp');
+      expect(find.byTooltip('Trang sau'), findsNothing);
+    });
+  });
 
   testWidgets('không xếp được tổ hợp nào → thông báo và nút quay lại', (
     t,

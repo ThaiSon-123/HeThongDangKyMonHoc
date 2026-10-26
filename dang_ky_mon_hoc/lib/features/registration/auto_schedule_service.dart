@@ -1,6 +1,6 @@
 /// TKB tự động (SV-06, plan.md mục 7.2) — **thuần Dart**, không phụ thuộc giao diện hay API.
 ///
-/// Nhận danh sách lớp mở (chưa lọc trùng lịch), các môn SV chọn + ưu tiên, lịch đã có; trả tối đa 3
+/// Nhận danh sách lớp mở (chưa lọc trùng lịch), các môn SV chọn + ưu tiên, lịch đã có; trả các
 /// tổ hợp không trùng lịch (BR-03) kèm điểm /100 và danh sách lý do. Gợi ý chỉ để tham khảo: đăng
 /// ký thật vẫn do server kiểm BR-01..07.
 library;
@@ -64,6 +64,8 @@ class Lop {
     required this.giaoVien,
     required this.lich,
     this.phong = '—',
+    this.ngayBatDau,
+    this.ngayKetThuc,
     this.siSo,
     this.siSoToiDa,
   });
@@ -81,6 +83,8 @@ class Lop {
         Buoi.fromJson(Json.from(b as Map)),
     ],
     phong: _phongCua(j['lich_hoc'] as List? ?? const []),
+    ngayBatDau: j['ngay_bat_dau'] as String?,
+    ngayKetThuc: j['ngay_ket_thuc'] as String?,
     siSo: (j['si_so_hien_tai'] as num?)?.toInt(),
     siSoToiDa: (j['si_so_toi_da'] as num?)?.toInt(),
   );
@@ -102,6 +106,10 @@ class Lop {
   final String giaoVien;
   final List<Buoi> lich;
   final String phong;
+
+  /// Ngày riêng của lớp (`yyyy-MM-dd`); null = theo học kỳ.
+  final String? ngayBatDau;
+  final String? ngayKetThuc;
   final int? siSo;
   final int? siSoToiDa;
 
@@ -221,12 +229,13 @@ class _Dang {
   final int diem;
 }
 
-/// Sinh tối đa [toiDa] tổ hợp, sắp theo (xếp được nhiều môn hơn, điểm cao hơn).
+/// Sinh các tổ hợp tìm được (tối đa [toiDa] nếu có, mặc định là tất cả), sắp theo (xếp được nhiều môn
+/// hơn, điểm cao hơn). Beam search chỉ giữ [_beRong] tổ hợp tốt nhất nên danh sách không quá [_beRong].
 ///
 /// Môn bắt buộc theo `kyGoiY` đứng trước. Duyệt từng môn bằng *beam search*: giữ [_beRong] tổ hợp dở
 /// dang tốt nhất (theo điểm riêng từng lớp) nên các tổ hợp khác nhau ngay từ những môn đầu, không
 /// chỉ khác ở môn cuối. Môn không lớp nào vừa thì bỏ qua và ghi lý do.
-List<ToHop> goiY(DauVao v, {int toiDa = 3}) {
+List<ToHop> goiY(DauVao v, {int? toiDa}) {
   final mon = [...v.mon]
     ..sort((a, b) {
       if (a.batBuoc != b.batBuoc) return a.batBuoc ? -1 : 1;
@@ -280,7 +289,7 @@ List<ToHop> goiY(DauVao v, {int toiDa = 3}) {
     final xep = b.chon.length - a.chon.length;
     return xep != 0 ? xep : b.diem - a.diem;
   });
-  return toHop.take(toiDa).toList();
+  return toiDa == null ? toHop : toHop.take(toiDa).toList();
 }
 
 /// Điểm riêng của một lớp — chỉ dùng để thử lớp tốt trước, không phải điểm tổ hợp.
