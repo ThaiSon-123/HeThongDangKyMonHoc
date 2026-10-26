@@ -10,6 +10,7 @@ import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../admin/system/backups_screen.dart' show formatBytes;
 import '../notifications/audit_log_screen.dart' show hanhDongLabel, tomTat;
+import '../notifications/audit_mo_ta.dart' show tenDoiTuong;
 import '../registration/timetable_screen.dart' show clockProvider;
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
@@ -387,7 +388,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
       ),
       Expanded(
         child: Text(
-          '${l.str('doi_tuong')} · ${tomTat(l)}',
+          '${tenDoiTuong[l.str('doi_tuong')] ?? l.str('doi_tuong')} · ${tomTat(l)}',
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: AppColors.muted),
         ),
@@ -416,7 +417,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
       ),
       const SizedBox(height: 2),
       Text(
-        '${l.str('doi_tuong')} · ${tomTat(l)}',
+        '${tenDoiTuong[l.str('doi_tuong')] ?? l.str('doi_tuong')} · ${tomTat(l)}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(color: AppColors.muted, fontSize: 13),

@@ -256,26 +256,320 @@ void main() {
       'scope': 'training',
     };
 
-    test('tomTat: ưu tiên hanh_dong, rồi vài cặp khóa=giá trị; rỗng thì —', () {
-      expect(
-        tomTat({
-          'chi_tiet': {'hanh_dong': 'huy_dang_ky', 'ly_do': 'Nghỉ'},
-        }),
-        'huy_dang_ky · ly_do=Nghỉ',
-      );
-      expect(
-        tomTat({
-          'chi_tiet': {
-            'serialized': {'ma_mon': 'IT1', 'ten_mon': 'LT'},
-          },
-        }),
-        'ma_mon=IT1 · ten_mon=LT',
-      );
+    Map<String, dynamic> nk(
+      String hd,
+      String dt,
+      Map<String, dynamic> ct, {
+      String id = '5',
+    }) => {
+      'hanh_dong': hd,
+      'doi_tuong': dt,
+      'doi_tuong_id': id,
+      'chi_tiet': ct,
+    };
+
+    test(
+      'tomTat: mô tả bằng tiếng Việt tự nhiên, không lộ tên trường kỹ thuật',
+      () {
+        final ca = <(Map<String, dynamic>, String)>[
+          // thao tác chung trên danh mục
+          (
+            nk('CREATE', 'Course', {
+              'serialized': {'ma_mon': 'IT1', 'ten_mon': 'Lập trình'},
+            }),
+            'Tạo môn học “Lập trình”',
+          ),
+          (
+            nk('UPDATE', 'ClassSection', {
+              'serialized': {'ma_lop': 'IT1-01'},
+            }),
+            'Cập nhật lớp học phần “IT1-01”',
+          ),
+          (
+            nk('DELETE', 'Semester', {
+              'serialized': {'ten_hk': 'HK1'},
+            }),
+            'Xóa học kỳ “HK1”',
+          ),
+          (
+            nk('UPDATE', 'Semester', {'trang_thai': 'DONG'}),
+            'Chuyển học kỳ sang trạng thái “đóng”',
+          ),
+          (
+            nk('UPDATE', 'ClassSection', {'trang_thai': 'DANG_HOC'}),
+            'Chuyển lớp học phần sang trạng thái “đang học”',
+          ),
+          (
+            nk('UPDATE', 'ClassSection', {
+              'hanh_dong': 'gia_han_nhap_diem',
+              'tu': '2027-01-10',
+              'den': '2027-02-01',
+            }),
+            'Gia hạn nhập điểm từ 10/01/2027 đến 01/02/2027',
+          ),
+          // tài khoản
+          (nk('LOGIN', 'User', {}), 'Đăng nhập hệ thống'),
+          (
+            nk('PHAN_QUYEN', 'User', {
+              'role': ['SINH_VIEN', 'GIAO_VIEN'],
+            }),
+            'Đổi vai trò từ Sinh viên sang Giáo viên',
+          ),
+          (nk('UPDATE', 'User', {'is_locked': true}), 'Khóa tài khoản'),
+          (nk('UPDATE', 'User', {'is_locked': false}), 'Mở khóa tài khoản'),
+          (
+            nk('UPDATE', 'User', {'hanh_dong': 'reset_password'}),
+            'Đặt lại mật khẩu tài khoản',
+          ),
+          // đăng ký
+          (
+            nk('CREATE', 'Registration', {'lop_hoc_phan': 3, 'sinh_vien': 9}),
+            'Đăng ký lớp học phần',
+          ),
+          (
+            nk('UPDATE', 'Registration', {
+              'hanh_dong': 'huy_dang_ky',
+              'boi': 'PHONG_DAO_TAO',
+              'ly_do': 'Nghỉ',
+            }),
+            'Phòng đào tạo hủy đăng ký — lý do: Nghỉ',
+          ),
+          (
+            nk('UPDATE', 'Registration', {
+              'hanh_dong': 'huy_dang_ky',
+              'boi': 'SINH_VIEN',
+              'ly_do': '',
+            }),
+            'Sinh viên hủy đăng ký',
+          ),
+          // điểm danh, điểm
+          (
+            nk('UPDATE', 'AttendanceSession', {
+              'hanh_dong': 'luu_diem_danh',
+              'so_dong': 40,
+            }),
+            'Lưu điểm danh 40 sinh viên',
+          ),
+          (
+            nk('CREATE', 'AttendanceRequest', {
+              'attendance': 1,
+              'mong_muon': 'VANG_CO_PHEP',
+            }),
+            'Gửi yêu cầu sửa điểm danh thành “Vắng có phép”',
+          ),
+          (
+            nk('UPDATE', 'AttendanceRequest', {
+              'quyet_dinh': 'DA_DUYET',
+              'attendance': 1,
+            }),
+            'Duyệt yêu cầu sửa điểm danh',
+          ),
+          (
+            nk('UPDATE', 'AttendanceRequest', {
+              'quyet_dinh': 'TU_CHOI',
+              'attendance': 1,
+            }),
+            'Từ chối yêu cầu sửa điểm danh',
+          ),
+          (
+            nk('UPDATE', 'Grade', {
+              'hanh_dong': 'nhap_diem',
+              'lop_hoc_phan': 1,
+              'so_dong': 30,
+            }),
+            'Lưu nháp điểm 30 sinh viên',
+          ),
+          (
+            nk('UPDATE', 'Grade', {
+              'hanh_dong': 'nhap_ho',
+              'lop_hoc_phan': 1,
+              'so_dong': 30,
+            }),
+            'Nhập hộ điểm 30 sinh viên',
+          ),
+          (
+            nk('UPDATE', 'Grade', {'hanh_dong': 'khoa_diem', 'so_dong': 30}),
+            'Khóa điểm 30 sinh viên',
+          ),
+          (
+            nk('UPDATE', 'Grade', {'hanh_dong': 'mo_khoa_diem', 'so_dong': 30}),
+            'Mở khóa điểm 30 sinh viên',
+          ),
+          (
+            nk('UPDATE', 'Grade', {
+              'hanh_dong': 'duyet_diem',
+              'so_sinh_vien': 12,
+            }),
+            'Duyệt điểm 12 sinh viên',
+          ),
+          // thông báo, hệ thống
+          (
+            nk('CREATE', 'Notification', {
+              'audience': 'CLASS',
+              'target_refs': [1],
+              'tieu_de': 'Nghỉ học',
+            }),
+            'Gửi thông báo “Nghỉ học” tới lớp học phần',
+          ),
+          (
+            nk('CREATE', 'Notification', {
+              'audience': 'ROLE',
+              'target_refs': ['SINH_VIEN'],
+              'tieu_de': 'Họp',
+            }),
+            'Gửi thông báo “Họp” tới vai trò',
+          ),
+          (
+            nk('UPDATE', 'Notification', {'hanh_dong': 'thu_hoi'}),
+            'Thu hồi thông báo',
+          ),
+          (
+            nk('CREATE', 'Backup', {'hanh_dong': 'tao_backup'}, id: ''),
+            'Tạo bản sao lưu dữ liệu',
+          ),
+          (
+            nk('UPDATE', 'SystemConfig', {
+              'tu': '20',
+              'den': '25',
+            }, id: 'max_absent_pct'),
+            'Đổi “Ngưỡng vắng tối đa (%)” từ 20 sang 25',
+          ),
+          // học phí
+          (
+            nk('CREATE', 'HocPhanGia', {
+              'serialized': {
+                'pham_vi': 'NGANH',
+                'tham_chieu': 'CNTT',
+                'don_gia': '120000.00',
+              },
+            }),
+            'Tạo bảng giá ngành CNTT: 120.000 ₫/tín chỉ',
+          ),
+          (
+            nk('CREATE', 'Discount', {
+              'serialized': {
+                'loai': 'HOC_BONG',
+                'ty_le': '25.00',
+                'so_tien': null,
+              },
+            }),
+            'Tạo học bổng 25%',
+          ),
+          (
+            nk('UPDATE', 'Discount', {
+              'serialized': {
+                'loai': 'MIEN_GIAM',
+                'so_tien': '500000.00',
+                'ty_le': null,
+              },
+            }),
+            'Cập nhật miễn giảm 500.000 ₫',
+          ),
+          (
+            nk('UPDATE', 'TuitionConfig', {
+              'serialized': {'han_dong': '2027-02-01'},
+            }),
+            'Cập nhật hạn đóng học phí 01/02/2027',
+          ),
+          (
+            nk('UPDATE', 'TuitionInstallment', {
+              'dots': [
+                {'thu_tu': 1, 'ty_le': '40.00', 'han_dong': '2026-11-15'},
+                {'thu_tu': 2, 'ty_le': '30.00', 'han_dong': '2026-12-15'},
+                {'thu_tu': 3, 'ty_le': '30.00', 'han_dong': '2027-01-15'},
+              ],
+            }, id: 'hk1'),
+            'Cấu hình 3 đợt đóng học phí: 40% hạn 15/11/2026 · 30% hạn 15/12/2026 · 30% hạn 15/01/2027',
+          ),
+          (
+            nk('UPDATE', 'Tuition', {
+              'hanh_dong': 'tinh_hang_loat',
+              'so_sv': 12,
+            }, id: 'hk1'),
+            'Tính lại học phí cho 12 sinh viên',
+          ),
+          (
+            nk('UPDATE', 'Tuition', {
+              'hanh_dong': 'doi_hinh_thuc',
+              'hinh_thuc': 'CHIA_DOT',
+            }),
+            'Đổi hình thức đóng học phí sang chia 3 đợt',
+          ),
+          (
+            nk('UPDATE', 'Tuition', {
+              'hanh_dong': 'doi_hinh_thuc',
+              'hinh_thuc': 'MOT_LAN',
+            }),
+            'Đổi hình thức đóng học phí sang đóng một lần',
+          ),
+          (
+            nk('CREATE', 'Payment', {
+              'tuition': 7,
+              'loai': 'THU',
+              'so_tien': '6770000.00',
+            }),
+            'Thu 6.770.000 ₫',
+          ),
+          (
+            nk('CREATE', 'Payment', {
+              'tuition': 7,
+              'loai': 'HOAN',
+              'so_tien': '500000.00',
+            }),
+            'Hoàn 500.000 ₫',
+          ),
+          (
+            nk('CREATE', 'OnlineTransaction', {
+              'tuition': 7,
+              'so_tien': '6770000.00',
+            }),
+            'Tạo giao dịch VNPay 6.770.000 ₫',
+          ),
+          (
+            nk('UPDATE', 'OnlineTransaction', {
+              'trang_thai': 'THANH_CONG',
+              'so_tien': '6770000.00',
+              'payment': 2080,
+            }),
+            'VNPay: thanh toán thành công 6.770.000 ₫',
+          ),
+          (
+            nk('UPDATE', 'OnlineTransaction', {
+              'trang_thai': 'THAT_BAI',
+              'so_tien': '6770000.00',
+              'payment': null,
+            }),
+            'VNPay: thanh toán không thành công',
+          ),
+          (
+            nk('UPDATE', 'OnlineTransaction', {
+              'trang_thai': 'LOI',
+              'so_tien': '6770000.00',
+              'payment': null,
+            }),
+            'VNPay: đã nhận 6.770.000 ₫ nhưng chưa ghi được học phí — cần kế toán xử lý',
+          ),
+        ];
+        for (final (log, mong) in ca) {
+          expect(
+            tomTat(log),
+            mong,
+            reason: '${log['doi_tuong']} ${log['chi_tiet']}',
+          );
+        }
+      },
+    );
+
+    test('tomTat: không lộ cặp khóa=giá trị; thiếu đối tượng thì —', () {
       expect(tomTat({'chi_tiet': {}}), '—');
+      final la = tomTat(nk('UPDATE', 'Lạ', {'khoa_la': 'x', 'khac': 1}));
+      expect(la, 'Cập nhật Lạ');
+      expect(la.contains('='), isFalse);
+      expect(tomTat(nk('DELETE', 'Course', {})), 'Xóa môn học');
     });
 
     testWidgets(
-      'PĐT: bảng, lọc hành động gửi query, bấm dòng xem chi tiết JSON; không có lọc phạm vi',
+      'PĐT: bảng, lọc hành động gửi query, bấm dòng xem chi tiết bằng tiếng Việt; không có lọc phạm vi',
       (t) async {
         final api = pdtApi({
           'GET /admin/audit-logs/': (_) => reply(
@@ -304,7 +598,10 @@ void main() {
 
         await tapText(t, 'Đăng ký #5');
         expect(find.text('Chi tiết thao tác #2'), findsOneWidget);
-        expect(find.textContaining('"ly_do": "Nghỉ học"'), findsOneWidget);
+        // Chi tiết là câu tiếng Việt (có ở cả cột Tóm tắt và hộp thoại), không phải JSON thô.
+        expect(find.textContaining('lý do: Nghỉ học'), findsWidgets);
+        expect(find.textContaining('"ly_do"'), findsNothing);
+        expect(find.textContaining('huy_dang_ky'), findsNothing);
         expect(find.textContaining('IP 10.0.0.1'), findsOneWidget);
       },
     );

@@ -552,11 +552,18 @@ void main() {
         expect(find.text('2 tài khoản đang khóa'), findsOneWidget);
         expect(find.text('Sinh viên'), findsOneWidget);
         expect(find.text('6'), findsOneWidget);
-        expect(find.text('hethongdangkymonhoc_20261010_020000.dump'), findsOneWidget);
+        expect(
+          find.text('hethongdangkymonhoc_20261010_020000.dump'),
+          findsOneWidget,
+        );
         expect(find.text('412 MB'), findsOneWidget);
         expect(find.textContaining('chưa có bản sao lưu mới'), findsNothing);
         expect(find.text('pdt01'), findsOneWidget);
-        expect(find.textContaining('ClassSection'), findsOneWidget);
+        expect(
+          find.textContaining('Lớp học phần · Gia hạn nhập điểm'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('ClassSection'), findsNothing);
       },
     );
 
