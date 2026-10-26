@@ -42,7 +42,20 @@ def sinh_ten(rng, da_co):
 
 
 class Command(BaseCommand):
-    help = "Nạp sinh viên mẫu (20 người mỗi ngành, gắn với CTĐT của ngành)."
+    help = "Nạp sinh viên mẫu (mặc định 20 người mỗi ngành, gắn với CTĐT của ngành)."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--moi-nganh",
+            type=int,
+            default=SO_SV_MOI_NGANH,
+            help="số sinh viên mỗi ngành (tối đa 999); 20 người đầu mỗi ngành luôn có tên như cũ",
+        )
+        parser.add_argument(
+            "--chi-nguoi-moi",
+            action="store_true",
+            help="bỏ qua sinh viên đã có (không đặt lại mật khẩu/hồ sơ), chỉ tạo người chưa có",
+        )
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -52,34 +65,47 @@ class Command(BaseCommand):
         rng = random.Random(2027)
         da_co = set()
         tong = 0
-        for _file, ma_nganh, _ten, _khoa, _nam, _tc, khoa_ts in NGANH:
-            ctdt = Curriculum.objects.select_related("nganh").get(ma_ctdt=f"CT-{ma_nganh}-{khoa_ts}")
-            for n in range(1, SO_SV_MOI_NGANH + 1):
-                ho_ten = sinh_ten(rng, da_co)
-                ma_sv = mssv(khoa_ts, ma_nganh, n)
-                email = f"{ma_sv}@student.tdmu.edu.vn"
-                user, _ = User.objects.update_or_create(
-                    username=ma_sv,
-                    defaults={
-                        "role": Role.SINH_VIEN,
-                        "first_name": ho_ten,
-                        "email": email,
-                        "is_locked": False,
-                        "is_active": True,
-                    },
-                )
-                user.set_password(mat_khau)
-                user.save(update_fields=["password"])
-                StudentProfile.objects.update_or_create(
-                    user=user,
-                    defaults={
-                        "ma_sv": ma_sv,
-                        "ho_ten": ho_ten,
-                        "nganh": ctdt.nganh,
-                        "ctdt": ctdt,
-                        "khoa_nhap_hoc": khoa_ts,
-                        "email": email,
-                    },
-                )
-                tong += 1
+        moi_nganh = min(options["moi_nganh"], 999)
+        # Lượt 1 đúng thứ tự cũ (20 người/ngành) để tên không đổi; lượt 2 là người thêm.
+        luot = [
+            (ng, n)
+            for tu, den in ((1, SO_SV_MOI_NGANH), (SO_SV_MOI_NGANH + 1, moi_nganh))
+            for ng in NGANH
+            for n in range(tu, den + 1)
+        ]
+        ctdt_cua = {
+            ng[1]: Curriculum.objects.select_related("nganh").get(ma_ctdt=f"CT-{ng[1]}-{ng[6]}")
+            for ng in NGANH
+        }
+        for (_file, ma_nganh, _ten, _khoa, _nam, _tc, khoa_ts), n in luot:
+            ctdt = ctdt_cua[ma_nganh]
+            ho_ten = sinh_ten(rng, da_co)  # luôn sinh tên để dãy tên không đổi dù bỏ qua người đã có
+            ma_sv = mssv(khoa_ts, ma_nganh, n)
+            if options["chi_nguoi_moi"] and User.objects.filter(username=ma_sv).exists():
+                continue
+            email = f"{ma_sv}@student.tdmu.edu.vn"
+            user, _ = User.objects.update_or_create(
+                username=ma_sv,
+                defaults={
+                    "role": Role.SINH_VIEN,
+                    "first_name": ho_ten,
+                    "email": email,
+                    "is_locked": False,
+                    "is_active": True,
+                },
+            )
+            user.set_password(mat_khau)
+            user.save(update_fields=["password"])
+            StudentProfile.objects.update_or_create(
+                user=user,
+                defaults={
+                    "ma_sv": ma_sv,
+                    "ho_ten": ho_ten,
+                    "nganh": ctdt.nganh,
+                    "ctdt": ctdt,
+                    "khoa_nhap_hoc": khoa_ts,
+                    "email": email,
+                },
+            )
+            tong += 1
         self.stdout.write(f"Đã nạp {tong} sinh viên mẫu.")
