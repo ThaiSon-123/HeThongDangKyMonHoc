@@ -562,3 +562,21 @@ def test_task_celery_goi_service():
     from jobs.tasks import tuition_overdue_notify
 
     assert tuition_overdue_notify() == 0
+
+
+def test_bang_gia_loc_ap_dung_cho_gom_gia_moi_hoc_ky(kt):
+    hk1, hk2 = SemesterFactory(), SemesterFactory()
+    gia("MAC_DINH", 100)  # mọi học kỳ
+    gia("MAC_DINH", 200, hoc_ky=hk1)
+    gia("MAC_DINH", 300, hoc_ky=hk2)
+
+    def don_gia(query):
+        res = kt.get(f"/api/tuition/pricing/?{query}")
+        assert res.status_code == 200, res.data
+        return sorted(D(r["don_gia"]) for r in res.json()["results"])
+
+    assert don_gia(f"ap_dung_cho={hk1.id}") == [100, 200]
+    assert don_gia(f"ap_dung_cho={hk2.id}") == [100, 300]
+    assert don_gia(f"hoc_ky={hk1.id}") == [200]  # tham số cũ: đúng kỳ, không kèm giá chung
+    assert don_gia("") == [100, 200, 300]
+    assert kt.get("/api/tuition/pricing/?ap_dung_cho=abc").status_code == 400

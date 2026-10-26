@@ -249,6 +249,8 @@ class AvailableCoursesView(APIView):
         res.data["meta"] = {
             "hoc_ky": hoc_ky.id,
             "ten_hk": hoc_ky.ten_hk,
+            "ngay_bat_dau": hoc_ky.ngay_bat_dau,
+            "ngay_ket_thuc": hoc_ky.ngay_ket_thuc,
             "trong_cua_so": hoc_ky.trang_thai == TrangThaiHocKy.MO
             and hoc_ky.cua_so_dk_bat_dau <= now <= hoc_ky.cua_so_dk_ket_thuc,
             "tin_chi_toi_thieu": hoc_ky.tin_chi_toi_thieu,

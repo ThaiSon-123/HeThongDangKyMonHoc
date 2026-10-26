@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +11,7 @@ import '../../shared/widgets/status_chip.dart';
 import '../training/resource_list.dart';
 import '../training/training_api.dart';
 import '../training/training_widgets.dart' show monoStyle;
+import 'audit_mo_ta.dart';
 
 const _hanhDong = <(String, String)>[
   ('', 'Tất cả'),
@@ -26,43 +25,8 @@ const _hanhDong = <(String, String)>[
 String hanhDongLabel(String h) =>
     _hanhDong.firstWhere((e) => e.$1 == h, orElse: () => (h, h)).$2;
 
-const _tenDoiTuong = {
-  'Faculty': 'Khoa/viện',
-  'Major': 'Ngành',
-  'Curriculum': 'CTĐT',
-  'CurriculumCourse': 'Môn trong CTĐT',
-  'Course': 'Môn học',
-  'Prerequisite': 'Tiên quyết',
-  'Semester': 'Học kỳ',
-  'ClassSection': 'Lớp học phần',
-  'Schedule': 'Lịch học',
-  'Registration': 'Đăng ký',
-  'AttendanceSession': 'Buổi điểm danh',
-  'AttendanceRequest': 'Yêu cầu sửa điểm danh',
-  'Grade': 'Điểm',
-  'HocPhanGia': 'Bảng giá',
-  'TuitionConfig': 'Hạn đóng học phí',
-  'Discount': 'Miễn giảm',
-  'Payment': 'Thanh toán',
-  'Tuition': 'Học phí',
-  'Notification': 'Thông báo',
-  'User': 'Tài khoản',
-  'StudentProfile': 'Hồ sơ SV',
-  'TeacherProfile': 'Hồ sơ GV',
-};
-
-/// `ten_hanh_dong · k=v · k=v` — tóm tắt `chi_tiet` cho cột "Tóm tắt".
-String tomTat(Json log) {
-  final ct = log['chi_tiet'];
-  if (ct is! Map || ct.isEmpty) return '—';
-  final nguon = ct['serialized'] is Map ? ct['serialized'] as Map : ct;
-  final parts = <String>[
-    if (ct['hanh_dong'] != null) '${ct['hanh_dong']}',
-    for (final e in nguon.entries.where((e) => e.key != 'hanh_dong').take(3))
-      '${e.key}=${e.value}',
-  ];
-  return parts.isEmpty ? '—' : parts.join(' · ');
-}
+/// Mô tả thao tác bằng câu tiếng Việt cho cột "Tóm tắt" (xem `moTaNhatKy`).
+String tomTat(Json log) => moTaNhatKy(log);
 
 /// Nhật ký thao tác (ADM-06) — mockup `AD-Web-NhatKy`: Admin xem tất cả, PĐT chỉ phạm vi đào tạo,
 /// KT chỉ phạm vi tài chính (server tự lọc). Bấm một dòng để xem toàn bộ chi tiết.
@@ -124,7 +88,7 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
         children: [
           Text(
             '${r.str('nguoi_thuc_hien')} · ${hanhDongLabel(r.str('hanh_dong'))} · '
-            '${_tenDoiTuong[r.str('doi_tuong')] ?? r.str('doi_tuong')} #${r.str('doi_tuong_id')}',
+            '${tenDoiTuong[r.str('doi_tuong')] ?? r.str('doi_tuong')} #${r.str('doi_tuong_id')}',
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           Text(
@@ -140,8 +104,8 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: SelectableText(
-              const JsonEncoder.withIndent('  ').convert(r['chi_tiet']),
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              tomTat(r),
+              style: const TextStyle(fontSize: 14, height: 1.4),
             ),
           ),
         ],
@@ -240,7 +204,7 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
                 ),
               ),
               Text(
-                '${_tenDoiTuong[r.str('doi_tuong')] ?? r.str('doi_tuong')} #${r.str('doi_tuong_id')}',
+                '${tenDoiTuong[r.str('doi_tuong')] ?? r.str('doi_tuong')} #${r.str('doi_tuong_id')}',
                 style: monoStyle,
                 overflow: TextOverflow.ellipsis,
               ),

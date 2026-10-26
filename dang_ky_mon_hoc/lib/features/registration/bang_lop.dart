@@ -11,6 +11,7 @@ class DongLop {
     required this.giaoVien,
     required this.lich,
     required this.phong,
+    this.thoiGian,
     this.siSo,
     this.siSoToiDa,
     this.nhan,
@@ -22,6 +23,9 @@ class DongLop {
   final String giaoVien;
   final String lich;
   final String phong;
+
+  /// `07/09/2026 – 17/01/2027`; null = không hiện cột Thời gian học.
+  final String? thoiGian;
   final int? siSo;
   final int? siSoToiDa;
 
@@ -58,6 +62,7 @@ class BangLop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final coNut = dong.any((d) => d.hanhDong != null);
+    final coThoiGian = dong.any((d) => d.thoiGian != null);
     if (isCompact(context)) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,6 +80,7 @@ class BangLop extends StatelessWidget {
               cot(3, const Text('MÃ LỚP', style: _dau)),
               cot(3, const Text('GIÁO VIÊN', style: _dau)),
               cot(3, const Text('LỊCH HỌC', style: _dau)),
+              if (coThoiGian) cot(3, const Text('THỜI GIAN HỌC', style: _dau)),
               cot(2, const Text('PHÒNG', style: _dau)),
               cot(3, const Text('SĨ SỐ', style: _dau)),
               if (coNut) const SizedBox(width: 132),
@@ -105,6 +111,7 @@ class BangLop extends StatelessWidget {
                   ),
                   cot(3, Text(d.giaoVien)),
                   cot(3, Text(d.lich)),
+                  if (coThoiGian) cot(3, Text(d.thoiGian ?? '—')),
                   cot(2, Text(d.phong)),
                   cot(
                     3,
@@ -178,6 +185,11 @@ class BangLop extends StatelessWidget {
             '${d.lich} · ${d.phong}',
             style: const TextStyle(fontSize: 13, color: AppColors.muted),
           ),
+          if (d.thoiGian != null)
+            Text(
+              'Học: ${d.thoiGian}',
+              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
           if (d.siSo != null && d.siSoToiDa != null || d.hanhDong != null) ...[
             const SizedBox(height: 8),
             Row(

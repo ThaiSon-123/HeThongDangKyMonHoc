@@ -6,6 +6,7 @@ from apps.auth.models import Role
 from apps.training.models import KhoiKienThuc, Major
 from apps.tuition.models import (
     Discount,
+    HinhThucDong,
     HocPhanGia,
     LoaiThanhToan,
     Payment,
@@ -22,6 +23,32 @@ class TuitionConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = TuitionConfig
         fields = ["id", "hoc_ky", "ten_hk", "han_dong", "ghi_chu"]
+
+
+class InstallmentSerializer(serializers.Serializer):
+    thu_tu = serializers.IntegerField(min_value=1, max_value=3)
+    ty_le = serializers.DecimalField(
+        max_digits=5, decimal_places=2, min_value=Decimal("0.01"), max_value=Decimal(100)
+    )
+    han_dong = serializers.DateField()
+
+
+class InstallmentsPutSerializer(serializers.Serializer):
+    dots = InstallmentSerializer(many=True)
+
+    def validate_dots(self, dots):
+        if sorted(d["thu_tu"] for d in dots) != [1, 2, 3]:
+            raise serializers.ValidationError("Phải có đủ 3 đợt với thứ tự 1, 2, 3.")
+        dots = sorted(dots, key=lambda d: d["thu_tu"])
+        if sum(d["ty_le"] for d in dots) != 100:
+            raise serializers.ValidationError("Tổng tỷ lệ 3 đợt phải bằng 100%.")
+        if not dots[0]["han_dong"] < dots[1]["han_dong"] < dots[2]["han_dong"]:
+            raise serializers.ValidationError("Hạn đóng phải tăng dần theo đợt.")
+        return dots
+
+
+class InstallmentsSerializer(InstallmentsPutSerializer):
+    hoc_ky = serializers.IntegerField(read_only=True)
 
 
 class HocPhanGiaSerializer(serializers.ModelSerializer):
@@ -188,6 +215,7 @@ class TuitionRowSerializer(serializers.Serializer):
     con_no = serializers.DecimalField(**TIEN)
     can_hoan = serializers.DecimalField(**TIEN)
     hien_thi = serializers.CharField()
+    hinh_thuc = serializers.CharField()
     han_dong = serializers.DateField(allow_null=True)
     qua_han = serializers.BooleanField()
 
@@ -202,9 +230,47 @@ class HocKyCoHocPhiSerializer(serializers.Serializer):
     ten_hk = serializers.CharField()
 
 
+class DotMySerializer(serializers.Serializer):
+    thu_tu = serializers.IntegerField()
+    han_dong = serializers.DateField()
+    phai_nop = serializers.DecimalField(**TIEN)
+    luy_ke = serializers.DecimalField(**TIEN)
+    da_dong = serializers.BooleanField()
+
+
+class DotTiepTheoSerializer(serializers.Serializer):
+    thu_tu = serializers.IntegerField()
+    can_dong = serializers.DecimalField(**TIEN)
+
+
+class MyPlanSerializer(serializers.Serializer):
+    hinh_thuc = serializers.ChoiceField(choices=HinhThucDong.choices)
+
+
+class MyPaySerializer(serializers.Serializer):
+    muc = serializers.ChoiceField(choices=["DOT_TIEP", "TOAN_BO", "TUY_Y"])
+    so_tien = serializers.DecimalField(required=False, **TIEN)
+
+
+class MyPayResultSerializer(serializers.Serializer):
+    payment_url = serializers.CharField()
+    txn_ref = serializers.CharField()
+    so_tien = serializers.DecimalField(**TIEN)
+
+
+class MyPayStatusSerializer(serializers.Serializer):
+    txn_ref = serializers.CharField()
+    trang_thai = serializers.CharField()
+    so_tien = serializers.DecimalField(**TIEN)
+
+
 class MyTuitionSerializer(TuitionDetailSerializer):
     thanh_toan = ThanhToanSerializer()
-    cac_hoc_ky = HocKyCoHocPhiSerializer(many=True)  # kỳ tôi có học phí (+ kỳ đang xem), mới nhất trước
+    cac_dot = DotMySerializer(many=True)  # lịch 3 đợt nếu học kỳ đã cấu hình, ngược lại []
+    dot_tiep_theo = DotTiepTheoSerializer(allow_null=True)  # chỉ có khi CHIA_DOT
+    cac_hoc_ky = HocKyCoHocPhiSerializer(
+        many=True
+    )  # kỳ tôi có học phí (+ kỳ đang xem), mới nhất trước
 
 
 class CalculateResultSerializer(serializers.Serializer):

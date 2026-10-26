@@ -32,6 +32,9 @@ CONG_KHAI = {
     ("POST", "/api/auth/forgot-password/"),
     ("POST", "/api/auth/reset-password/"),
     ("GET", "/api/health/"),
+    # VNPay gọi về: không có token, chỉ chữ ký HMAC làm căn cứ
+    ("GET", "/api/tuition/vnpay/ipn/"),
+    ("GET", "/api/tuition/vnpay/return/"),
 }
 
 QUYEN = {
@@ -124,6 +127,9 @@ QUYEN = {
     ("GET", "/api/attendance/my/"): "S",
     ("GET", "/api/grades/my/"): "S",
     ("GET", "/api/tuition/my/"): "S",
+    ("PATCH", "/api/tuition/my/plan/"): "S",
+    ("POST", "/api/tuition/my/pay/"): "S",
+    ("GET", "/api/tuition/my/pay/{txn_ref}/"): "S",
     # --- PĐT theo dõi / hủy hộ
     ("GET", "/api/registrations/"): "P",
     ("GET", "/api/registrations/export/"): "P",
@@ -167,6 +173,8 @@ QUYEN = {
     ("GET", "/api/tuition/debts/"): "K",
     ("GET", "/api/tuition/students/"): "K",
     ("POST", "/api/tuition/calculate/"): "K",
+    ("GET", "/api/tuition/installments/"): "K",
+    ("PUT", "/api/tuition/installments/"): "K",
     ("GET", "/api/tuition/payments/"): "K",
     ("POST", "/api/tuition/payments/"): "K",
     ("GET", "/api/tuition/payments/{id}/receipt/"): "K",

@@ -1,5 +1,9 @@
 """Học phí (BR-15..18, BR-26): tính theo bảng giá, giá trị dẫn xuất, thu/hoàn tiền, công nợ quá hạn."""
 
+import logging
+import uuid
+from collections.abc import Mapping, Sequence
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import IntegrityError, transaction
@@ -7,25 +11,33 @@ from django.db.models import Q, Sum
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
+from apps.audit.models import AuditLog, HanhDong
 from apps.auth.models import Role, User
 from apps.config.models import SystemConfig
 from apps.notifications.models import Audience, Notification
 from apps.notifications.services import gui_cho_nguoi_dung
 from apps.profiles.models import StudentProfile
 from apps.registration.models import Registration, TrangThaiDangKy
-from apps.training.models import CurriculumCourse
+from apps.training.models import CurriculumCourse, Semester
+from apps.tuition import vnpay
 from apps.tuition.models import (
     Discount,
+    HinhThucDong,
     HocPhanGia,
     LoaiThanhToan,
+    OnlineTransaction,
     Payment,
+    PhuongThuc,
+    TrangThaiGiaoDich,
     TrangThaiHocPhi,
     Tuition,
     TuitionConfig,
+    TuitionInstallment,
 )
 from apps.tuition.pricing import tra_bang_gia
-from core.exceptions import Codes, business_error
+from core.exceptions import BusinessError, Codes, business_error
 
+log = logging.getLogger(__name__)
 D = Decimal
 HAI_SO = D("0.01")
 
@@ -175,6 +187,55 @@ def han_dong(hoc_ky_id):
     return cfg.han_dong if cfg else None
 
 
+def dot_cua_hoc_ky(hoc_ky_id):
+    """3 đợt đã cấu hình của học kỳ theo `thu_tu`; `[]` nếu chưa đủ 3 đợt."""
+    dots = list(TuitionInstallment.objects.filter(hoc_ky_id=hoc_ky_id).order_by("thu_tu"))
+    return dots if len(dots) == 3 else []
+
+
+def lich_dot(
+    phai_nop: Decimal, thuc_thu: Decimal, dots: Sequence[TuitionInstallment]
+) -> list[dict]:
+    """Lịch đợt dẫn xuất: `luy_ke` đợt n = phai_nop × Σ ty_le[1..n]/100 (đợt cuối = phai_nop).
+    Tiền chảy từ đợt 1 xuống: đợt n đã đóng khi `thuc_thu ≥ luy_ke`."""
+    lich, ty_le_luy_ke, luy_ke_truoc = [], D(0), D(0)
+    for i, d in enumerate(dots):
+        ty_le_luy_ke += D(d.ty_le)
+        luy_ke = phai_nop if i == len(dots) - 1 else _lam_tron(phai_nop * ty_le_luy_ke / 100)
+        lich.append(
+            {
+                "thu_tu": d.thu_tu,
+                "ty_le": D(d.ty_le),
+                "han_dong": d.han_dong,
+                "phai_nop": luy_ke - luy_ke_truoc,
+                "luy_ke": luy_ke,
+                "da_dong": thuc_thu >= luy_ke,
+            }
+        )
+        luy_ke_truoc = luy_ke
+    return lich
+
+
+def dot_tiep_theo(lich: list[dict], thuc_thu: Decimal):
+    """Đợt đầu tiên chưa đóng: `{"thu_tu", "can_dong"}`; `None` nếu đã đóng hết / không có lịch."""
+    for d in lich:
+        if not d["da_dong"]:
+            return {"thu_tu": d["thu_tu"], "can_dong": d["luy_ke"] - thuc_thu}
+    return None
+
+
+def han_va_qua_han(
+    hinh_thuc: str, dx: dict, han_mot_lan: date | None, lich: list[dict], hom_nay: date
+) -> tuple[date | None, bool]:
+    """Hạn đang áp dụng và cờ quá hạn. `CHIA_DOT` có lịch: hạn của đợt chưa đóng đầu tiên (đợt cuối
+    nếu đã đóng hết), quá hạn khi có đợt chưa đóng đã qua hạn. Còn lại: hạn một lần của học kỳ."""
+    if hinh_thuc == HinhThucDong.CHIA_DOT and lich:
+        chua = [d for d in lich if not d["da_dong"]]
+        han = (chua[0] if chua else lich[-1])["han_dong"]
+        return han, any(d["han_dong"] < hom_nay for d in chua)
+    return han_mot_lan, bool(han_mot_lan and hom_nay > han_mot_lan and dx["con_no"] > 0)
+
+
 # ----------------------------------------------------------------- thu / hoàn tiền (BR-26)
 
 
@@ -251,23 +312,133 @@ def thong_tin_chuyen_khoan(ho_so, hoc_ky):
     }
 
 
+def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip):
+    """Tạo `OnlineTransaction` `CHO` và URL VNPay. `muc`: `TOAN_BO` (toàn bộ `con_no`), `DOT_TIEP` (đợt
+    chưa đóng đầu tiên nếu đang `CHIA_DOT`, ngược lại toàn bộ), `TUY_Y` (`0 < so_tien ≤ con_no`).
+    Trả `(giao_dich, payment_url)`."""
+    if not vnpay.da_cau_hinh():
+        raise ValidationError({"vnpay": ["Chưa cấu hình cổng thanh toán VNPay."]})
+    t = Tuition.objects.filter(sinh_vien=sv_user, hoc_ky=hoc_ky).first()
+    if t is None or t.trang_thai != TrangThaiHocPhi.DA_TINH:
+        raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Học phí chưa được tính.")
+    dx = dan_xuat_cua(t)
+    con_no = dx["con_no"]
+    if con_no <= 0:
+        raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Bạn không còn công nợ học phí.")
+    if muc == "TUY_Y":
+        if so_tien is None or not 0 < so_tien <= con_no:
+            raise business_error(
+                Codes.SO_TIEN_KHONG_HOP_LE,
+                f"Số tiền phải lớn hơn 0 và không vượt công nợ ({con_no}).",
+            )
+    elif muc == "DOT_TIEP" and t.hinh_thuc == HinhThucDong.CHIA_DOT:
+        lich = lich_dot(dx["phai_nop"], dx["thuc_thu"], dot_cua_hoc_ky(hoc_ky.id))
+        tiep = dot_tiep_theo(lich, dx["thuc_thu"])
+        so_tien = min(tiep["can_dong"], con_no) if tiep else con_no
+    else:
+        so_tien = con_no
+    giao_dich = OnlineTransaction.objects.create(tuition=t, so_tien=so_tien)
+    order_info = f"HOCPHI {sv_user.sinh_vien.ma_sv} HK{hoc_ky.id}"
+    url = vnpay.tao_url(giao_dich.txn_ref.hex, so_tien, order_info, ip, timezone.now())
+    return giao_dich, url
+
+
+def xac_nhan_vnpay(params: Mapping[str, str]):
+    """Xử lý kết quả VNPay (dùng chung cho return URL và IPN). Trả `(RspCode, giao_dich | None)` theo mã
+    IPN: `97` sai chữ ký, `01` không thấy giao dịch, `04` sai số tiền, `02` đã xác nhận, `00` đã xử lý
+    (kể cả khi thanh toán thất bại hoặc `LOI`), `99` lỗi không lường trước. Idempotent theo `txn_ref`.
+    """
+    if not vnpay.kiem_chu_ky(params):
+        return "97", None
+    try:
+        ref = uuid.UUID(params.get("vnp_TxnRef", ""))
+    except ValueError:
+        return "01", None
+    try:
+        with transaction.atomic():
+            gd = (
+                OnlineTransaction.objects.select_for_update()
+                .select_related("tuition__sinh_vien")
+                .filter(txn_ref=ref)
+                .first()
+            )
+            if gd is None:
+                return "01", None
+            if int(params["vnp_Amount"]) != int(gd.so_tien * 100):
+                return "04", gd
+            if gd.trang_thai != TrangThaiGiaoDich.CHO:
+                return "02", gd
+            thanh_cong = (
+                params.get("vnp_ResponseCode") == "00"
+                and params.get("vnp_TransactionStatus") == "00"
+            )
+            gd.vnp_transaction_no = params.get("vnp_TransactionNo", "")[:30]
+            gd.ket_thuc_luc = timezone.now()
+            payment_id = None
+            if not thanh_cong:
+                gd.trang_thai = TrangThaiGiaoDich.THAT_BAI
+            else:
+                try:
+                    with transaction.atomic():
+                        p, _ = ghi_thanh_toan(
+                            gd.tuition.sinh_vien,
+                            gd.tuition_id,
+                            LoaiThanhToan.THU,
+                            gd.so_tien,
+                            PhuongThuc.VNPAY,
+                            gd.txn_ref,
+                        )
+                    gd.trang_thai, payment_id = TrangThaiGiaoDich.THANH_CONG, p.id
+                except (BusinessError, ValidationError):
+                    # con_no đã giảm trong lúc chờ: tiền đã vào nhưng không ghi được; KT xử lý tay
+                    gd.trang_thai = TrangThaiGiaoDich.LOI
+            gd.save()
+            AuditLog.objects.create(
+                user=gd.tuition.sinh_vien,
+                hanh_dong=HanhDong.UPDATE,
+                doi_tuong="OnlineTransaction",
+                doi_tuong_id=str(gd.id),
+                chi_tiet={
+                    "trang_thai": gd.trang_thai,
+                    "so_tien": str(gd.so_tien),
+                    "vnp_transaction_no": gd.vnp_transaction_no,
+                    "payment": payment_id,
+                },
+            )
+            return "00", gd
+    except Exception:
+        log.exception("Lỗi xử lý kết quả VNPay")
+        return "99", None
+
+
 # ----------------------------------------------------------------- job quá hạn (mục 7.8)
 
 
 def thong_bao_qua_han(hom_nay=None):
-    """Job `tuition_overdue_notify`: `Tuition` `DA_TINH` còn nợ và quá `han_dong` → báo SV (một lần mỗi
-    học kỳ) + một thông báo tổng hợp cho Kế toán khi có sinh viên mới. Idempotent. Trả số SV mới báo.
+    """Job `tuition_overdue_notify`: `Tuition` `DA_TINH` còn nợ và quá hạn (một lần hoặc theo đợt, xem
+    `han_va_qua_han`) → báo SV (một lần mỗi học kỳ) + một thông báo tổng hợp cho Kế toán khi có sinh
+    viên mới. Idempotent. Trả số SV mới báo.
     """
     hom_nay = hom_nay or timezone.localdate()
     moi = {}  # hoc_ky → số SV vừa báo
-    cfgs = TuitionConfig.objects.filter(han_dong__lt=hom_nay).select_related("hoc_ky")
-    for cfg in cfgs:
+    hoc_ky_ids = set(
+        TuitionConfig.objects.filter(han_dong__lt=hom_nay).values_list("hoc_ky_id", flat=True)
+    ) | set(
+        TuitionInstallment.objects.filter(han_dong__lt=hom_nay).values_list("hoc_ky_id", flat=True)
+    )
+    for hoc_ky in Semester.objects.filter(id__in=hoc_ky_ids):
+        han_mot_lan, dots = han_dong(hoc_ky.id), dot_cua_hoc_ky(hoc_ky.id)
         for t in Tuition.objects.filter(
-            hoc_ky=cfg.hoc_ky, trang_thai=TrangThaiHocPhi.DA_TINH
+            hoc_ky=hoc_ky, trang_thai=TrangThaiHocPhi.DA_TINH
         ).select_related("sinh_vien"):
-            if dan_xuat_cua(t)["con_no"] <= 0:
+            dx = dan_xuat_cua(t)
+            if dx["con_no"] <= 0:
                 continue
-            tieu_de = f"Học phí quá hạn — {cfg.hoc_ky.ten_hk}"
+            lich = lich_dot(dx["phai_nop"], dx["thuc_thu"], dots)
+            han, qua_han = han_va_qua_han(t.hinh_thuc, dx, han_mot_lan, lich, hom_nay)
+            if not qua_han:
+                continue
+            tieu_de = f"Học phí quá hạn — {hoc_ky.ten_hk}"
             if Notification.objects.filter(
                 tieu_de=tieu_de, audience=Audience.USER, target_refs=[t.sinh_vien_id]
             ).exists():
@@ -275,10 +446,10 @@ def thong_bao_qua_han(hom_nay=None):
             gui_cho_nguoi_dung(
                 t.sinh_vien,
                 tieu_de,
-                f"Học phí {cfg.hoc_ky.ten_hk} đã quá hạn đóng ({cfg.han_dong:%d/%m/%Y}). "
+                f"Học phí {hoc_ky.ten_hk} đã quá hạn đóng ({han:%d/%m/%Y}). "
                 "Vui lòng thanh toán sớm.",
             )
-            moi[cfg.hoc_ky] = moi.get(cfg.hoc_ky, 0) + 1
+            moi[hoc_ky] = moi.get(hoc_ky, 0) + 1
     kt_ids = list(
         User.objects.filter(role=Role.KE_TOAN, is_locked=False).values_list("id", flat=True)
     )

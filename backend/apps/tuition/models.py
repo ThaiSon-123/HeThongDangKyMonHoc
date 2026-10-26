@@ -1,5 +1,7 @@
 """Học phí (BR-15..18, BR-26). Tuition chỉ lưu tong_*; con_no/can_hoan/... dẫn xuất (plan.md mục 5)."""
 
+import uuid
+
 from django.conf import settings
 from django.db import models
 from django.db.models import BigIntegerField, CharField, Value
@@ -102,6 +104,11 @@ class TrangThaiHocPhi(models.TextChoices):
     DA_TINH = "DA_TINH", "Đã tính"
 
 
+class HinhThucDong(models.TextChoices):
+    MOT_LAN = "MOT_LAN", "Đóng một lần"
+    CHIA_DOT = "CHIA_DOT", "Chia 3 đợt"
+
+
 class Tuition(models.Model):
     sinh_vien = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hoc_phi"
@@ -111,6 +118,9 @@ class Tuition(models.Model):
     tong_tien = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     trang_thai = models.CharField(
         max_length=20, choices=TrangThaiHocPhi.choices, default=TrangThaiHocPhi.CHUA_TINH
+    )
+    hinh_thuc = models.CharField(
+        max_length=10, choices=HinhThucDong.choices, default=HinhThucDong.MOT_LAN
     )
 
     class Meta:
@@ -129,11 +139,35 @@ class PhuongThuc(models.TextChoices):
     TIEN_MAT = "TIEN_MAT", "Tiền mặt"
     CHUYEN_KHOAN = "CHUYEN_KHOAN", "Chuyển khoản"
     KHAC = "KHAC", "Khác"
+    VNPAY = "VNPAY", "VNPay"
 
 
 class LoaiThanhToan(models.TextChoices):
     THU = "THU", "Thu"
     HOAN = "HOAN", "Hoàn tiền"
+
+
+class TuitionInstallment(models.Model):
+    """Một trong 3 đợt đóng học phí của học kỳ (tỷ lệ % + hạn). Lịch đợt của từng SV là dẫn xuất."""
+
+    hoc_ky = models.ForeignKey(Semester, on_delete=models.CASCADE, related_name="dot_hoc_phi")
+    thu_tu = models.PositiveSmallIntegerField()
+    ty_le = models.DecimalField(max_digits=5, decimal_places=2)
+    han_dong = models.DateField()
+
+    class Meta:
+        verbose_name = "Đợt đóng học phí"
+        verbose_name_plural = "Đợt đóng học phí"
+        ordering = ["hoc_ky_id", "thu_tu"]
+        constraints = [
+            models.UniqueConstraint(fields=["hoc_ky", "thu_tu"], name="uniq_dot_hoc_ky_thu_tu"),
+            models.CheckConstraint(
+                condition=models.Q(thu_tu__gte=1, thu_tu__lte=3), name="ck_dot_thu_tu_1_3"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.hoc_ky_id} đợt {self.thu_tu} {self.ty_le}%"
 
 
 class Payment(models.Model):
@@ -160,3 +194,32 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.tuition_id} {self.so_tien}"
+
+
+class TrangThaiGiaoDich(models.TextChoices):
+    CHO = "CHO", "Chờ thanh toán"
+    THANH_CONG = "THANH_CONG", "Thành công"
+    THAT_BAI = "THAT_BAI", "Thất bại"
+    LOI = "LOI", "Lỗi cần xử lý"
+
+
+class OnlineTransaction(models.Model):
+    """Giao dịch VNPay đã khởi tạo; `txn_ref` (dạng hex) là `vnp_TxnRef` và `Payment.request_id`."""
+
+    txn_ref = models.UUIDField(unique=True, default=uuid.uuid4, editable=False)
+    tuition = models.ForeignKey(Tuition, on_delete=models.CASCADE, related_name="giao_dich_online")
+    so_tien = models.DecimalField(max_digits=14, decimal_places=2)
+    trang_thai = models.CharField(
+        max_length=12, choices=TrangThaiGiaoDich.choices, default=TrangThaiGiaoDich.CHO
+    )
+    vnp_transaction_no = models.CharField(max_length=30, blank=True)
+    tao_luc = models.DateTimeField(auto_now_add=True)
+    ket_thuc_luc = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Giao dịch VNPay"
+        verbose_name_plural = "Giao dịch VNPay"
+        ordering = ["-tao_luc"]
+
+    def __str__(self):
+        return f"{self.txn_ref.hex} {self.trang_thai}"

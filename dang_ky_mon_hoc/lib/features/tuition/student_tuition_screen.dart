@@ -1,17 +1,22 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/api/api_failure.dart';
 import '../../core/layout.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/alert_banner.dart';
 import '../../shared/widgets/app_button.dart';
-import '../../shared/widgets/app_toast.dart';
 import '../../shared/widgets/labeled_dropdown.dart';
 import '../../shared/widgets/labeled_field.dart';
+import '../admin/accounts/account_dialogs.dart' show failureText;
 import '../dashboard/dashboard_widgets.dart' show soNgayDen;
 import '../registration/timetable_screen.dart' show clockProvider;
 import '../reports/report_widgets.dart' show LuoiStat, StatCard;
@@ -452,9 +457,9 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
   );
 }
 
-/// Thanh toán học phí bằng chuyển khoản QR (SV-12) — mockup `SV-Web-ThanhToan`: chọn toàn bộ / một
-/// phần ≤ `con_no`, QR sinh ở client từ `tuition/my.thanh_toan`, sao chép thông tin. Học phí chỉ cập nhật
-/// khi Kế toán xác nhận đã nhận tiền.
+/// Thanh toán học phí qua VNPay (SV-12): chọn đóng một lần / chia 3 đợt (đổi được bất cứ lúc nào), xem lịch
+/// đợt, chọn mức thanh toán rồi quét QR (chứa `payment_url` của VNPay) hoặc mở trang thanh toán. Màn hình
+/// poll trạng thái giao dịch tới khi VNPay báo kết quả; học phí do backend tự cập nhật.
 class StudentPayScreen extends ConsumerStatefulWidget {
   const StudentPayScreen({super.key});
 
@@ -463,22 +468,100 @@ class StudentPayScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
-  late final Future<Json> _data = ref
-      .read(trainingApiProvider)
-      .get('/tuition/my/');
+  late Future<Json> _data = _fetch();
   final _amount = TextEditingController();
-  bool _full = true;
+  String? _muc; // null = mặc định theo dữ liệu (đợt tiếp theo nếu có, ngược lại toàn bộ)
+  Json?
+  _giaoDich; // `payment_url`, `txn_ref`, `so_tien` của mã đang chờ thanh toán
+  String? _ketQua; // THANH_CONG | THAT_BAI | LOI sau khi giao dịch kết thúc
+  String? _loi;
+  bool _dangTao = false;
+  bool _dangDoi = false;
+  Timer? _timer;
+
+  Future<Json> _fetch() => ref.read(trainingApiProvider).get('/tuition/my/');
+
+  void _reload() => setState(() {
+    _data = _fetch();
+  });
 
   @override
   void dispose() {
+    _timer?.cancel();
     _amount.dispose();
     super.dispose();
   }
 
-  Future<void> _copy(String label, String v) async {
-    await Clipboard.setData(ClipboardData(text: v));
-    if (mounted) showAppToast(context, 'Đã sao chép $label.');
+  Future<void> _doiHinhThuc(String hinhThuc) async {
+    setState(() {
+      _loi = null;
+      _dangDoi = true;
+    });
+    try {
+      await ref.read(trainingApiProvider).patch('/tuition/my/plan/', {
+        'hinh_thuc': hinhThuc,
+      });
+      _muc = null;
+      if (mounted) _reload();
+    } on ApiFailure catch (f) {
+      if (mounted) {
+        setState(() => _loi = failureText(f, 'Không đổi được hình thức đóng.'));
+      }
+    } finally {
+      if (mounted) setState(() => _dangDoi = false);
+    }
   }
+
+  Future<void> _taoMa(String muc, int? soTien) async {
+    setState(() {
+      _loi = null;
+      _ketQua = null;
+      _dangTao = true;
+    });
+    try {
+      final r = await ref.read(trainingApiProvider).create('/tuition/my/pay/', {
+        'muc': muc,
+        if (muc == 'TUY_Y') 'so_tien': soTien,
+      });
+      if (!mounted) return;
+      setState(() => _giaoDich = r);
+      _timer?.cancel();
+      _timer = Timer.periodic(const Duration(seconds: 3), (_) => _hoi());
+    } on ApiFailure catch (f) {
+      if (mounted) {
+        setState(() => _loi = failureText(f, 'Không tạo được mã thanh toán.'));
+      }
+    } finally {
+      if (mounted) setState(() => _dangTao = false);
+    }
+  }
+
+  Future<void> _hoi() async {
+    final gd = _giaoDich;
+    if (gd == null) return;
+    try {
+      final r = await ref
+          .read(trainingApiProvider)
+          .get('/tuition/my/pay/${gd.str('txn_ref')}/');
+      if (!mounted || r.str('trang_thai') == 'CHO') return;
+      _timer?.cancel();
+      setState(() {
+        _ketQua = r.str('trang_thai');
+        _giaoDich = null;
+      });
+      _reload();
+    } on ApiFailure {
+      // mạng chập chờn: lần poll sau thử lại
+    }
+  }
+
+  void _boMa() {
+    _timer?.cancel();
+    setState(() => _giaoDich = null);
+  }
+
+  Future<void> _moTrang(String url) =>
+      launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
 
   @override
   Widget build(BuildContext context) => FutureBuilder<Json>(
@@ -490,11 +573,201 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
       final d = snap.data;
       if (d == null) return const ListSkeleton();
       final conNo = vnd(d, 'con_no');
-      final tt = Json.from(d['thanh_toan'] as Map);
+      final hinhThuc = d.str('hinh_thuc');
+      final dots = [for (final e in d['cac_dot'] as List) Json.from(e as Map)];
+      final coDot = dots.isNotEmpty;
+      final dotTiep = d['dot_tiep_theo'] == null
+          ? null
+          : Json.from(d['dot_tiep_theo'] as Map);
+      final muc = switch (_muc) {
+        'DOT_TIEP' when dotTiep != null => 'DOT_TIEP',
+        'TUY_Y' => 'TUY_Y',
+        null when dotTiep != null => 'DOT_TIEP',
+        _ => 'TOAN_BO',
+      };
       final nhap = int.tryParse(_amount.text.trim());
-      final soTien = _full ? conNo : (nhap?.toDouble());
+      final soTien = switch (muc) {
+        'DOT_TIEP' => math.min(vnd(dotTiep!, 'can_dong'), conNo),
+        'TOAN_BO' => conNo,
+        _ => nhap?.toDouble(),
+      };
       final hopLe = soTien != null && soTien > 0 && soTien <= conNo;
-      final chuaCauHinh = tt.str('so_tai_khoan').isEmpty;
+      final cho = _giaoDich;
+      final cotTrai = <Widget>[
+        _Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                d.str('ten_hk'),
+                style: const TextStyle(color: AppColors.muted),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Công nợ hiện tại',
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+              Text(
+                formatVnd(conNo),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.navy,
+                ),
+              ),
+              const SizedBox(height: 14),
+              _tienDo(d),
+              if (conNo <= 0) ...[
+                const SizedBox(height: 10),
+                const AlertBanner(
+                  kind: BannerKind.info,
+                  message: 'Bạn không còn công nợ học phí.',
+                ),
+              ] else ...[
+                const SizedBox(height: 14),
+                const Text(
+                  'Hình thức đóng',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Đóng một lần'),
+                      selected: hinhThuc == 'MOT_LAN',
+                      onSelected: _dangDoi || hinhThuc == 'MOT_LAN'
+                          ? null
+                          : (_) => _doiHinhThuc('MOT_LAN'),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Chia 3 đợt'),
+                      selected: hinhThuc == 'CHIA_DOT',
+                      onSelected: !coDot || _dangDoi || hinhThuc == 'CHIA_DOT'
+                          ? null
+                          : (_) => _doiHinhThuc('CHIA_DOT'),
+                    ),
+                  ],
+                ),
+                if (!coDot)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Học kỳ này chưa cấu hình chia đợt.',
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+        if (coDot) ...[
+          const SizedBox(height: 16),
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Lịch 3 đợt',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+                const SizedBox(height: 10),
+                _tieuDeBang(),
+                const Divider(color: AppColors.divider, height: 12),
+                for (final dot in dots) _dongDot(dot),
+              ],
+            ),
+          ),
+        ],
+      ];
+      final cotPhai = <Widget>[
+        if (_ketQua != null) ...[
+          _bangKetQua(_ketQua!),
+          const SizedBox(height: 16),
+        ],
+        if (conNo > 0)
+          _Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Thanh toán qua VNPay',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Quét mã QR bằng điện thoại để mở trang thanh toán VNPay (môi trường thử nghiệm). '
+                  'Thanh toán xong, học phí được cập nhật tự động.',
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+                const SizedBox(height: 14),
+                if (cho == null) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      if (dotTiep != null)
+                        ChoiceChip(
+                          label: const Text('Đợt tiếp theo'),
+                          selected: muc == 'DOT_TIEP',
+                          onSelected: (_) => setState(() => _muc = 'DOT_TIEP'),
+                        ),
+                      ChoiceChip(
+                        label: const Text('Toàn bộ công nợ'),
+                        selected: muc == 'TOAN_BO',
+                        onSelected: (_) => setState(() => _muc = 'TOAN_BO'),
+                      ),
+                      ChoiceChip(
+                        label: const Text('Số tiền khác'),
+                        selected: muc == 'TUY_Y',
+                        onSelected: (_) => setState(() => _muc = 'TUY_Y'),
+                      ),
+                    ],
+                  ),
+                  if (muc == 'TUY_Y') ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: 300,
+                      child: LabeledField(
+                        label: 'Số tiền muốn thanh toán (₫)',
+                        controller: _amount,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        onChanged: (_) => setState(() {}),
+                        error: _amount.text.isNotEmpty && !hopLe
+                            ? 'Số tiền phải lớn hơn 0 và không vượt quá công nợ ${formatVnd(conNo)}.'
+                            : null,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  if (soTien != null && soTien > 0)
+                    Text(
+                      'Số tiền thanh toán: ${formatVnd(soTien)}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  if (_loi != null) ...[
+                    const SizedBox(height: 10),
+                    AlertBanner(kind: BannerKind.error, message: _loi!),
+                  ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: 240,
+                    child: AppButton(
+                      label: 'Tạo mã thanh toán',
+                      loading: _dangTao,
+                      onPressed: hopLe ? () => _taoMa(muc, nhap) : null,
+                    ),
+                  ),
+                ] else
+                  _khoiQr(cho),
+              ],
+            ),
+          ),
+      ];
+      final compact = isCompact(context);
       return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -506,152 +779,31 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
                 child: const Text('← Quay lại học phí'),
               ),
             ),
-            _Card(
-              child: Column(
+            if (compact)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [...cotTrai, const SizedBox(height: 16), ...cotPhai],
+              )
+            else
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    d.str('ten_hk'),
-                    style: const TextStyle(color: AppColors.muted),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Công nợ hiện tại',
-                    style: TextStyle(fontSize: 12, color: AppColors.muted),
-                  ),
-                  Text(
-                    formatVnd(conNo),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.navy,
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: cotTrai,
                     ),
                   ),
-                  if (conNo <= 0) ...[
-                    const SizedBox(height: 10),
-                    const AlertBanner(
-                      kind: BannerKind.info,
-                      message: 'Bạn không còn công nợ học phí.',
+                  const SizedBox(width: 24),
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: cotPhai,
                     ),
-                  ] else ...[
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        ChoiceChip(
-                          label: const Text('Toàn bộ công nợ'),
-                          selected: _full,
-                          onSelected: (_) => setState(() => _full = true),
-                        ),
-                        ChoiceChip(
-                          label: const Text('Một phần'),
-                          selected: !_full,
-                          onSelected: (_) => setState(() => _full = false),
-                        ),
-                      ],
-                    ),
-                    if (!_full) ...[
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: 300,
-                        child: LabeledField(
-                          label: 'Số tiền muốn thanh toán (₫)',
-                          controller: _amount,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          onChanged: (_) => setState(() {}),
-                          error: _amount.text.isNotEmpty && !hopLe
-                              ? 'Số tiền phải lớn hơn 0 và không vượt quá công nợ ${formatVnd(conNo)}.'
-                              : null,
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (conNo > 0)
-              _Card(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Quét mã QR để chuyển khoản',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Học phí chỉ được cập nhật sau khi Phòng Kế toán xác nhận đã nhận tiền (thường trong 1–2 ngày làm việc). '
-                      'Hãy giữ nguyên nội dung chuyển khoản để kế toán đối soát.',
-                      style: TextStyle(fontSize: 13, color: AppColors.muted),
-                    ),
-                    const SizedBox(height: 14),
-                    if (chuaCauHinh)
-                      const AlertBanner(
-                        kind: BannerKind.warning,
-                        message: 'Nhà trường chưa cấu hình tài khoản nhận chuyển khoản. Vui lòng thanh toán tại phòng Kế toán.',
-                      )
-                    else if (!hopLe)
-                      const Text(
-                        'Nhập số tiền hợp lệ để tạo mã QR.',
-                        style: TextStyle(color: AppColors.muted),
-                      )
-                    else
-                      Wrap(
-                        spacing: 24,
-                        runSpacing: 16,
-                        alignment: isCompact(context)
-                            ? WrapAlignment.center
-                            : WrapAlignment.start,
-                        children: [
-                          Semantics(
-                            label: 'Mã QR chuyển khoản',
-                            child: QrImageView(
-                              key: const ValueKey('qr'),
-                              data:
-                                  'Ngân hàng: ${tt.str('ngan_hang')}\nSTK: ${tt.str('so_tai_khoan')}\n'
-                                  'Chủ TK: ${tt.str('chu_tai_khoan')}\nSố tiền: ${soTien.round()}\n'
-                                  'Nội dung: ${tt.str('noi_dung_ck')}',
-                              size: 200,
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _copyRow('Ngân hàng', tt.str('ngan_hang')),
-                              _copyRow('Số tài khoản', tt.str('so_tai_khoan')),
-                              _copyRow(
-                                'Chủ tài khoản',
-                                tt.str('chu_tai_khoan'),
-                              ),
-                              _copyRow(
-                                'Số tiền',
-                                '${soTien.round()}',
-                                hien: formatVnd(soTien),
-                              ),
-                              _copyRow('Nội dung', tt.str('noi_dung_ck')),
-                              const Padding(
-                                padding: EdgeInsets.only(top: 6),
-                                child: Text(
-                                  'Mã QR minh họa — mã thật do ngân hàng cung cấp.',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.muted,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
               ),
           ],
         ),
@@ -659,35 +811,195 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
     },
   );
 
-  Widget _copyRow(String k, String v, {String? hien}) {
-    final compact = isCompact(context);
-    final gia = Text(
-      hien ?? v,
-      style: const TextStyle(fontWeight: FontWeight.w600),
+  /// Thanh tiến độ đã nộp / phải nộp (cùng kiểu với trang tổng hợp học phí).
+  Widget _tienDo(Json d) {
+    final phaiNop = vnd(d, 'phai_nop');
+    final thu = vnd(d, 'thuc_thu');
+    final tiLe = phaiNop > 0 ? (thu / phaiNop).clamp(0, 1).toDouble() : 0.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Đã nộp',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${formatVnd(thu)} / ${formatVnd(phaiNop)}',
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: tiLe,
+            minHeight: 8,
+            color: tiLe >= 1 ? AppColors.success : AppColors.primary,
+            backgroundColor: AppColors.divider,
+          ),
+        ),
+      ],
     );
-    // Điện thoại: giá trị chiếm phần còn lại của hàng (tự xuống dòng) để nút Sao chép không tràn.
+  }
+
+  Widget _tieuDeBang() {
+    const kieu = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.5,
+      color: AppColors.muted,
+    );
+    return const Row(
+      children: [
+        SizedBox(width: 56, child: Text('ĐỢT', style: kieu)),
+        Expanded(child: Text('HẠN ĐÓNG', style: kieu)),
+        Text('SỐ TIỀN', style: kieu),
+        SizedBox(
+          width: 96,
+          child: Text('TRẠNG THÁI', textAlign: TextAlign.right, style: kieu),
+        ),
+      ],
+    );
+  }
+
+  Widget _dongDot(Json dot) {
+    final xong = dot['da_dong'] == true;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
-        mainAxisSize: compact ? MainAxisSize.max : MainAxisSize.min,
         children: [
           SizedBox(
-            width: compact ? 92 : 110,
+            width: 56,
             child: Text(
-              k,
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              'Đợt ${dot.str('thu_tu')}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          if (compact)
-            Expanded(child: gia)
-          else
-            SizedBox(width: 200, child: gia),
-          TextButton(
-            onPressed: () => _copy(k.toLowerCase(), v),
-            child: const Text('Sao chép'),
+          Expanded(child: Text(formatYmd(dot.str('han_dong')))),
+          Text(
+            formatVnd(dot['phai_nop']),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          SizedBox(
+            width: 96,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: xong ? AppColors.successBg : AppColors.divider,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  xong ? 'Đã đóng' : 'Chưa đóng',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: xong ? AppColors.success : AppColors.muted,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _bangKetQua(String ketQua) => switch (ketQua) {
+    'THANH_CONG' => const AlertBanner(
+      kind: BannerKind.info,
+      message: 'Thanh toán thành công.',
+    ),
+    'LOI' => const AlertBanner(kind: BannerKind.error, message: _loiGhiHocPhi),
+    _ => const AlertBanner(
+      kind: BannerKind.warning,
+      message: 'Thanh toán không thành công.',
+    ),
+  };
+
+  Widget _khoiQr(Json gd) {
+    final url = gd.str('payment_url');
+    return Wrap(
+      spacing: 24,
+      runSpacing: 16,
+      alignment: isCompact(context)
+          ? WrapAlignment.center
+          : WrapAlignment.start,
+      children: [
+        Semantics(
+          label: 'Mã QR thanh toán VNPay',
+          child: QrImageView(key: ValueKey(url), data: url, size: 200),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Số tiền: ${formatVnd(gd['so_tien'])}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 260,
+              child: AppButton(
+                label: 'Mở trang thanh toán VNPay',
+                outlined: true,
+                onPressed: () => _moTrang(url),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Đang chờ thanh toán… (tự cập nhật khi VNPay báo kết quả)',
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
+            TextButton(onPressed: _boMa, child: const Text('Tạo mã khác')),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+const _loiGhiHocPhi =
+    'Đã nhận tiền nhưng chưa ghi được học phí, vui lòng liên hệ Phòng Kế toán.';
+
+/// Trang đích khi VNPay chuyển trình duyệt về (`/student/tuition/pay-result?status=`): hiện kết quả
+/// do backend ghi nhận rồi cho quay lại học phí.
+class StudentPayResultScreen extends StatelessWidget {
+  const StudentPayResultScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = GoRouterState.of(context).uri.queryParameters['status'];
+    final (kind, message) = switch (status) {
+      'thanh_cong' => (BannerKind.info, 'Thanh toán thành công.'),
+      'that_bai' => (BannerKind.warning, 'Thanh toán không thành công.'),
+      'loi' => (BannerKind.error, _loiGhiHocPhi),
+      _ => (BannerKind.error, 'Kết quả thanh toán không hợp lệ.'),
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AlertBanner(kind: kind, message: message),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => context.go('/student/tuition'),
+            child: const Text('← Quay lại học phí'),
+          ),
+        ),
+      ],
     );
   }
 }

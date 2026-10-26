@@ -70,7 +70,7 @@ void main() {
             ]),
         ],
       );
-      final r = goiY(v);
+      final r = goiY(v, toiDa: 3);
       expect(r, hasLength(3));
       for (final t in r) {
         expect(t.chon.keys.toSet(), {1, 2, 3, 4});
@@ -93,6 +93,34 @@ void main() {
         r.map((t) => t.idLop.toString()).toSet(),
         hasLength(3),
       ); // khác nhau
+    });
+
+    test('mặc định trả về mọi tổ hợp tìm được (không cắt ở 3); toiDa cắt đúng đầu danh sách', () {
+      final v = DauVao(
+        mon: [
+          for (var m = 1; m <= 4; m++)
+            mon(m, [
+              for (var k = 0; k < 6; k++)
+                lop(m, 'M$m-0$k', [
+                  Buoi(2 + k, 1 + 5 * (m % 2), 3 + 5 * (m % 2)),
+                ]),
+            ]),
+        ],
+      );
+      final tatCa = goiY(v);
+      expect(tatCa.length, greaterThan(3));
+      expect(tatCa.length, lessThanOrEqualTo(60)); // beam search giữ tối đa 60
+      final ba = goiY(v, toiDa: 3);
+      expect(ba, hasLength(3));
+      expect(
+        ba.map((t) => t.idLop.toString()).toList(),
+        tatCa.take(3).map((t) => t.idLop.toString()).toList(),
+      );
+      // Không tổ hợp nào bị lặp.
+      expect(
+        tatCa.map((t) => t.idLop.toString()).toSet(),
+        hasLength(tatCa.length),
+      );
     });
 
     test('điểm cơ bản: 70 + 4 khi học ≤ 4 ngày/tuần; lý do đúng', () {

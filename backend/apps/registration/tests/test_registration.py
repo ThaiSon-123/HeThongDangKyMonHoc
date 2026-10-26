@@ -450,6 +450,9 @@ def test_lop_co_the_dang_ky_loc_ctdt_cho_trong_trung_lich_va_meta(sv_api, sv, hk
         14,
     )
     assert meta["tin_chi_da_dang_ky"] == 3 and meta["bi_canh_bao_hoc_vu"] is False
+    # ngày bắt đầu/kết thúc của học kỳ: giao diện dùng khi lớp không có ngày riêng
+    assert meta["ngay_bat_dau"] == hk.ngay_bat_dau
+    assert meta["ngay_ket_thuc"] == hk.ngay_ket_thuc
 
 
 def test_available_hoc_ky_khong_hop_le_va_tim_kiem(sv_api, sv, hk):

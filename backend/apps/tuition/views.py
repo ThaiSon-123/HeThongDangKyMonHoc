@@ -2,13 +2,17 @@
 
 import uuid
 
+from django.conf import settings
+from django.db import transaction
 from django.db.models import Q
+from django.http import HttpResponseRedirect
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -21,16 +25,28 @@ from apps.training.services import chon_hoc_ky
 from apps.tuition import services
 from apps.tuition.models import (
     Discount,
+    HinhThucDong,
     HocPhanGia,
     LoaiThanhToan,
+    OnlineTransaction,
     Payment,
+    TrangThaiGiaoDich,
+    TrangThaiHocPhi,
     Tuition,
     TuitionConfig,
+    TuitionInstallment,
 )
 from apps.tuition.serializers import (
     CalculateResultSerializer,
     DiscountSerializer,
     HocPhanGiaSerializer,
+    InstallmentSerializer,
+    InstallmentsPutSerializer,
+    InstallmentsSerializer,
+    MyPayResultSerializer,
+    MyPaySerializer,
+    MyPayStatusSerializer,
+    MyPlanSerializer,
     MyTuitionSerializer,
     PaymentCreateSerializer,
     PaymentSerializer,
@@ -39,11 +55,12 @@ from apps.tuition.serializers import (
     TuitionDetailSerializer,
     TuitionRowSerializer,
 )
+from core.exceptions import Codes, business_error
 from core.export import XLSX, xlsx_response
 from core.mixins import AuditLogMixin, write_audit
 from core.pagination import StandardPagination
 from core.permissions import IsKeToan, IsSinhVien
-from core.utils import int_param
+from core.utils import client_ip, int_param
 
 HOC_KY = OpenApiParameter("hoc_ky", int, description="Mặc định: học kỳ hiện tại / `MO` gần nhất")
 
@@ -65,6 +82,42 @@ class TuitionConfigViewSet(_KtViewSet):
     ordering_fields = ["id", "han_dong"]
 
 
+class InstallmentsView(APIView):
+    """KT-01: 3 đợt đóng học phí của học kỳ — `GET`/`PUT /api/tuition/installments/?hoc_ky=`."""
+
+    permission_classes = [IsKeToan]
+
+    @staticmethod
+    def _tra(hoc_ky):
+        dots = TuitionInstallment.objects.filter(hoc_ky=hoc_ky).order_by("thu_tu")
+        return Response({"hoc_ky": hoc_ky.id, "dots": InstallmentSerializer(dots, many=True).data})
+
+    @extend_schema(parameters=[HOC_KY], responses=InstallmentsSerializer)
+    def get(self, request):
+        return self._tra(chon_hoc_ky(request.query_params.get("hoc_ky")))
+
+    @extend_schema(
+        parameters=[HOC_KY], request=InstallmentsPutSerializer, responses=InstallmentsSerializer
+    )
+    def put(self, request):
+        hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
+        s = InstallmentsPutSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        with transaction.atomic():
+            TuitionInstallment.objects.filter(hoc_ky=hoc_ky).delete()
+            TuitionInstallment.objects.bulk_create(
+                TuitionInstallment(hoc_ky=hoc_ky, **d) for d in s.validated_data["dots"]
+            )
+        write_audit(
+            request,
+            HanhDong.UPDATE,
+            "TuitionInstallment",
+            f"hk{hoc_ky.id}",
+            {"dots": InstallmentSerializer(s.validated_data["dots"], many=True).data},
+        )
+        return self._tra(hoc_ky)
+
+
 class PricingViewSet(_KtViewSet):
     """KT-02/03/04: bảng giá `HocPhanGia` (mặc định, khối kiến thức, ngành, giá TH). Sai thì xóa."""
 
@@ -75,6 +128,24 @@ class PricingViewSet(_KtViewSet):
     filterset_fields = ["hoc_ky", "pham_vi"]
     search_fields = ["tham_chieu"]
     ordering_fields = ["id", "don_gia"]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "ap_dung_cho",
+                int,
+                description="Học kỳ: giá của kỳ đó + giá 'mọi học kỳ' đang áp dụng",
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if hoc_ky := int_param(self.request, "ap_dung_cho"):
+            qs = qs.filter(Q(hoc_ky=hoc_ky) | Q(hoc_ky__isnull=True))
+        return qs
 
 
 class DiscountViewSet(_KtViewSet):
@@ -92,9 +163,11 @@ class DiscountViewSet(_KtViewSet):
 # ----------------------------------------------------------------- danh sách / chi tiết
 
 
-def _hang(t, discounts, han, hom_nay, chi_tiet=None, payments=None):
+def _hang(t, discounts, han, hom_nay, chi_tiet=None, payments=None, dots=()):
     ho_so = getattr(t.sinh_vien, "sinh_vien", None)
     dx = services.gia_tri_dan_xuat(t, discounts, t.payments.all())
+    lich = services.lich_dot(dx["phai_nop"], dx["thuc_thu"], dots)
+    han, qua_han = services.han_va_qua_han(t.hinh_thuc, dx, han, lich, hom_nay)
     out = {
         "id": t.id,
         "sinh_vien": t.sinh_vien_id,
@@ -108,8 +181,9 @@ def _hang(t, discounts, han, hom_nay, chi_tiet=None, payments=None):
         "tong_tien": t.tong_tien,
         "trang_thai": t.trang_thai,
         **dx,
+        "hinh_thuc": t.hinh_thuc,
         "han_dong": han,
-        "qua_han": bool(han and hom_nay > han and dx["con_no"] > 0),
+        "qua_han": qua_han,
     }
     if chi_tiet is not None:
         out["chi_tiet"] = chi_tiet
@@ -148,7 +222,8 @@ def _rows(qs, hoc_ky):
     for d in Discount.objects.filter(hoc_ky=hoc_ky):
         ds.setdefault(d.sinh_vien_id, []).append(d)
     han, hom_nay = services.han_dong(hoc_ky.id), timezone.localdate()
-    return [_hang(t, ds.get(t.sinh_vien_id, []), han, hom_nay) for t in qs]
+    dots = services.dot_cua_hoc_ky(hoc_ky.id)
+    return [_hang(t, ds.get(t.sinh_vien_id, []), han, hom_nay, dots=dots) for t in qs]
 
 
 def _phan_trang(request, rows, view):
@@ -237,6 +312,7 @@ class TuitionDetailView(APIView):
                     timezone.localdate(),
                     chi_tiet,
                     list(t.payments.all()),
+                    services.dot_cua_hoc_ky(t.hoc_ky_id),
                 )
             ).data
         )
@@ -382,10 +458,18 @@ class MyTuitionView(APIView):
         except Exception:  # chưa cấu hình giá: SV thấy CHUA_TINH
             chi_tiet = []
         ds = list(Discount.objects.filter(sinh_vien=user, hoc_ky=hoc_ky))
+        dots = services.dot_cua_hoc_ky(hoc_ky.id)
         if t.pk is None:
             row = _hang_chua_co(t, ds, hoc_ky, ho_so)
         else:
-            row = _hang(t, ds, services.han_dong(hoc_ky.id), timezone.localdate())
+            row = _hang(t, ds, services.han_dong(hoc_ky.id), timezone.localdate(), dots=dots)
+        lich = services.lich_dot(row["phai_nop"], row["thuc_thu"], dots)
+        row["cac_dot"] = lich
+        row["dot_tiep_theo"] = (
+            services.dot_tiep_theo(lich, row["thuc_thu"])
+            if row["hinh_thuc"] == HinhThucDong.CHIA_DOT
+            else None
+        )
         row["chi_tiet"] = chi_tiet
         row["payments"] = payments
         row["thanh_toan"] = services.thong_tin_chuyen_khoan(ho_so, hoc_ky)
@@ -398,6 +482,85 @@ class MyTuitionView(APIView):
             .values("id", "ten_hk")
         )
         return Response(MyTuitionSerializer(row).data)
+
+
+class MyPlanView(APIView):
+    """`PATCH /api/tuition/my/plan/?hoc_ky=`: SV đổi giữa đóng một lần / chia 3 đợt (đổi lúc nào cũng
+    được: lịch đợt là dẫn xuất nên `con_no` không đổi)."""
+
+    permission_classes = [IsSinhVien]
+
+    @extend_schema(parameters=[HOC_KY], request=MyPlanSerializer, responses=MyPlanSerializer)
+    def patch(self, request):
+        hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
+        s = MyPlanSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        hinh_thuc = s.validated_data["hinh_thuc"]
+        t = Tuition.objects.filter(sinh_vien=request.user, hoc_ky=hoc_ky).first()
+        if t is None or t.trang_thai != TrangThaiHocPhi.DA_TINH:
+            raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Học phí chưa được tính.")
+        if hinh_thuc == HinhThucDong.CHIA_DOT and not services.dot_cua_hoc_ky(hoc_ky.id):
+            raise business_error(
+                Codes.TRANG_THAI_KHONG_HOP_LE, "Học kỳ này chưa cấu hình chia đợt."
+            )
+        t.hinh_thuc = hinh_thuc
+        t.save(update_fields=["hinh_thuc"])
+        write_audit(
+            request,
+            HanhDong.UPDATE,
+            "Tuition",
+            t.id,
+            {"hanh_dong": "doi_hinh_thuc", "hinh_thuc": hinh_thuc},
+        )
+        return Response({"hinh_thuc": hinh_thuc})
+
+
+class MyPayView(APIView):
+    """`POST /api/tuition/my/pay/?hoc_ky=`: tạo giao dịch VNPay, trả `payment_url` để mở/quét QR."""
+
+    permission_classes = [IsSinhVien]
+
+    @extend_schema(
+        parameters=[HOC_KY], request=MyPaySerializer, responses={201: MyPayResultSerializer}
+    )
+    def post(self, request):
+        hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
+        s = MyPaySerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        giao_dich, url = services.tao_giao_dich_vnpay(
+            request.user,
+            hoc_ky,
+            s.validated_data["muc"],
+            s.validated_data.get("so_tien"),
+            client_ip(request),
+        )
+        write_audit(
+            request,
+            HanhDong.CREATE,
+            "OnlineTransaction",
+            giao_dich.id,
+            {"tuition": giao_dich.tuition_id, "so_tien": str(giao_dich.so_tien)},
+        )
+        data = {"payment_url": url, "txn_ref": giao_dich.txn_ref.hex, "so_tien": giao_dich.so_tien}
+        return Response(MyPayResultSerializer(data).data, status=201)
+
+
+class MyPayStatusView(APIView):
+    """`GET /api/tuition/my/pay/<txn_ref>/`: trạng thái giao dịch của tôi (người khác → `404`)."""
+
+    permission_classes = [IsSinhVien]
+
+    @extend_schema(responses=MyPayStatusSerializer)
+    def get(self, request, txn_ref):
+        try:
+            ref = uuid.UUID(txn_ref)
+        except ValueError:
+            raise NotFound("Không tìm thấy giao dịch.") from None
+        gd = OnlineTransaction.objects.filter(txn_ref=ref, tuition__sinh_vien=request.user).first()
+        if gd is None:
+            raise NotFound("Không tìm thấy giao dịch.")
+        data = {"txn_ref": gd.txn_ref.hex, "trang_thai": gd.trang_thai, "so_tien": gd.so_tien}
+        return Response(MyPayStatusSerializer(data).data)
 
 
 def _hang_chua_co(t, ds, hoc_ky, ho_so):
@@ -415,6 +578,59 @@ def _hang_chua_co(t, ds, hoc_ky, ho_so):
         "tong_tien": t.tong_tien,
         "trang_thai": t.trang_thai,
         **dx,
+        "hinh_thuc": t.hinh_thuc,
         "han_dong": services.han_dong(hoc_ky.id),
         "qua_han": False,
     }
+
+
+# ----------------------------------------------------------------- VNPay gọi về
+
+
+IPN_THONG_DIEP = {
+    "00": "Confirm Success",
+    "01": "Order not found",
+    "02": "Order already confirmed",
+    "04": "Invalid amount",
+    "97": "Invalid signature",
+    "99": "Unknown error",
+}
+
+
+def _tham_so_vnp(request):
+    return {k: v for k, v in request.query_params.items() if k.startswith("vnp_")}
+
+
+class _VnpayCallback(APIView):
+    authentication_classes: list = []  # VNPay / trình duyệt đã rời app: chỉ chữ ký làm căn cứ
+    permission_classes = [AllowAny]
+
+
+class VnpayIpnView(_VnpayCallback):
+    """`GET /api/tuition/vnpay/ipn/`: VNPay gọi server-to-server; trả `{RspCode, Message}`."""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        rsp, _ = services.xac_nhan_vnpay(_tham_so_vnp(request))
+        return Response({"RspCode": rsp, "Message": IPN_THONG_DIEP[rsp]})
+
+
+class VnpayReturnView(_VnpayCallback):
+    """`GET /api/tuition/vnpay/return/`: trình duyệt SV được VNPay chuyển về; ghi kết quả (cùng hàm với
+    IPN, idempotent) rồi chuyển tiếp tới trang kết quả của app."""
+
+    @extend_schema(responses={302: None})
+    def get(self, request):
+        rsp, gd = services.xac_nhan_vnpay(_tham_so_vnp(request))
+        if rsp == "97":
+            status = "sai_chu_ky"
+        elif gd is not None and rsp in ("00", "02"):
+            status = {
+                TrangThaiGiaoDich.THANH_CONG: "thanh_cong",
+                TrangThaiGiaoDich.THAT_BAI: "that_bai",
+                TrangThaiGiaoDich.LOI: "loi",
+            }.get(gd.trang_thai, "khong_hop_le")
+        else:
+            status = "khong_hop_le"
+        txn = gd.txn_ref.hex if gd is not None else ""
+        return HttpResponseRedirect(f"{settings.APP_RESULT_URL}?status={status}&txn={txn}")

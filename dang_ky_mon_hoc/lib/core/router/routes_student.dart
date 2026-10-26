@@ -75,8 +75,14 @@ const studentRoutes = RoleRoutes(
       '/student/tuition/pay',
       'Thanh toán học phí',
       subtitle:
-          'Chuyển khoản bằng mã QR — Phòng Kế toán xác nhận sau khi nhận tiền',
+          'Đóng một lần hoặc chia 3 đợt, quét mã QR để thanh toán qua VNPay',
       builder: StudentPayScreen.new,
+    ),
+    RouteDef(
+      '/student/tuition/pay-result',
+      'Kết quả thanh toán',
+      subtitle: 'Kết quả giao dịch VNPay',
+      builder: StudentPayResultScreen.new,
     ),
     RouteDef(
       '/student/notifications',

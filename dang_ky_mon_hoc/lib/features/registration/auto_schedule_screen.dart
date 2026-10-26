@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,14 +17,20 @@ import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
 import '../training/training_widgets.dart' show PanelCard;
 import 'auto_schedule_service.dart';
+import 'luoi_tkb_tuan.dart';
 import 'bang_lop.dart';
-import 'registration_format.dart' show loaiMonText, newIdempotencyKey;
+import 'loc_mon.dart';
+import 'registration_format.dart'
+    show loaiMonText, newIdempotencyKey, thoiGianHoc;
 
 /// Nghỉ giữa hai lần đăng ký liên tiếp để không vượt 30 lần/phút/người dùng (plan mục 8.2).
 /// Thay được trong test.
 final autoScheduleDelayProvider = Provider<Duration>(
   (ref) => const Duration(milliseconds: 2200),
 );
+
+/// Số thẻ tổ hợp dựng mỗi trang: dựng cả chục thẻ cùng lúc làm màn gợi ý giật.
+const _theMoiTrang = 6;
 
 class _Data {
   _Data(this.meta, this.lop, this.daDat, this.lichCoSan, this.monDaDangKy);
@@ -63,6 +71,7 @@ class AutoScheduleScreen extends ConsumerStatefulWidget {
 }
 
 class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
+  Json _meta = {}; // meta của lần tải gần nhất (ngày học kỳ…)
   late Future<_Data> _data = _fetch();
   int _buoc = 0; // 0 chọn môn · 1 tổ hợp · 2 kết quả
   bool _daChonSan = false;
@@ -80,6 +89,9 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
   DauVao? _dauVao;
   List<ToHop> _toHop = [];
   int? _toHopChon;
+  final _tim = TextEditingController();
+  int _kyCtdt = 0; // 0 = tất cả học kỳ trong CTĐT
+  int _trang = 0; // trang đang xem (từ 0) của danh sách tổ hợp
 
   // Bước 3
   List<_Dong> _dong = [];
@@ -116,7 +128,14 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
         lichCoSan.add(Buoi.fromJson(Json.from(b as Map)));
       }
     }
+    _meta = meta;
     return _Data(meta, lop, daDat, lichCoSan, monDaDangKy);
+  }
+
+  @override
+  void dispose() {
+    _tim.dispose();
+    super.dispose();
   }
 
   void _taiLai() {
@@ -129,6 +148,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       _gv.clear();
       _toHop = [];
       _toHopChon = null;
+      _trang = 0;
       _dong = [];
     });
   }
@@ -180,6 +200,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       _dauVao = v;
       _toHop = goiY(v);
       _toHopChon = null;
+      _trang = 0;
       _buoc = 1;
     });
   }
@@ -269,9 +290,15 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       for (final m in mon)
         // "Theo CTĐT": chỉ môn có trong chương trình đào tạo của mình.
         if ((_mode == 0 || m.kyGoiY != null) &&
-            !(_chuaHoc && d.daDat[m.id] == true))
+            !(_chuaHoc && d.daDat[m.id] == true) &&
+            (_kyCtdt == 0 || m.kyGoiY == _kyCtdt) &&
+            khopTuKhoa(_tim.text, [m.ten, for (final l in m.lop) l.maLop]))
           m,
     ];
+    final cacKy = ({
+      for (final m in mon)
+        if (m.kyGoiY != null) m.kyGoiY!,
+    }.toList()..sort());
     final tinChi = mon
         .where((m) => _chon.contains(m.id))
         .fold<int>(0, (s, m) => s + m.tinChi);
@@ -295,6 +322,14 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                 style: const TextStyle(fontSize: 13, color: AppColors.muted),
               ),
               const SizedBox(height: 16),
+              LocMon(
+                tim: _tim,
+                ky: _kyCtdt,
+                cacKy: cacKy,
+                onTim: (_) => setState(() {}),
+                onKy: (k) => setState(() => _kyCtdt = k),
+              ),
+              const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -458,6 +493,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                     giaoVien: l.giaoVien,
                     lich: l.lichText,
                     phong: l.phong,
+                    thoiGian: _thoiGian(d.meta, l),
                     siSo: l.siSo,
                     siSoToiDa: l.siSoToiDa,
                     mo: _gv[m.id] != null && l.giaoVienId != _gv[m.id],
@@ -472,6 +508,14 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       ),
     );
   }
+
+  /// Thời gian học của lớp; lớp chưa có ngày riêng thì theo học kỳ (meta của API).
+  String? _thoiGian(Json meta, Lop l) => thoiGianHoc(
+    l.ngayBatDau,
+    l.ngayKetThuc,
+    macDinhBatDau: meta['ngay_bat_dau'],
+    macDinhKetThuc: meta['ngay_ket_thuc'],
+  );
 
   Widget _uuTien() {
     const ngay = <(int, String)>[
@@ -626,15 +670,25 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           builder: (context, box) {
             final rong = box.maxWidth >= 900;
             final w = rong ? (box.maxWidth - 32) / 3 : box.maxWidth;
-            return Wrap(
-              spacing: 16,
-              runSpacing: 16,
+            final soTrang = (_toHop.length / _theMoiTrang).ceil();
+            final trang = _trang.clamp(0, soTrang - 1);
+            final dau = trang * _theMoiTrang;
+            final cuoi = math.min(_toHop.length, dau + _theMoiTrang);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final (i, t) in _toHop.indexed)
-                  SizedBox(
-                    width: rong ? w.clamp(300, 460).toDouble() : w,
-                    child: _theToHop(v, i, t),
-                  ),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    for (var i = dau; i < cuoi; i++)
+                      SizedBox(
+                        width: rong ? w.clamp(300, 460).toDouble() : w,
+                        child: _theToHop(v, i, _toHop[i]),
+                      ),
+                  ],
+                ),
+                if (soTrang > 1) _phanTrang(trang, soTrang, dau, cuoi),
               ],
             );
           },
@@ -653,6 +707,79 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       ],
     );
   }
+
+  Widget _phanTrang(int trang, int soTrang, int dau, int cuoi) => Padding(
+    padding: const EdgeInsets.only(top: 16),
+    child: Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      children: [
+        IconButton(
+          tooltip: 'Trang trước',
+          onPressed: trang > 0
+              ? () => setState(() => _trang = trang - 1)
+              : null,
+          icon: const Icon(Icons.chevron_left),
+        ),
+        Text(
+          'Trang ${trang + 1}/$soTrang · tổ hợp ${dau + 1}–$cuoi trong ${_toHop.length}',
+          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+        ),
+        IconButton(
+          tooltip: 'Trang sau',
+          onPressed: trang < soTrang - 1
+              ? () => setState(() => _trang = trang + 1)
+              : null,
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
+    ),
+  );
+
+  /// Hộp thoại nổi trên màn hình hiện tại: lưới tuần của tổ hợp [i] — lớp của tổ hợp (mỗi lớp một
+  /// màu) + lớp đã đăng ký (xám). Hộp thoại là modal nên dữ liệu không đổi khi đang mở.
+  Future<void> _xemTkb(DauVao v, int i) => showDialog<void>(
+    context: context,
+    builder: (ctx) => AppDialog(
+      title: 'Thời khóa biểu — Tổ hợp ${i + 1}',
+      maxWidth: 1100,
+      actions: [DialogButton('Đóng', onPressed: () => Navigator.of(ctx).pop())],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Lịch lặp hằng tuần. Ô xám là các lớp bạn đã đăng ký trong học kỳ.',
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          LuoiTkbTuan(
+            o: [
+              for (final b in v.lichCoSan)
+                OTkb(
+                  thu: b.thu,
+                  tietBatDau: b.tietBatDau,
+                  tietKetThuc: b.tietKetThuc,
+                  tieuDe: 'Đã đăng ký',
+                  xam: true,
+                ),
+              for (final (k, l) in _toHop[i].chon.values.indexed)
+                for (final b in l.lich)
+                  OTkb(
+                    thu: b.thu,
+                    tietBatDau: b.tietBatDau,
+                    tietKetThuc: b.tietKetThuc,
+                    tieuDe: l.tenMon,
+                    dong2: '${l.maLop} · ${l.phong}',
+                    dong3: 'GV ${l.giaoVien}',
+                    mau: k,
+                  ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _theToHop(DauVao v, int i, ToHop t) {
     final chon = _toHopChon == i;
@@ -726,6 +853,15 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
             style: const TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: AppButton(
+              label: 'Xem TKB',
+              height: 40,
+              outlined: true,
+              onPressed: t.chon.isEmpty ? null : () => _xemTkb(v, i),
+            ),
+          ),
           AppButton(
             label: chon ? 'Đã chọn tổ hợp này' : 'Chọn tổ hợp này',
             height: 44,
@@ -788,6 +924,11 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
             '${l.maLop} · GV ${l.giaoVien} · ${l.lichText}',
             style: const TextStyle(fontSize: 12, color: AppColors.muted),
           ),
+          if (_thoiGian(_meta, l) != null)
+            Text(
+              'Thời gian học: ${_thoiGian(_meta, l)}',
+              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
           if (khac.length > 1)
             DropdownButton<int>(
               isDense: true,

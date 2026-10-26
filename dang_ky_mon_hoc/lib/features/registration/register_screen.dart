@@ -14,6 +14,7 @@ import '../../shared/widgets/status_chip.dart';
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
 import 'bang_lop.dart';
+import 'loc_mon.dart';
 import 'registration_format.dart';
 
 const _regPath = '/registrations/';
@@ -48,11 +49,19 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   late Future<_RegData> _data = _fetch();
   int _tab = 0;
+  final _tim = TextEditingController();
+  int _kyCtdt = 0; // 0 = tất cả học kỳ trong CTĐT
   int _mode = 0; // 0 = tất cả môn đang mở, 1 = theo CTĐT (lọc theo kỳ)
   bool _chuaHoc = false;
   int? _hkLichSu; // lọc tab Lịch sử theo học kỳ (null = tất cả)
   String _ttLichSu = ''; // '' = tất cả · DA_DANG_KY · DA_HUY
   int? _busy; // id lớp / đăng ký đang gọi API
+
+  @override
+  void dispose() {
+    _tim.dispose();
+    super.dispose();
+  }
 
   Future<_RegData> _fetch() async {
     final api = ref.read(trainingApiProvider);
@@ -230,9 +239,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       for (final l in d.lop)
         // "Theo CTĐT": chỉ môn có trong chương trình đào tạo của mình.
         if ((_mode == 0 || l['hoc_ky_goi_y'] != null) &&
-            !(_chuaHoc && d.daDat[l.num0('mon_hoc')] == true))
+            !(_chuaHoc && d.daDat[l.num0('mon_hoc')] == true) &&
+            (_kyCtdt == 0 || l['hoc_ky_goi_y'] == _kyCtdt) &&
+            khopTuKhoa(_tim.text, [
+              l.str('ten_mon'),
+              l.str('ma_mon'),
+              l.str('ma_lop'),
+            ]))
           l,
     ];
+    final cacKy = ({
+      for (final l in d.lop)
+        if (l['hoc_ky_goi_y'] != null) l.num0('hoc_ky_goi_y'),
+    }.toList()..sort());
     final groups = <int, List<Json>>{};
     for (final l in lop) {
       groups.putIfAbsent(l.num0('mon_hoc'), () => []).add(l);
@@ -240,6 +259,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        LocMon(
+          tim: _tim,
+          ky: _kyCtdt,
+          cacKy: cacKy,
+          onTim: (_) => setState(() {}),
+          onKy: (k) => setState(() => _kyCtdt = k),
+        ),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -330,6 +357,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       giaoVien: l.str('giao_vien_ten'),
                       lich: lichText(l['lich_hoc'] as List),
                       phong: phongText(l['lich_hoc'] as List),
+                      thoiGian: thoiGianHoc(
+                        l['ngay_bat_dau'],
+                        l['ngay_ket_thuc'],
+                        macDinhBatDau: d.meta['ngay_bat_dau'],
+                        macDinhKetThuc: d.meta['ngay_ket_thuc'],
+                      ),
                       siSo: l.num0('si_so_hien_tai'),
                       siSoToiDa: l.num0('si_so_toi_da'),
                       hanhDong: AppButton(
