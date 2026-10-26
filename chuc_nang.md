@@ -333,7 +333,7 @@ SV chọn danh sách môn + ưu tiên (ngày/buổi/GV)
 
 > **MVP (Pha 1):** dùng **greedy** — sắp môn bắt buộc trước theo `hoc_ky_goi_y`, mỗi môn
 > chọn lớp đầu tiên không trùng lịch, scoring đơn giản (+điểm nếu không trùng buổi, +điểm
-> nếu tiết gần nhau). Trả về tối đa 3 tổ hợp. Tách `AutoScheduleService` (pure Dart, test
+> nếu tiết gần nhau). Trả về các tổ hợp tìm được (tối đa 60 do beam search). Tách `AutoScheduleService` (pure Dart, test
 > độc lập, không phụ thuộc Flutter).
 > **Nâng cấp (Pha 2):** backtracking với bảng điểm ưu tiên (tiết sáng/chiều, GV yêu thích, phòng
 > gần). Không cần sửa API, chỉ đổi thuật toán bên trong service.
