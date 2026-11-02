@@ -511,7 +511,8 @@ class _DonGiaState extends ConsumerState<_DonGia> {
     'GIA_TH': 'Thực hành',
   };
 
-  List<FieldSpec> _specs(String phamVi) => [
+  /// [nganh] = (mã ngành, nhãn) của các ngành để chọn — chỉ dùng khi phạm vi là Ngành.
+  List<FieldSpec> _specs(String phamVi, List<(Object, String)> nganh) => [
     const SelectSpec(
       'hoc_ky',
       'Học kỳ',
@@ -522,13 +523,7 @@ class _DonGiaState extends ConsumerState<_DonGia> {
       helper: 'Để trống = áp dụng cho mọi học kỳ.',
     ),
     if (phamVi == 'NGANH')
-      const TextSpec(
-        'tham_chieu',
-        'Mã ngành',
-        lockedOnEdit: true,
-        hint: 'VD: CNTT',
-        half: true,
-      ),
+      ChoiceSpec('tham_chieu', 'Ngành', nganh, lockedOnEdit: true, half: true),
     if (phamVi == 'KHOI_KIEN_THUC')
       ChoiceSpec(
         'tham_chieu',
@@ -547,13 +542,34 @@ class _DonGiaState extends ConsumerState<_DonGia> {
 
   Future<void> _form(String phamVi, [Json? row]) async {
     final api = ref.read(trainingApiProvider);
+    // Ngành chọn từ danh sách (không gõ tay); giá trị gửi lên vẫn là mã ngành.
+    var nganh = <(Object, String)>[];
+    if (phamVi == 'NGANH') {
+      try {
+        nganh = [
+          for (final n in await api.listAll('/majors/'))
+            (n.str('ma_nganh'), '${n.str('ma_nganh')} — ${n.str('ten_nganh')}'),
+        ];
+      } on ApiFailure catch (f) {
+        if (mounted) {
+          showAppToast(
+            context,
+            failureText(f, 'Không tải được danh sách ngành.'),
+          );
+        }
+        return;
+      }
+      final cu = row?.str('tham_chieu') ?? '';
+      if (cu.isNotEmpty && !nganh.any((n) => n.$1 == cu)) nganh.add((cu, cu));
+      if (!mounted) return;
+    }
     final saved = await showEntityForm(
       context,
       title: row == null ? 'Thêm đơn giá — ${_phamVi[phamVi]}' : 'Sửa đơn giá',
       note:
           'Cách tra giá: ưu tiên đơn giá của chính học kỳ, sau đó đơn giá chung. Trong mỗi nhóm: theo khối '
           'kiến thức, rồi theo ngành, rồi mặc định. Tín chỉ thực hành tính theo đơn giá thực hành nếu có.',
-      specs: _specs(phamVi),
+      specs: _specs(phamVi, nganh),
       initial: row,
       initialSelected: row == null || row['hoc_ky'] == null
           ? const {}

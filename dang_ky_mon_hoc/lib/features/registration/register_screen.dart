@@ -29,7 +29,25 @@ class _RegData {
   final Map<int, bool> daDat; // mon_hoc → đã đạt (từ CTĐT của tôi)
 
   bool get trongCuaSo => meta['trong_cua_so'] == true;
+
+  /// Câu nhắc nợ học phí quá hạn (null = được đăng ký).
+  String? get noQuaHan => meta['hoc_phi_qua_han'] as String?;
+  bool get duocDangKy => trongCuaSo && noQuaHan == null;
   int get hocKy => meta.num0('hoc_ky');
+
+  /// Mã môn đã học ở kỳ trước nhưng chưa đạt → đăng ký lần này là học lại.
+  Set<String> get monHocLai => {
+    for (final h in history)
+      if (h.str('trang_thai') == 'DA_DANG_KY' &&
+          h.num0('hoc_ky') != hocKy &&
+          daDatTheoMa[h.str('ma_mon')] != true)
+        h.str('ma_mon'),
+  };
+
+  Map<String, bool> get daDatTheoMa => {
+    for (final l in lop)
+      if (daDat[l.num0('mon_hoc')] == true) l.str('ma_mon'): true,
+  };
 
   List<Json> get dangKy => [
     for (final h in history)
@@ -50,9 +68,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   late Future<_RegData> _data = _fetch();
   int _tab = 0;
   final _tim = TextEditingController();
-  int _kyCtdt = 0; // 0 = tất cả học kỳ trong CTĐT
   int _mode = 0; // 0 = tất cả môn đang mở, 1 = theo CTĐT (lọc theo kỳ)
   bool _chuaHoc = false;
+  bool _chiDangKyDuoc =
+      false; // ẩn lớp có `ma_ly_do` (đã đạt, thiếu tiên quyết, đầy, trùng lịch)
   int? _hkLichSu; // lọc tab Lịch sử theo học kỳ (null = tất cả)
   String _ttLichSu = ''; // '' = tất cả · DA_DANG_KY · DA_HUY
   int? _busy; // id lớp / đăng ký đang gọi API
@@ -240,7 +259,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         // "Theo CTĐT": chỉ môn có trong chương trình đào tạo của mình.
         if ((_mode == 0 || l['hoc_ky_goi_y'] != null) &&
             !(_chuaHoc && d.daDat[l.num0('mon_hoc')] == true) &&
-            (_kyCtdt == 0 || l['hoc_ky_goi_y'] == _kyCtdt) &&
+            !(_chiDangKyDuoc && l['ma_ly_do'] != null) &&
             khopTuKhoa(_tim.text, [
               l.str('ten_mon'),
               l.str('ma_mon'),
@@ -248,10 +267,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ]))
           l,
     ];
-    final cacKy = ({
-      for (final l in d.lop)
-        if (l['hoc_ky_goi_y'] != null) l.num0('hoc_ky_goi_y'),
-    }.toList()..sort());
     final groups = <int, List<Json>>{};
     for (final l in lop) {
       groups.putIfAbsent(l.num0('mon_hoc'), () => []).add(l);
@@ -259,13 +274,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LocMon(
-          tim: _tim,
-          ky: _kyCtdt,
-          cacKy: cacKy,
-          onTim: (_) => setState(() {}),
-          onKy: (k) => setState(() => _kyCtdt = k),
-        ),
+        LocMon(tim: _tim, onTim: (_) => setState(() {})),
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
@@ -286,6 +295,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               label: const Text('Môn chưa học'),
               selected: _chuaHoc,
               onSelected: (v) => setState(() => _chuaHoc = v),
+            ),
+            FilterChip(
+              label: const Text('Chỉ lớp đăng ký được'),
+              selected: _chiDangKyDuoc,
+              onSelected: (v) => setState(() => _chiDangKyDuoc = v),
             ),
           ],
         ),
@@ -311,10 +325,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Widget _courseTile(_RegData d, List<Json> classes) {
     final c = classes.first;
-    final daDat = d.daDat[c.num0('mon_hoc')] == true;
-    // Môn đã đạt: làm mờ để phân biệt với môn còn học được.
+    // Lý do chung của cả môn (mọi lớp cùng lý do cấp môn: đã đạt / thiếu tiên quyết / đã đăng ký lớp khác).
+    final maMon = classes.map((l) => l['ma_ly_do']).toSet();
+    final lyDoMon =
+        maMon.length == 1 &&
+            const {
+              'DA_DAT_MON',
+              'THIEU_TIEN_QUYET',
+              'DA_DANG_KY_MON',
+            }.contains(maMon.first)
+        ? c.str('ma_ly_do')
+        : null;
+    final daDat = d.daDat[c.num0('mon_hoc')] == true || lyDoMon == 'DA_DAT_MON';
+    final hocLai = !daDat && d.monHocLai.contains(c.str('ma_mon'));
+    // Môn không đăng ký được: làm mờ để phân biệt với môn còn học được.
     return Opacity(
-      opacity: daDat ? 0.55 : 1,
+      opacity: daDat || lyDoMon != null ? 0.6 : 1,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: _Card(
@@ -339,6 +365,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     StatusChip.gray,
                   ),
                 if (daDat) StatusChip.of('Đã đạt', StatusChip.green),
+                if (hocLai) StatusChip.of('Học lại', StatusChip.orange),
+                if (lyDoMon == 'THIEU_TIEN_QUYET')
+                  StatusChip.of('Chưa đủ tiên quyết', StatusChip.red),
+                if (lyDoMon == 'DA_DANG_KY_MON')
+                  StatusChip.of('Đã đăng ký môn này', StatusChip.indigo),
+                if (lyDoMon != null && lyDoMon != 'DA_DAT_MON')
+                  Text(
+                    c.str('ly_do'),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.danger,
+                    ),
+                  ),
                 Text(
                   '${classes.length} lớp',
                   style: const TextStyle(fontSize: 13, color: AppColors.muted),
@@ -365,11 +404,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       siSo: l.num0('si_so_hien_tai'),
                       siSoToiDa: l.num0('si_so_toi_da'),
+                      // Lý do cấp lớp (đầy / trùng lịch) gắn ở dòng; lý do cấp môn đã ghi ở tiêu đề môn.
+                      nhan: l['ma_ly_do'] == null || lyDoMon != null
+                          ? null
+                          : Tooltip(
+                              message: l.str('ly_do'),
+                              child: StatusChip.of(
+                                l['ma_ly_do'] == 'LOP_DAY'
+                                    ? 'Lớp đầy'
+                                    : l['ma_ly_do'] == 'TRUNG_LICH'
+                                    ? l.str('ly_do')
+                                    : 'Không đăng ký được',
+                                StatusChip.red,
+                              ),
+                            ),
                       hanhDong: AppButton(
                         label: 'Đăng ký',
                         height: 40,
                         loading: _busy == l.id,
-                        onPressed: d.trongCuaSo && _busy == null
+                        onPressed:
+                            d.duocDangKy &&
+                                l['ma_ly_do'] == null &&
+                                _busy == null
                             ? () => _register(l)
                             : null,
                       ),
@@ -646,6 +702,14 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
+        if (d.noQuaHan != null) ...[
+          const SizedBox(height: 12),
+          AlertBanner(
+            kind: BannerKind.error,
+            title: 'Chưa đóng học phí quá hạn — không thể đăng ký môn.',
+            message: d.noQuaHan!,
+          ),
+        ],
         if (!d.trongCuaSo) ...[
           const SizedBox(height: 12),
           const AlertBanner(

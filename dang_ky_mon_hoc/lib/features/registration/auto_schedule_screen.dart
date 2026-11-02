@@ -20,6 +20,7 @@ import 'auto_schedule_service.dart';
 import 'luoi_tkb_tuan.dart';
 import 'bang_lop.dart';
 import 'loc_mon.dart';
+import 'timetable_screen.dart' show NhacHocPhi;
 import 'registration_format.dart'
     show loaiMonText, newIdempotencyKey, thoiGianHoc;
 
@@ -90,7 +91,6 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
   List<ToHop> _toHop = [];
   int? _toHopChon;
   final _tim = TextEditingController();
-  int _kyCtdt = 0; // 0 = tất cả học kỳ trong CTĐT
   int _trang = 0; // trang đang xem (từ 0) của danh sách tổ hợp
 
   // Bước 3
@@ -117,7 +117,10 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
     } on ApiFailure {
       // Chưa gán CTĐT: bỏ qua bộ lọc "Môn chưa học".
     }
-    final tkb = await api.get('/timetable/my/');
+    final tkb = await api.get(
+      '/timetable/my/',
+      query: {'hoc_ky': meta.num0('hoc_ky')},
+    );
     final lichCoSan = <Buoi>[];
     final monDaDangKy = <int>{};
     for (final l in tkb['lop_hoc_phan'] as List) {
@@ -255,6 +258,12 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
     builder: (context, snap) {
       if (snap.hasError) {
         final f = snap.error;
+        if (f is ApiFailure && f.code == 'HOC_PHI_QUA_HAN') {
+          return NhacHocPhi(
+            title: 'Chưa thể dùng thời khóa biểu tự động',
+            message: f.message ?? '',
+          );
+        }
         if (f is ApiFailure && f.fields.containsKey('hoc_ky')) {
           return const AlertBanner(
             kind: BannerKind.warning,
@@ -291,14 +300,9 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
         // "Theo CTĐT": chỉ môn có trong chương trình đào tạo của mình.
         if ((_mode == 0 || m.kyGoiY != null) &&
             !(_chuaHoc && d.daDat[m.id] == true) &&
-            (_kyCtdt == 0 || m.kyGoiY == _kyCtdt) &&
             khopTuKhoa(_tim.text, [m.ten, for (final l in m.lop) l.maLop]))
           m,
     ];
-    final cacKy = ({
-      for (final m in mon)
-        if (m.kyGoiY != null) m.kyGoiY!,
-    }.toList()..sort());
     final tinChi = mon
         .where((m) => _chon.contains(m.id))
         .fold<int>(0, (s, m) => s + m.tinChi);
@@ -322,13 +326,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                 style: const TextStyle(fontSize: 13, color: AppColors.muted),
               ),
               const SizedBox(height: 16),
-              LocMon(
-                tim: _tim,
-                ky: _kyCtdt,
-                cacKy: cacKy,
-                onTim: (_) => setState(() {}),
-                onKy: (k) => setState(() => _kyCtdt = k),
-              ),
+              LocMon(tim: _tim, onTim: (_) => setState(() {})),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,

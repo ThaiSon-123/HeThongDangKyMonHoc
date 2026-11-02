@@ -4,7 +4,7 @@ import pytest
 
 from apps.audit.models import AuditLog, HanhDong
 from apps.auth.models import Role
-from apps.training.models import TrangThaiDung
+from apps.training.models import CurriculumCourse, Prerequisite, TrangThaiDung
 from core.factories import (
     CourseFactory,
     CurriculumFactory,
@@ -180,6 +180,28 @@ def test_tien_quyet_chan_tu_tham_chieu_va_chu_trinh(pdt):
     assert kep.status_code == 201
     assert pdt.delete(f"/api/prerequisites/{kep.data['id']}/").status_code == 204
     assert pdt.patch(f"/api/prerequisites/{kep.data['id']}/", {}).status_code == 405
+
+
+def test_danh_sach_tien_quyet_kem_ten_va_loc_theo_khoa_ctdt_tim_kiem(pdt):
+    k1, k2 = FacultyFactory(), FacultyFactory()
+    nen = CourseFactory(khoa=k1, ma_mon="NEN1", ten_mon="Lập trình cơ bản")
+    sau = CourseFactory(khoa=k1, ma_mon="SAU1", ten_mon="Cấu trúc dữ liệu")
+    khac = CourseFactory(khoa=k2, ma_mon="KHAC1", ten_mon="Kinh tế vi mô")
+    Prerequisite.objects.create(mon_hoc=sau, mon_tien_quyet=nen)
+    Prerequisite.objects.create(mon_hoc=khac, mon_tien_quyet=nen)
+    ctdt = CurriculumFactory()
+    CurriculumCourse.objects.create(ctdt=ctdt, mon_hoc=sau)
+
+    def ma(q=""):
+        return [r["ma_mon"] for r in pdt.get(f"/api/prerequisites/{q}").data["results"]]
+
+    r = pdt.get("/api/prerequisites/").data["results"][0]
+    assert (r["ma_mon"], r["ten_mon"]) == ("KHAC1", "Kinh tế vi mô")  # xếp theo mã môn
+    assert r["ten_mon_tien_quyet"] == "Lập trình cơ bản"
+    assert ma(f"?mon_hoc__khoa={k1.id}") == ["SAU1"]
+    assert ma(f"?mon_hoc__mon_ctdt__ctdt={ctdt.id}") == ["SAU1"]
+    assert ma("?search=vi mô") == ["KHAC1"]
+    assert ma("?search=cơ bản") == ["KHAC1", "SAU1"]  # tìm cả theo môn tiên quyết
 
 
 def test_khoa_va_nganh_tra_so_luong_dang_hoat_dong(pdt):

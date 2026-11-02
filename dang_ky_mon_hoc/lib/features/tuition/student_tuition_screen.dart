@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -473,7 +474,7 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
   String? _muc; // null = mặc định theo dữ liệu (đợt tiếp theo nếu có, ngược lại toàn bộ)
   Json?
   _giaoDich; // `payment_url`, `txn_ref`, `so_tien` của mã đang chờ thanh toán
-  String? _ketQua; // THANH_CONG | THAT_BAI | LOI sau khi giao dịch kết thúc
+  Json? _ketQua; // giao dịch đã kết thúc: `trang_thai` (THANH_CONG | THAT_BAI | LOI), `so_tien`, `txn_ref`
   String? _loi;
   bool _dangTao = false;
   bool _dangDoi = false;
@@ -522,6 +523,8 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
       final r = await ref.read(trainingApiProvider).create('/tuition/my/pay/', {
         'muc': muc,
         if (muc == 'TUY_Y') 'so_tien': soTien,
+        // App điện thoại không mở được bản Web: VNPay trả về trang kết quả tĩnh của backend.
+        if (!kIsWeb) 'nguon': 'APP',
       });
       if (!mounted) return;
       setState(() => _giaoDich = r);
@@ -546,7 +549,7 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
       if (!mounted || r.str('trang_thai') == 'CHO') return;
       _timer?.cancel();
       setState(() {
-        _ketQua = r.str('trang_thai');
+        _ketQua = r;
         _giaoDich = null;
       });
       _reload();
@@ -682,7 +685,13 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
       ];
       final cotPhai = <Widget>[
         if (_ketQua != null) ...[
-          _bangKetQua(_ketQua!),
+          _KetQuaThanhToan(
+            ketQua: _ketQua!.str('trang_thai'),
+            soTien: _ketQua!['so_tien'],
+            txn: _ketQua!.str('txn_ref'),
+            onThuLai: () => setState(() => _ketQua = null),
+            onDong: () => setState(() => _ketQua = null),
+          ),
           const SizedBox(height: 16),
         ],
         if (conNo > 0)
@@ -916,18 +925,6 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
     );
   }
 
-  Widget _bangKetQua(String ketQua) => switch (ketQua) {
-    'THANH_CONG' => const AlertBanner(
-      kind: BannerKind.info,
-      message: 'Thanh toán thành công.',
-    ),
-    'LOI' => const AlertBanner(kind: BannerKind.error, message: _loiGhiHocPhi),
-    _ => const AlertBanner(
-      kind: BannerKind.warning,
-      message: 'Thanh toán không thành công.',
-    ),
-  };
-
   Widget _khoiQr(Json gd) {
     final url = gd.str('payment_url');
     return Wrap(
@@ -973,33 +970,245 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
 const _loiGhiHocPhi =
     'Đã nhận tiền nhưng chưa ghi được học phí, vui lòng liên hệ Phòng Kế toán.';
 
-/// Trang đích khi VNPay chuyển trình duyệt về (`/student/tuition/pay-result?status=`): hiện kết quả
-/// do backend ghi nhận rồi cho quay lại học phí.
-class StudentPayResultScreen extends StatelessWidget {
-  const StudentPayResultScreen({super.key});
+/// Thẻ kết quả giao dịch VNPay: biểu tượng lớn có hiệu ứng, số tiền và mã giao dịch. Dùng ở trang
+/// Thanh toán (khi poll thấy giao dịch kết thúc) và trang đích VNPay chuyển về.
+class _KetQuaThanhToan extends StatelessWidget {
+  const _KetQuaThanhToan({
+    required this.ketQua,
+    this.soTien,
+    this.txn,
+    required this.onThuLai,
+    this.onDong,
+  });
+
+  final String ketQua; // THANH_CONG | THAT_BAI | LOI | khác = không hợp lệ
+  final Object? soTien;
+  final String? txn;
+  final VoidCallback onThuLai;
+  final VoidCallback? onDong; // chỉ trang Thanh toán: ẩn thẻ
 
   @override
   Widget build(BuildContext context) {
-    final status = GoRouterState.of(context).uri.queryParameters['status'];
-    final (kind, message) = switch (status) {
-      'thanh_cong' => (BannerKind.info, 'Thanh toán thành công.'),
-      'that_bai' => (BannerKind.warning, 'Thanh toán không thành công.'),
-      'loi' => (BannerKind.error, _loiGhiHocPhi),
-      _ => (BannerKind.error, 'Kết quả thanh toán không hợp lệ.'),
+    final thanhCong = ketQua == 'THANH_CONG';
+    final (icon, mau, nen, tieuDe, moTa) = switch (ketQua) {
+      'THANH_CONG' => (
+        Icons.check_rounded,
+        AppColors.success,
+        AppColors.successBg,
+        'Thanh toán thành công!',
+        'Học phí của bạn đã được ghi nhận. Cảm ơn bạn đã hoàn thành nghĩa vụ học phí.',
+      ),
+      'THAT_BAI' => (
+        Icons.close_rounded,
+        AppColors.warnBannerText,
+        AppColors.warnBannerBg,
+        'Thanh toán không thành công',
+        'Giao dịch đã bị hủy hoặc không được chấp nhận. Bạn có thể tạo mã mới để thử lại.',
+      ),
+      'LOI' => (
+        Icons.priority_high_rounded,
+        AppColors.danger,
+        AppColors.errorBannerBg,
+        'Chưa ghi được học phí',
+        _loiGhiHocPhi,
+      ),
+      _ => (
+        Icons.question_mark_rounded,
+        AppColors.muted,
+        AppColors.divider,
+        'Kết quả thanh toán không hợp lệ',
+        'Không xác minh được giao dịch. Kiểm tra lại công nợ trong mục Học phí.',
+      ),
     };
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final ma = txn ?? '';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppColors.cardShadow,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [nen, Colors.white],
+          stops: const [0, 0.4],
+        ),
+      ),
+      child: Column(
+        children: [
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.elasticOut,
+            builder: (_, v, child) => Transform.scale(scale: v, child: child),
+            child: Container(
+              width: 96,
+              height: 96,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: mau.withValues(alpha: 0.14),
+              ),
+              child: Container(
+                width: 68,
+                height: 68,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: mau,
+                  boxShadow: [
+                    BoxShadow(
+                      color: mau.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, size: 40, color: Colors.white),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            tieuDe,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            moTa,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.muted,
+              height: 1.5,
+            ),
+          ),
+          if (soTien != null || ma.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                children: [
+                  if (soTien != null) ...[
+                    const Text(
+                      'Số tiền',
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      formatVnd(soTien),
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: thanhCong ? AppColors.success : AppColors.navy,
+                      ),
+                    ),
+                    const Divider(color: AppColors.divider, height: 24),
+                  ],
+                  _dongChiTiet('Phương thức', 'VNPay'),
+                  if (ma.isNotEmpty)
+                    _dongChiTiet(
+                      'Mã giao dịch',
+                      ma.length > 12 ? ma.substring(0, 12).toUpperCase() : ma,
+                    ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              SizedBox(
+                width: 200,
+                child: thanhCong
+                    ? AppButton(
+                        label: 'Xem học phí',
+                        onPressed: () => context.go('/student/tuition'),
+                      )
+                    : AppButton(label: 'Thanh toán lại', onPressed: onThuLai),
+              ),
+              SizedBox(
+                width: 200,
+                child: thanhCong && onDong != null
+                    ? AppButton(
+                        label: 'Đóng',
+                        outlined: true,
+                        onPressed: onDong,
+                      )
+                    : thanhCong
+                    ? AppButton(
+                        label: 'Thanh toán tiếp',
+                        outlined: true,
+                        onPressed: onThuLai,
+                      )
+                    : AppButton(
+                        label: 'Về trang học phí',
+                        outlined: true,
+                        onPressed: () => context.go('/student/tuition'),
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dongChiTiet(String nhan, String giaTri) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
       children: [
-        AlertBanner(kind: kind, message: message),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: () => context.go('/student/tuition'),
-            child: const Text('← Quay lại học phí'),
+        Text(nhan, style: const TextStyle(color: AppColors.muted)),
+        const Spacer(),
+        Text(giaTri, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ],
+    ),
+  );
+}
+
+/// Trang đích khi VNPay chuyển trình duyệt về (`/student/tuition/pay-result?status=&txn=`): hiện kết quả
+/// do backend ghi nhận (số tiền lấy theo mã giao dịch) rồi cho quay lại học phí.
+class StudentPayResultScreen extends ConsumerWidget {
+  const StudentPayResultScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final q = GoRouterState.of(context).uri.queryParameters;
+    final ketQua = switch (q['status']) {
+      'thanh_cong' => 'THANH_CONG',
+      'that_bai' => 'THAT_BAI',
+      'loi' => 'LOI',
+      _ => 'KHONG_HOP_LE',
+    };
+    final txn = q['txn'] ?? '';
+    return SingleChildScrollView(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: FutureBuilder<Json?>(
+            future: txn.isEmpty
+                ? Future.value()
+                : ref
+                      .read(trainingApiProvider)
+                      .get('/tuition/my/pay/$txn/')
+                      .then<Json?>((r) => r, onError: (_) => null),
+            builder: (context, snap) => _KetQuaThanhToan(
+              ketQua: ketQua,
+              soTien: snap.data?['so_tien'],
+              txn: txn,
+              onThuLai: () => context.go('/student/tuition/pay'),
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

@@ -316,6 +316,42 @@ void main() {
     );
   });
 
+  group('Kế toán — nhắc nợ qua mail', () {
+    testWidgets(
+      'nhắc một sinh viên gửi tuition_ids; nhắc hàng loạt gửi qua_han theo bộ lọc',
+      (t) async {
+        final api = ktApi({
+          'GET /tuition/debts/': (_) =>
+              reply(200, pageOf([tuitionRow(quaHan: true)])),
+          'POST /tuition/remind/?hoc_ky=7': (_) =>
+              reply(200, {'da_gui': 1, 'khong_co_email': 0}),
+          'POST /tuition/remind/': (_) =>
+              reply(200, {'da_gui': 12, 'khong_co_email': 2}),
+        });
+        await openKt(t, api, '/accountant/debts');
+
+        await tapText(t, 'Nhắc mail');
+        expect(find.textContaining('Trần Hoàng Nam'), findsWidgets);
+        await tapText(t, 'Gửi mail');
+        expect(api.bodies['POST /tuition/remind/?hoc_ky=7'], {
+          'tuition_ids': [5],
+        });
+        expect(find.text('Đã gửi 1 mail nhắc đóng học phí.'), findsOneWidget);
+
+        await tapText(t, 'Chỉ hiện quá hạn');
+        await tapText(t, 'Gửi mail nhắc nợ');
+        await tapText(t, 'Gửi mail');
+        expect(api.bodies['POST /tuition/remind/'], {'qua_han': true});
+        expect(
+          find.text(
+            'Đã gửi 12 mail nhắc đóng học phí (2 sinh viên chưa có email).',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  });
+
   group('Kế toán — cấu hình học phí', () {
     testWidgets(
       'đơn giá: thêm giá theo ngành gửi pham_vi + mã ngành; hạn đóng; miễn giảm xóa có xác nhận',
@@ -347,6 +383,13 @@ void main() {
             ]),
           ),
           'POST /tuition/pricing/': (_) => reply(201, {'id': 4}),
+          'GET /majors/': (_) => reply(
+            200,
+            pageOf([
+              {'id': 1, 'ma_nganh': 'CNTT', 'ten_nganh': 'Công nghệ thông tin'},
+              {'id': 2, 'ma_nganh': 'KTPM', 'ten_nganh': 'Kỹ thuật phần mềm'},
+            ]),
+          ),
           'GET /tuition/discounts/': (_) => reply(
             200,
             pageOf([
@@ -374,12 +417,16 @@ void main() {
         expect(find.text('Mọi học kỳ'), findsOneWidget);
         expect(find.text('100.000 ₫'), findsOneWidget);
         await tapText(t, '+ Giá ngành');
-        await enterField(t, 'Mã ngành', 'CNTT');
+        // chọn ngành từ danh sách (không còn ô gõ mã ngành)
+        expect(find.text('Mã ngành'), findsNothing);
+        await tapText(t, 'CNTT — Công nghệ thông tin');
+        await t.tap(find.text('KTPM — Kỹ thuật phần mềm').last);
+        await t.pumpAndSettle();
         await enterField(t, 'Đơn giá mỗi tín chỉ (₫)', '120000');
         await tapText(t, 'Lưu');
         expect(api.bodies['POST /tuition/pricing/'], {
           'hoc_ky': null,
-          'tham_chieu': 'CNTT',
+          'tham_chieu': 'KTPM',
           'don_gia': 120000,
           'pham_vi': 'NGANH',
         });
@@ -697,7 +744,11 @@ void main() {
       expect(find.text('300.000 ₫'), findsWidgets);
 
       await tapText(t, 'Tạo mã thanh toán');
-      expect(api.bodies['POST /tuition/my/pay/'], {'muc': 'DOT_TIEP'});
+      // test chạy ngoài web (như app điện thoại) → gửi kèm nguon=APP
+      expect(api.bodies['POST /tuition/my/pay/'], {
+        'muc': 'DOT_TIEP',
+        'nguon': 'APP',
+      });
       expect(
         find.byKey(const ValueKey('https://sandbox.vnpayment.vn/x')),
         findsOneWidget,
@@ -727,12 +778,16 @@ void main() {
         await t.pump(const Duration(seconds: 3));
         await t.pump();
         expect(
-          find.text('Thanh toán thành công.'),
+          find.text('Thanh toán thành công!'),
           findsNothing,
         ); // poll đầu vẫn CHO
         await t.pump(const Duration(seconds: 3));
         await t.pumpAndSettle();
-        expect(find.text('Thanh toán thành công.'), findsOneWidget);
+        expect(find.text('Thanh toán thành công!'), findsOneWidget);
+        expect(
+          find.text('1.000.000 ₫'),
+          findsWidgets,
+        ); // số tiền trên thẻ kết quả
         expect(find.byType(QrImageView), findsNothing);
         // học phí được tải lại đúng một lần sau khi giao dịch kết thúc (lần đầu + lần tải lại)
         expect(
@@ -764,6 +819,7 @@ void main() {
         expect(api.bodies['POST /tuition/my/pay/'], {
           'muc': 'TUY_Y',
           'so_tien': 400000,
+          'nguon': 'APP',
         });
       },
     );
@@ -799,10 +855,10 @@ void main() {
     testWidgets('trang kết quả: hiện đúng thông báo theo status', (t) async {
       final api = svApi({});
       const cases = {
-        'thanh_cong': 'Thanh toán thành công.',
-        'that_bai': 'Thanh toán không thành công.',
+        'thanh_cong': 'Thanh toán thành công!',
+        'that_bai': 'Thanh toán không thành công',
         'loi': 'Đã nhận tiền nhưng chưa ghi được học phí',
-        'xyz': 'Kết quả thanh toán không hợp lệ.',
+        'xyz': 'Kết quả thanh toán không hợp lệ',
       };
       await openStudent(
         t,

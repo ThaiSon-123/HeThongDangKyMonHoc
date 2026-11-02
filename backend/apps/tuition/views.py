@@ -5,8 +5,9 @@ import uuid
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
+from django.utils.html import format_html
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, viewsets
@@ -283,6 +284,38 @@ class TuitionDebtsView(APIView):
         return _phan_trang(request, rows, self)
 
 
+class TuitionRemindView(APIView):
+    """`POST /api/tuition/remind/?hoc_ky=` (KT): gửi mail nhắc đóng học phí. Body `{tuition_ids?: [...],
+    qua_han?: bool}`: có `tuition_ids` thì chỉ các dòng đó, không thì mọi SV còn nợ của học kỳ (chỉ quá hạn
+    nếu `qua_han`). Trả `{da_gui, khong_co_email}`."""
+
+    permission_classes = [IsKeToan]
+
+    @extend_schema(parameters=[HOC_KY], request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
+        qs = _tuition_qs(request, hoc_ky)
+        ids = request.data.get("tuition_ids")
+        if ids is not None:
+            if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
+                raise ValidationError({"tuition_ids": ["Danh sách id học phí không hợp lệ."]})
+            qs = qs.filter(id__in=ids)
+        rows = [r for r in _rows(qs, hoc_ky) if r["con_no"] > 0]
+        if request.data.get("qua_han") is True:
+            rows = [r for r in rows if r["qua_han"]]
+        if not rows:
+            raise ValidationError({"tuition_ids": ["Không có sinh viên nào còn nợ để nhắc."]})
+        da_gui, khong_email = services.gui_mail_nhac_no(rows)
+        write_audit(
+            request,
+            HanhDong.CREATE,
+            "Tuition",
+            hoc_ky.id,
+            {"hanh_dong": "nhac_no_qua_mail", "hoc_ky": hoc_ky.ten_hk, "so_mail": da_gui},
+        )
+        return Response({"da_gui": da_gui, "khong_co_email": khong_email})
+
+
 class TuitionDetailView(APIView):
     """`GET /api/tuition/{id}/` (KT): chi tiết từng môn + các lần thu/hoàn."""
 
@@ -472,7 +505,6 @@ class MyTuitionView(APIView):
         )
         row["chi_tiet"] = chi_tiet
         row["payments"] = payments
-        row["thanh_toan"] = services.thong_tin_chuyen_khoan(ho_so, hoc_ky)
         row["cac_hoc_ky"] = (
             Semester.objects.filter(
                 Q(id=hoc_ky.id)
@@ -533,6 +565,7 @@ class MyPayView(APIView):
             s.validated_data["muc"],
             s.validated_data.get("so_tien"),
             client_ip(request),
+            tu_app=s.validated_data["nguon"] == "APP",
         )
         write_audit(
             request,
@@ -615,9 +648,66 @@ class VnpayIpnView(_VnpayCallback):
         return Response({"RspCode": rsp, "Message": IPN_THONG_DIEP[rsp]})
 
 
+# Trang kết quả cho thanh toán từ app điện thoại: (biểu tượng, màu, tiêu đề, mô tả)
+TRANG_KET_QUA_APP = {
+    "thanh_cong": (
+        "✓",
+        "#2E7D32",
+        "Thanh toán thành công",
+        "Học phí đã được ghi nhận. Hãy quay lại ứng dụng để xem chi tiết.",
+    ),
+    "that_bai": (
+        "✕",
+        "#B26A00",
+        "Thanh toán không thành công",
+        "Giao dịch bị hủy hoặc không được chấp nhận. Hãy quay lại ứng dụng để thử lại.",
+    ),
+    "loi": (
+        "!",
+        "#C62828",
+        "Chưa ghi được học phí",
+        "Đã nhận tiền nhưng chưa ghi được học phí, vui lòng liên hệ Phòng Kế toán.",
+    ),
+}
+KHONG_HOP_LE_APP = (
+    "?",
+    "#6B7280",
+    "Kết quả không hợp lệ",
+    "Không xác minh được giao dịch. Hãy quay lại ứng dụng để kiểm tra công nợ.",
+)
+
+
+def _trang_ket_qua_app(status):
+    bieu_tuong, mau, tieu_de, mo_ta = TRANG_KET_QUA_APP.get(status, KHONG_HOP_LE_APP)
+    return format_html(
+        '<!doctype html><html lang="vi"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        "<title>{}</title></head>"
+        '<body style="margin:0;min-height:100vh;display:flex;align-items:center;'
+        "justify-content:center;background:#F4F5FA;font-family:Arial,sans-serif;padding:16px;"
+        'box-sizing:border-box">'
+        '<div style="max-width:380px;width:100%;background:#fff;border-radius:20px;'
+        'padding:36px 24px;text-align:center;box-shadow:0 2px 10px rgba(31,42,92,.08)">'
+        '<div style="width:72px;height:72px;margin:0 auto 20px;border-radius:50%;background:{};'
+        'color:#fff;font-size:38px;font-weight:700;line-height:72px">{}</div>'
+        '<h1 style="margin:0 0 10px;font-size:22px;color:#212121">{}</h1>'
+        '<p style="margin:0;color:#6B7280;font-size:15px;line-height:1.5">{}</p>'
+        '<p style="margin:24px 0 0;color:#9AA1B2;font-size:13px">Bạn có thể đóng trang này.</p>'
+        "</div></body></html>",
+        tieu_de,
+        mau,
+        bieu_tuong,
+        tieu_de,
+        mo_ta,
+    )
+
+
 class VnpayReturnView(_VnpayCallback):
     """`GET /api/tuition/vnpay/return/`: trình duyệt SV được VNPay chuyển về; ghi kết quả (cùng hàm với
-    IPN, idempotent) rồi chuyển tiếp tới trang kết quả của app."""
+    IPN, idempotent) rồi chuyển tiếp tới trang kết quả của app. `.../return/app/` (thanh toán từ app
+    điện thoại): ghi kết quả như trên nhưng trả trang HTML tĩnh, vì bản Web không mở được trên máy đó."""
+
+    cho_app = False
 
     @extend_schema(responses={302: None})
     def get(self, request):
@@ -632,5 +722,7 @@ class VnpayReturnView(_VnpayCallback):
             }.get(gd.trang_thai, "khong_hop_le")
         else:
             status = "khong_hop_le"
+        if self.cho_app:
+            return HttpResponse(_trang_ket_qua_app(status))
         txn = gd.txn_ref.hex if gd is not None else ""
         return HttpResponseRedirect(f"{settings.APP_RESULT_URL}?status={status}&txn={txn}")

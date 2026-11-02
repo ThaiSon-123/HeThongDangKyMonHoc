@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/api_failure.dart';
 import '../../core/theme/app_colors.dart';
-import '../../shared/widgets/alert_banner.dart';
-import '../../shared/widgets/app_button.dart';
 import 'entity_form.dart';
+import 'curriculums_screen.dart' show ctdtLabel;
 import 'majors_screen.dart' show khoaLabel;
 import 'resource_list.dart';
 import 'training_api.dart';
@@ -227,7 +225,8 @@ class _CourseListState extends ConsumerState<_CourseList> {
 }
 
 // ------------------------------------------------------------------ Tiên quyết
-/// Chọn một môn → xem/sửa các môn tiên quyết của nó. Server chặn tự tiên quyết và vòng (A → B → A).
+/// Mọi cặp tiên quyết đã thiết lập (môn → môn tiên quyết): tìm theo mã/tên môn, lọc theo khoa và CTĐT,
+/// thêm cặp mới, bỏ cặp. Server chặn tự tiên quyết và vòng (A → B → A).
 class _PrerequisitePanel extends ConsumerStatefulWidget {
   const _PrerequisitePanel();
 
@@ -236,153 +235,106 @@ class _PrerequisitePanel extends ConsumerStatefulWidget {
 }
 
 class _PrerequisitePanelState extends ConsumerState<_PrerequisitePanel> {
-  Json? _mon;
-  Json? _them;
-  int _addKey = 0;
-  String? _error;
-  late Future<List<Json>> _list = Future.value(const []);
-
-  void _reload() {
-    final mon = _mon;
-    final next = mon == null
-        ? Future.value(const <Json>[])
-        : ref
-              .read(trainingApiProvider)
-              .list(_prereqPath, pageSize: 50, query: {'mon_hoc': mon.id})
-              .then((p) => p.items);
-    setState(() {
-      _list = next;
-    });
-  }
-
-  Future<void> _add() async {
-    final mon = _mon, them = _them;
-    if (mon == null || them == null) return;
-    try {
-      await ref.read(trainingApiProvider).create(_prereqPath, {
-        'mon_hoc': mon.id,
-        'mon_tien_quyet': them.id,
-      });
-    } on ApiFailure catch (f) {
-      if (mounted) {
-        setState(
-          () => _error =
-              f.fields.values.firstOrNull ?? 'Không thêm được môn tiên quyết.',
-        );
-      }
-      return;
-    }
-    if (!mounted) return;
-    setState(() {
-      _error = null;
-      _them = null;
-      _addKey++;
-    });
-    _reload();
-  }
-
-  Future<void> _remove(Json p) async {
-    await runAction(
-      context,
-      () => ref.read(trainingApiProvider).delete(_prereqPath, p.id),
-      success: 'Đã bỏ môn tiên quyết.',
-      onDone: _reload,
-    );
-  }
+  final _ctl = ResourceListController();
 
   @override
-  Widget build(BuildContext context) => PanelCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 420,
-          child: ApiSelect(
-            label: 'Chọn môn cần thiết lập tiên quyết',
-            path: _path,
-            labelOf: monLabel,
-            onChanged: (o) {
-              _mon = o;
-              _them = null;
-              _error = null;
-              _addKey++;
-              _reload();
-            },
-          ),
-        ),
-        const SizedBox(height: 20),
-        if (_mon == null)
-          const Text(
-            'Chọn một môn ở trên để xem và chỉnh môn tiên quyết của môn đó.',
-            style: TextStyle(color: AppColors.muted, fontSize: 14),
-          )
-        else ...[
-          Text(
-            'Môn tiên quyết của ${_mon!.str('ten_mon')}',
-            style: sectionTitleStyle,
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Json>>(
-            future: _list,
-            builder: (context, snap) {
-              if (snap.hasError) {
-                return ListErrorCard(onRetry: _reload);
-              }
-              final items = snap.data;
-              if (items == null) return const ListSkeleton();
-              if (items.isEmpty) {
-                return const Text(
-                  'Môn này chưa có môn tiên quyết.',
-                  style: TextStyle(color: AppColors.muted, fontSize: 14),
-                );
-              }
-              return Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final p in items)
-                    InputChip(
-                      label: Text(p.str('ma_mon_tien_quyet')),
-                      deleteButtonTooltipMessage:
-                          'Bỏ ${p.str('ma_mon_tien_quyet')}',
-                      onDeleted: () => _remove(p),
-                    ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.end,
-            children: [
-              SizedBox(
-                width: 380,
-                child: ApiSelect(
-                  key: ValueKey('them-${_mon!.id}-$_addKey'),
-                  label: 'Thêm môn tiên quyết',
-                  path: _path,
-                  labelOf: monLabel,
-                  onChanged: (o) => _them = o,
-                ),
-              ),
-              SizedBox(
-                width: 120,
-                child: AppButton(label: 'Thêm', height: 44, onPressed: _add),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (_error != null)
-            AlertBanner(kind: BannerKind.error, message: _error!)
-          else
-            const Text(
-              'Không cho phép môn tự tiên quyết hoặc tạo vòng (A → B → A).',
-              style: TextStyle(fontSize: 12, color: AppColors.muted),
-            ),
-        ],
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _them() async {
+    final saved = await showEntityForm(
+      context,
+      title: 'Thêm môn tiên quyết',
+      note:
+          'Sinh viên phải đạt môn tiên quyết mới được đăng ký môn học. '
+          'Không cho phép môn tự tiên quyết hoặc tạo vòng (A → B → A).',
+      specs: const [
+        SelectSpec('mon_hoc', 'Môn học', _path, monLabel),
+        SelectSpec('mon_tien_quyet', 'Môn tiên quyết', _path, monLabel),
       ],
-    ),
+      submit: (body) => ref.read(trainingApiProvider).create(_prereqPath, body),
+    );
+    if (saved && mounted) _ctl.reload();
+  }
+
+  void _bo(Json p) => confirmAndRun(
+    context,
+    title: 'Bỏ môn tiên quyết?',
+    message:
+        'Bỏ ${p.str('ma_mon_tien_quyet')} khỏi tiên quyết của ${p.str('ten_mon')} (${p.str('ma_mon')})?',
+    actionLabel: 'Bỏ',
+    call: () => ref.read(trainingApiProvider).delete(_prereqPath, p.id),
+    success: 'Đã bỏ môn tiên quyết.',
+    onDone: _ctl.reload,
+  );
+
+  static Widget _mon(String ten, String ma) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        ten,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      Text(ma, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+    ],
+  );
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      ListToolbar(
+        children: [
+          SearchBox(
+            controller: _ctl,
+            label: 'Tìm theo mã / tên môn',
+            hint: 'Môn học hoặc môn tiên quyết',
+          ),
+          SizedBox(
+            width: 240,
+            child: ApiSelect(
+              label: 'Khoa / viện',
+              path: '/faculties/',
+              labelOf: khoaLabel,
+              hint: 'Tất cả khoa / viện',
+              onChanged: (o) => _ctl.setFilter('mon_hoc__khoa', o?.id),
+            ),
+          ),
+          SizedBox(
+            width: 220,
+            child: ApiSelect(
+              label: 'Chương trình đào tạo',
+              path: '/curriculums/',
+              labelOf: ctdtLabel,
+              hint: 'Tất cả CTĐT',
+              onChanged: (o) =>
+                  _ctl.setFilter('mon_hoc__mon_ctdt__ctdt', o?.id),
+            ),
+          ),
+          AddButton('+ Thêm tiên quyết', _them),
+        ],
+      ),
+      const SizedBox(height: 24),
+      ResourceList(
+        controller: _ctl,
+        path: _prereqPath,
+        emptyText: 'Chưa có môn tiên quyết nào.',
+        columns: const [
+          ListColumn('Môn học', flex: 3),
+          ListColumn('', width: 40),
+          ListColumn('Môn tiên quyết (phải đạt trước)', flex: 3),
+          ListColumn('', width: 100),
+        ],
+        cells: (r) => [
+          _mon(r.str('ten_mon'), r.str('ma_mon')),
+          const Icon(Icons.arrow_back, size: 18, color: AppColors.muted),
+          _mon(r.str('ten_mon_tien_quyet'), r.str('ma_mon_tien_quyet')),
+          RowActions([RowButton('Bỏ', () => _bo(r), danger: true)]),
+        ],
+      ),
+    ],
   );
 }

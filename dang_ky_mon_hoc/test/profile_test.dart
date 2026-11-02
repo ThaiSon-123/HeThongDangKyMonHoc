@@ -106,12 +106,11 @@ void main() {
   });
 
   group('Sửa email / số điện thoại', () {
-    testWidgets('lưu thành công: bỏ khoảng trắng sđt, báo toast', (t) async {
+    testWidgets('SV: ô email bị khóa, chỉ gửi sđt (bỏ khoảng trắng)', (
+      t,
+    ) async {
       final api = studentApi(
-        extra: {
-          'PATCH /profiles/me/': (_) =>
-              reply(200, {...studentProfile(), 'email': 'moi@truong.edu.vn'}),
-        },
+        extra: {'PATCH /profiles/me/': (_) => reply(200, studentProfile())},
       );
       await pumpApp(
         t,
@@ -122,18 +121,22 @@ void main() {
       goTo(t, '/student/profile');
       await t.pumpAndSettle();
 
-      await t.enterText(find.byType(TextField).at(0), 'moi@truong.edu.vn');
+      expect(
+        t.widget<TextField>(find.byType(TextField).at(0)).enabled,
+        isFalse,
+      );
+      expect(
+        find.textContaining('Email do Phòng đào tạo quản lý'),
+        findsOneWidget,
+      );
       await t.enterText(find.byType(TextField).at(1), '0987 654 321');
       await tapButton(t, 'Lưu thay đổi');
 
-      expect(find.text('Đã cập nhật email và số điện thoại.'), findsOneWidget);
-      expect(api.bodies['PATCH /profiles/me/'], {
-        'email': 'moi@truong.edu.vn',
-        'sdt': '0987654321',
-      });
+      expect(find.text('Đã cập nhật số điện thoại.'), findsOneWidget);
+      expect(api.bodies['PATCH /profiles/me/'], {'sdt': '0987654321'});
     });
 
-    testWidgets('email / sđt sai: báo dưới ô, không gọi API', (t) async {
+    testWidgets('sđt sai: báo dưới ô, không gọi API', (t) async {
       final api = studentApi();
       await pumpApp(
         t,
@@ -144,11 +147,9 @@ void main() {
       goTo(t, '/student/profile');
       await t.pumpAndSettle();
 
-      await t.enterText(find.byType(TextField).at(0), 'khong-phai-email');
       await t.enterText(find.byType(TextField).at(1), 'abc');
       await tapButton(t, 'Lưu thay đổi');
 
-      expect(find.text('Nhập email hợp lệ.'), findsOneWidget);
       expect(find.text('Số điện thoại không hợp lệ.'), findsOneWidget);
       expect(api.bodies.containsKey('PATCH /profiles/me/'), isFalse);
     });
@@ -157,7 +158,7 @@ void main() {
       final api = studentApi(
         extra: {
           'PATCH /profiles/me/': (_) => reply(400, {
-            'email': ['Email đã được dùng.'],
+            'sdt': ['Số điện thoại đã được dùng.'],
           }),
         },
       );
@@ -170,10 +171,10 @@ void main() {
       goTo(t, '/student/profile');
       await t.pumpAndSettle();
 
-      await t.enterText(find.byType(TextField).at(0), 'trung@truong.edu.vn');
+      await t.enterText(find.byType(TextField).at(1), '0987654321');
       await tapButton(t, 'Lưu thay đổi');
 
-      expect(find.text('Email đã được dùng.'), findsOneWidget);
+      expect(find.text('Số điện thoại đã được dùng.'), findsOneWidget);
     });
   });
 

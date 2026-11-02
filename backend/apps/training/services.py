@@ -102,6 +102,15 @@ def hoc_ky_mac_dinh():
     )
 
 
+def hoc_ky_dang_ky():
+    """Học kỳ để đăng ký môn / TKB tự động: kỳ `MO` mới nhất (đăng ký trước cho kỳ sau trong khi kỳ
+    hiện tại vẫn đang học); không có kỳ `MO` thì như `hoc_ky_mac_dinh`."""
+    return (
+        Semester.objects.filter(trang_thai=TrangThaiHocKy.MO).order_by("-ngay_bat_dau").first()
+        or hoc_ky_mac_dinh()
+    )
+
+
 def chon_hoc_ky(hoc_ky_id=None):
     """Học kỳ theo `?hoc_ky=` hoặc mặc định; không có thì ValidationError field `hoc_ky` (400)."""
     if hoc_ky_id:

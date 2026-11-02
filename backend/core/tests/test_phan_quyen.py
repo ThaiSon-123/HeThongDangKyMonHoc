@@ -35,6 +35,7 @@ CONG_KHAI = {
     # VNPay gọi về: không có token, chỉ chữ ký HMAC làm căn cứ
     ("GET", "/api/tuition/vnpay/ipn/"),
     ("GET", "/api/tuition/vnpay/return/"),
+    ("GET", "/api/tuition/vnpay/return/app/"),
 }
 
 QUYEN = {
@@ -56,9 +57,13 @@ QUYEN = {
     ("PATCH", "/api/users/{id}/"): "A",
     ("PATCH", "/api/users/{id}/lock/"): "A",
     ("POST", "/api/users/{id}/reset-password/"): "A",
+    ("GET", "/api/users/import-template/"): "A",
+    ("POST", "/api/users/import/"): "A",
     ("GET", "/api/admin/permissions/"): "A",
     ("GET", "/api/admin/config/"): "A",
     ("PATCH", "/api/admin/config/"): "A",
+    ("GET", "/api/pdt/config/"): "P",
+    ("PATCH", "/api/pdt/config/"): "P",
     ("GET", "/api/admin/backups/"): "A",
     ("POST", "/api/admin/backups/"): "A",
     ("GET", "/api/admin/audit-logs/"): "APK",
@@ -171,6 +176,7 @@ QUYEN = {
     ("GET", "/api/tuition/"): "K",
     ("GET", "/api/tuition/{id}/"): "K",
     ("GET", "/api/tuition/debts/"): "K",
+    ("POST", "/api/tuition/remind/"): "K",
     ("GET", "/api/tuition/students/"): "K",
     ("POST", "/api/tuition/calculate/"): "K",
     ("GET", "/api/tuition/installments/"): "K",

@@ -478,7 +478,8 @@ class _TuitionDetailDialogState extends ConsumerState<TuitionDetailDialog> {
 
 // =================================================================== Công nợ (KT-09)
 
-/// Công nợ (KT-09) — mockup `KT-Web-CongNo`: sinh viên còn nợ và đang chờ hoàn tiền.
+/// Công nợ (KT-09) — mockup `KT-Web-CongNo`: sinh viên còn nợ và đang chờ hoàn tiền; gửi mail nhắc đóng
+/// học phí cho từng sinh viên hoặc cả danh sách đang lọc (`POST /tuition/remind/`).
 class DebtsScreen extends ConsumerStatefulWidget {
   const DebtsScreen({super.key});
 
@@ -491,6 +492,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
   int _tab = 0; // 0 = còn nợ, 1 = chờ hoàn tiền
   bool _quaHan = false;
   Json? _hocKy;
+  bool _dangGui = false;
 
   @override
   void dispose() {
@@ -508,6 +510,43 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
         _hoan ? 'Đã ghi hoàn tiền.' : 'Đã ghi thu học phí.',
       );
       _ctl.reload();
+    }
+  }
+
+  /// [r] = một dòng (nhắc riêng SV đó); `null` = mọi SV còn nợ của học kỳ đang chọn (theo lọc quá hạn).
+  Future<void> _nhacNo([Json? r]) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Gửi mail nhắc đóng học phí',
+      message: r != null
+          ? 'Gửi mail nhắc ${r.str('ho_ten')} (${r.str('ma_sv')}) đóng ${formatVnd(r['con_no'])} học phí ${r.str('ten_hk')}?'
+          : 'Gửi mail nhắc tới tất cả sinh viên còn nợ${_quaHan ? ' đã quá hạn' : ''} '
+                'của ${_hocKy == null ? 'học kỳ hiện tại' : hocKyLabel(_hocKy!)}?',
+      actionLabel: 'Gửi mail',
+    );
+    if (!ok || !mounted) return;
+    setState(() => _dangGui = true);
+    try {
+      final hk = r?['hoc_ky'] ?? _hocKy?.id;
+      final res = await ref.read(trainingApiProvider).create(
+        hk == null ? '/tuition/remind/' : '/tuition/remind/?hoc_ky=$hk',
+        {
+          if (r != null) 'tuition_ids': [r.id] else 'qua_han': _quaHan,
+        },
+      );
+      if (!mounted) return;
+      final khong = res.num0('khong_co_email');
+      showAppToast(
+        context,
+        'Đã gửi ${res.num0('da_gui')} mail nhắc đóng học phí'
+        '${khong > 0 ? ' ($khong sinh viên chưa có email)' : ''}.',
+      );
+    } on ApiFailure catch (f) {
+      if (mounted) {
+        showAppToast(context, failureText(f, 'Không gửi được mail nhắc nợ.'));
+      }
+    } finally {
+      if (mounted) setState(() => _dangGui = false);
     }
   }
 
@@ -564,6 +603,17 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
                   _ctl.setFilter('qua_han', v ? '1' : null);
                 },
               ),
+            if (!_hoan)
+              SizedBox(
+                width: 230,
+                child: AppButton(
+                  label: 'Gửi mail nhắc nợ',
+                  height: 44,
+                  outlined: true,
+                  loading: _dangGui,
+                  onPressed: () => _nhacNo(),
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 24),
@@ -593,7 +643,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
             ListColumn('Số tiền', width: 140),
             ListColumn('Hạn đóng', width: 120),
             ListColumn('Số ngày trễ', width: 170),
-            ListColumn('', width: 120),
+            ListColumn('', width: 200),
           ],
           cells: (r) => [
             Column(
@@ -622,6 +672,8 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
                   )
                 : const Text('—'),
             RowActions([
+              if (!_hoan)
+                RowButton('Nhắc mail', _dangGui ? null : () => _nhacNo(r)),
               RowButton(_hoan ? 'Ghi hoàn' : 'Ghi thu', () => _pay(r)),
             ]),
           ],

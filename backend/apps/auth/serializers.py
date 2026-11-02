@@ -40,7 +40,10 @@ class ForgotPasswordSerializer(serializers.Serializer):
 
 
 class ResetPasswordSerializer(serializers.Serializer):
-    token = serializers.CharField()
+    email = serializers.EmailField()
+    code = serializers.RegexField(
+        r"^\d{6}$", error_messages={"invalid": "Mã xác thực gồm 6 chữ số."}
+    )
     new_password = serializers.CharField(trim_whitespace=False)
 
 

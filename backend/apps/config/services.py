@@ -25,28 +25,7 @@ def _so_nguyen(thap, cao=None):
     return kiem_tra
 
 
-def _chuoi(v):
-    s = " ".join(str(v).split())
-    if not s:
-        raise ValueError("Không được để trống.")
-    return s
-
-
-def _chu_so(v):
-    s = str(v).strip()
-    if not re.fullmatch(r"\d+", s):
-        raise ValueError("Chỉ gồm chữ số.")
-    return s
-
-
-def _chu_hoa_khong_dau(v):
-    s = " ".join(str(v).split())
-    if not re.fullmatch(r"[A-Z]+( [A-Z]+)*", s):
-        raise ValueError("Chữ in hoa không dấu, ví dụ NGUYEN VAN A.")
-    return s
-
-
-# (khóa, nhóm, mô tả, mặc định, hàm kiểm tra) — 7 khóa (design.md 9.3)
+# (khóa, nhóm, mô tả, mặc định, hàm kiểm tra). Ai sửa nhóm nào: xem NHOM_PDT / NHOM_ADMIN.
 CAU_HINH = [
     (
         "max_absent_pct",
@@ -76,53 +55,39 @@ CAU_HINH = [
         "30",
         _so_nguyen(1),
     ),
-    (
-        "ck_ngan_hang",
-        "Nhận chuyển khoản học phí",
-        "Ngân hàng nhận chuyển khoản học phí",
-        "",
-        _chuoi,
-    ),
-    (
-        "ck_so_tai_khoan",
-        "Nhận chuyển khoản học phí",
-        "Số tài khoản nhận học phí",
-        "",
-        _chu_so,
-    ),
-    (
-        "ck_chu_tai_khoan",
-        "Nhận chuyển khoản học phí",
-        "Chủ tài khoản (chữ in hoa không dấu)",
-        "",
-        _chu_hoa_khong_dau,
-    ),
 ]
 _THEO_KHOA = {c[0]: c for c in CAU_HINH}
+NHOM_PDT = ("Điểm danh", "Nhập điểm")  # quy chế đào tạo — Phòng đào tạo
+NHOM_ADMIN = ("Sao lưu",)  # kỹ thuật — Admin
 
 
-def doc_cau_hinh():
-    """7 khóa cấu hình kèm giá trị hiện tại (chưa đặt thì là mặc định) và lần sửa gần nhất."""
-    luu = {c.khoa: c for c in SystemConfig.objects.filter(khoa__in=_THEO_KHOA)}
+def khoa_cua(nhom):
+    return [c[0] for c in CAU_HINH if c[1] in nhom]
+
+
+def doc_cau_hinh(nhom):
+    """Các khóa cấu hình thuộc `nhom` kèm giá trị hiện tại (chưa đặt thì là mặc định)."""
+    luu = {c.khoa: c for c in SystemConfig.objects.filter(khoa__in=khoa_cua(nhom))}
     return [
         {
             "khoa": khoa,
-            "nhom": nhom,
+            "nhom": ten_nhom,
             "mo_ta": mo_ta,
             "mac_dinh": mac_dinh,
             "gia_tri": luu[khoa].gia_tri if khoa in luu else mac_dinh,
             "cap_nhat_luc": luu[khoa].cap_nhat_luc if khoa in luu else None,
         }
-        for khoa, nhom, mo_ta, mac_dinh, _ in CAU_HINH
+        for khoa, ten_nhom, mo_ta, mac_dinh, _ in CAU_HINH
+        if ten_nhom in nhom
     ]
 
 
-def sua_lan_cuoi():
-    """`{boi, luc}` của lần sửa cấu hình gần nhất (lấy từ audit log), chưa sửa lần nào → None."""
+def sua_lan_cuoi(nhom):
+    """`{boi, luc}` của lần sửa gần nhất các khóa thuộc `nhom` (lấy từ audit log), chưa sửa → None."""
     from apps.audit.models import AuditLog
 
     log = (
-        AuditLog.objects.filter(doi_tuong="SystemConfig")
+        AuditLog.objects.filter(doi_tuong="SystemConfig", doi_tuong_id__in=khoa_cua(nhom))
         .select_related("user")
         .order_by("-thoi_gian")
         .first()
@@ -132,12 +97,13 @@ def sua_lan_cuoi():
     return {"boi": log.user.username if log.user else "", "luc": log.thoi_gian}
 
 
-def cap_nhat_cau_hinh(du_lieu):
-    """Kiểm tra rồi lưu các khóa trong `du_lieu`. Trả `(lỗi, thay_đổi)`: nếu có lỗi thì **không lưu gì**.
+def cap_nhat_cau_hinh(du_lieu, nhom):
+    """Kiểm tra rồi lưu các khóa trong `du_lieu` (chỉ khóa thuộc `nhom`). Trả `(lỗi, thay_đổi)`: có lỗi
+    thì **không lưu gì**.
     `thay_đổi` = `[(khóa, giá_trị_cũ, giá_trị_mới)]` chỉ gồm khóa thật sự đổi (để ghi audit log)."""
     loi, moi = {}, {}
     for khoa, v in du_lieu.items():
-        if khoa not in _THEO_KHOA:
+        if khoa not in khoa_cua(nhom):
             loi[khoa] = ["Không có khóa cấu hình này."]
             continue
         try:
@@ -146,7 +112,7 @@ def cap_nhat_cau_hinh(du_lieu):
             loi[khoa] = [str(e)]
     if loi:
         return loi, []
-    hien_tai = {c["khoa"]: c["gia_tri"] for c in doc_cau_hinh()}
+    hien_tai = {c["khoa"]: c["gia_tri"] for c in doc_cau_hinh(nhom)}
     thay_doi = [(k, hien_tai[k], v) for k, v in moi.items() if hien_tai[k] != v]
     for khoa, _, gia_tri in thay_doi:
         SystemConfig.objects.update_or_create(

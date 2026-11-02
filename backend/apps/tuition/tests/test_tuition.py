@@ -11,7 +11,6 @@ from openpyxl import load_workbook
 
 from apps.audit.models import AuditLog
 from apps.auth.models import Role
-from apps.config.models import SystemConfig
 from apps.notifications.models import Notification
 from apps.registration.models import Registration
 from apps.training.models import CurriculumCourse, TrangThaiLop
@@ -458,7 +457,7 @@ def test_bien_lai_excel(kt):
 # --------------------------------------------------------------- tuition/my (SV-12)
 
 
-def test_tuition_my_chi_tiet_giao_dich_va_thong_tin_chuyen_khoan(login_as, kt):
+def test_tuition_my_chi_tiet_giao_dich(login_as, kt):
     hk = SemesterFactory()
     ctdt = CurriculumFactory()
     sv = StudentProfileFactory(nganh=ctdt.nganh, ctdt=ctdt)
@@ -466,12 +465,6 @@ def test_tuition_my_chi_tiet_giao_dich_va_thong_tin_chuyen_khoan(login_as, kt):
     dang_ky(sv, ClassSectionFactory(hoc_ky=hk, mon_hoc=mon, trang_thai=TrangThaiLop.MO))
     gia("MAC_DINH", 100000)
     tinh_hoc_phi(sv.user, hk)
-    for khoa, v in (
-        ("ck_ngan_hang", "Vietcombank"),
-        ("ck_so_tai_khoan", "0123456789"),
-        ("ck_chu_tai_khoan", "TRUONG DAI HOC X"),
-    ):
-        SystemConfig.objects.create(khoa=khoa, gia_tri=v)
     Discount.objects.create(sinh_vien=sv.user, hoc_ky=hk, loai="HOC_BONG", ty_le=D(10))
     Payment.objects.create(
         tuition=Tuition.objects.get(),
@@ -503,9 +496,7 @@ def test_tuition_my_chi_tiet_giao_dich_va_thong_tin_chuyen_khoan(login_as, kt):
         "300000"
     )
     assert len(d["payments"]) == 1
-    tt = d["thanh_toan"]
-    assert tt["ngan_hang"] == "Vietcombank" and tt["so_tai_khoan"] == "0123456789"
-    assert tt["noi_dung_ck"] == f"HOCPHI {sv.ma_sv} HK{hk.id}"
+    assert "thanh_toan" not in d  # đã bỏ thanh toán chuyển khoản (chỉ còn VNPay)
 
 
 def test_tuition_my_chua_co_dang_ky_va_phan_quyen(login_as):

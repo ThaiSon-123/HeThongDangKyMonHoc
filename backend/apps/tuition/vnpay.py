@@ -37,9 +37,16 @@ def kiem_chu_ky(params: Mapping[str, str]) -> bool:
     return hmac.compare_digest(nhan.lower(), ky(params))
 
 
-def tao_url(txn_ref: str, so_tien: Decimal, order_info: str, ip: str, now: datetime) -> str:
+def tao_url(
+    txn_ref: str,
+    so_tien: Decimal,
+    order_info: str,
+    ip: str,
+    now: datetime,
+    return_url: str | None = None,
+) -> str:
     """URL chuyển hướng sang VNPay. `now` là datetime aware; không gửi `vnp_BankCode` để người dùng
-    tự chọn phương thức trên trang VNPay."""
+    tự chọn phương thức trên trang VNPay. `return_url` mặc định là `VNPAY_RETURN_URL`."""
     bay_gio = now.astimezone(GIO_VN)
     params = {
         "vnp_Version": "2.1.0",
@@ -52,7 +59,7 @@ def tao_url(txn_ref: str, so_tien: Decimal, order_info: str, ip: str, now: datet
         "vnp_Locale": "vn",
         "vnp_OrderInfo": order_info,
         "vnp_OrderType": "other",
-        "vnp_ReturnUrl": settings.VNPAY_RETURN_URL,
+        "vnp_ReturnUrl": return_url or settings.VNPAY_RETURN_URL,
         "vnp_TxnRef": txn_ref,
         "vnp_ExpireDate": (bay_gio + timedelta(minutes=HET_HAN_PHUT)).strftime("%Y%m%d%H%M%S"),
     }

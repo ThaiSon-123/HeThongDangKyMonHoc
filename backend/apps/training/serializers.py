@@ -210,10 +210,20 @@ class CurriculumCourseSerializer(serializers.ModelSerializer):
 class PrerequisiteSerializer(serializers.ModelSerializer):
     ma_mon = serializers.CharField(source="mon_hoc.ma_mon", read_only=True)
     ma_mon_tien_quyet = serializers.CharField(source="mon_tien_quyet.ma_mon", read_only=True)
+    ten_mon = serializers.CharField(source="mon_hoc.ten_mon", read_only=True)
+    ten_mon_tien_quyet = serializers.CharField(source="mon_tien_quyet.ten_mon", read_only=True)
 
     class Meta:
         model = Prerequisite
-        fields = ["id", "mon_hoc", "ma_mon", "mon_tien_quyet", "ma_mon_tien_quyet"]
+        fields = [
+            "id",
+            "mon_hoc",
+            "ma_mon",
+            "ten_mon",
+            "mon_tien_quyet",
+            "ma_mon_tien_quyet",
+            "ten_mon_tien_quyet",
+        ]
 
     def validate(self, attrs):
         if attrs["mon_hoc"] == attrs["mon_tien_quyet"]:
@@ -255,10 +265,9 @@ class SemesterSerializer(serializers.ModelSerializer):
         mo, dong = g("cua_so_dk_bat_dau"), g("cua_so_dk_ket_thuc")
         if mo >= dong:
             loi["cua_so_dk_ket_thuc"] = ["Cửa sổ đăng ký phải kết thúc sau khi bắt đầu."]
-        elif timezone.localtime(mo).date() < g("ngay_bat_dau") or timezone.localtime(
-            dong
-        ).date() > g("ngay_ket_thuc"):
-            loi["cua_so_dk_bat_dau"] = ["Cửa sổ đăng ký phải nằm trong thời gian học kỳ."]
+        elif timezone.localtime(dong).date() > g("ngay_ket_thuc"):
+            # được mở trước ngày bắt đầu kỳ (đăng ký trước cho kỳ sau), nhưng phải đóng trước khi kỳ kết thúc
+            loi["cua_so_dk_ket_thuc"] = ["Cửa sổ đăng ký phải đóng trước khi học kỳ kết thúc."]
         if not 1 <= g("tin_chi_toi_thieu") <= g("tin_chi_toi_da"):
             loi["tin_chi_toi_thieu"] = ["Tối thiểu phải từ 1 và không vượt tối đa."]
         if g("tin_chi_toi_da_canh_bao") > g("tin_chi_toi_da"):
@@ -402,8 +411,9 @@ class ClassSectionSerializer(serializers.ModelSerializer):
             if "si_so_toi_da" in attrs and attrs["si_so_toi_da"] < inst.si_so_hien_tai:
                 loi["si_so_toi_da"] = ["Sĩ số tối đa không được nhỏ hơn sĩ số hiện tại."]
         hoc_ky = _gia_tri(self, attrs, "hoc_ky")
-        bat_dau, ket_thuc = _gia_tri(self, attrs, "ngay_bat_dau"), _gia_tri(
-            self, attrs, "ngay_ket_thuc"
+        bat_dau, ket_thuc = (
+            _gia_tri(self, attrs, "ngay_bat_dau"),
+            _gia_tri(self, attrs, "ngay_ket_thuc"),
         )
         if bat_dau and ket_thuc and bat_dau > ket_thuc:
             loi["ngay_ket_thuc"] = ["Ngày kết thúc phải từ ngày bắt đầu trở đi."]

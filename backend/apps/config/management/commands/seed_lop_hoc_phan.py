@@ -152,6 +152,46 @@ class KeHoach:
         return self.ket_qua
 
 
+def tao_lop_hoc_ky(hk, nhom_hk, mon, gv_theo_khoa):
+    """Xếp và ghi lớp học phần + lịch của MỘT học kỳ theo khối CTĐT `nhom_hk` ({ma_nganh: [ma_mon]}).
+    Lớp `MO` nếu học kỳ đang mở, ngược lại `DA_DONG`. Trả `(số lớp, số môn)`."""
+    ket_qua = KeHoach(nhom_hk, mon, gv_theo_khoa).xep()
+    ky, nam1, nam2 = TEN_HK.fullmatch(hk.ten_hk).groups()
+    trang_thai = TrangThaiLop.MO if hk.trang_thai == TrangThaiHocKy.MO else TrangThaiLop.DA_DONG
+    ma_lop_moi = set()
+    for (ma, j), (gv, phong, buoi) in sorted(ket_qua.items()):
+        m = mon[ma]
+        ma_lop = f"{ma}.L{j + 1:02d}-{nam1[2:]}{nam2[2:]}.{ky}"
+        ma_lop_moi.add(ma_lop)
+        lop, _ = ClassSection.objects.update_or_create(
+            ma_lop=ma_lop,
+            defaults={
+                "mon_hoc": m,
+                "hoc_ky": hk,
+                "giao_vien": gv,
+                "si_so_toi_da": 40 if m.so_tiet_ly_thuyet == 0 else 60,
+                "ngay_bat_dau": hk.ngay_bat_dau,
+                "ngay_ket_thuc": hk.ngay_ket_thuc,
+                "han_nhap_diem": hk.ngay_ket_thuc + timedelta(days=14),
+                "trang_thai": trang_thai,
+            },
+        )
+        lop.lich_hoc.all().delete()
+        Schedule.objects.bulk_create(
+            Schedule(
+                lop_hoc_phan=lop,
+                thu=thu,
+                tiet_bat_dau=dau,
+                so_tiet_moi_buoi=cuoi - dau + 1,
+                phong=phong,
+            )
+            for thu, dau, cuoi in buoi
+        )
+    # Bỏ lớp cũ không còn trong kế hoạch (chạy lại sau khi đổi số lớp/môn); nơi gọi phải chặn khi có đăng ký.
+    ClassSection.objects.filter(hoc_ky=hk).exclude(ma_lop__in=ma_lop_moi).delete()
+    return len(ket_qua), len({ma for ma, _ in ket_qua})
+
+
 class Command(BaseCommand):
     help = "Nạp lớp học phần + lịch cho mọi học kỳ đã có (4–7 lớp/môn, GV và phòng không trùng giờ)."
 
@@ -169,43 +209,9 @@ class Command(BaseCommand):
         for hk in Semester.objects.order_by("ngay_bat_dau"):
             if hk.ten_hk not in nhom:
                 continue
-            ket_qua = KeHoach(nhom[hk.ten_hk], mon, gv_theo_khoa).xep()
-            ky, nam1, nam2 = TEN_HK.fullmatch(hk.ten_hk).groups()
-            trang_thai = TrangThaiLop.MO if hk.trang_thai == TrangThaiHocKy.MO else TrangThaiLop.DA_DONG
-            ma_lop_moi = set()
-            for (ma, j), (gv, phong, buoi) in sorted(ket_qua.items()):
-                m = mon[ma]
-                ma_lop = f"{ma}.L{j + 1:02d}-{nam1[2:]}{nam2[2:]}.{ky}"
-                ma_lop_moi.add(ma_lop)
-                lop, _ = ClassSection.objects.update_or_create(
-                    ma_lop=ma_lop,
-                    defaults={
-                        "mon_hoc": m,
-                        "hoc_ky": hk,
-                        "giao_vien": gv,
-                        "si_so_toi_da": 40 if m.so_tiet_ly_thuyet == 0 else 60,
-                        "ngay_bat_dau": hk.ngay_bat_dau,
-                        "ngay_ket_thuc": hk.ngay_ket_thuc,
-                        "han_nhap_diem": hk.ngay_ket_thuc + timedelta(days=14),
-                        "trang_thai": trang_thai,
-                    },
-                )
-                lop.lich_hoc.all().delete()
-                Schedule.objects.bulk_create(
-                    Schedule(
-                        lop_hoc_phan=lop,
-                        thu=thu,
-                        tiet_bat_dau=dau,
-                        so_tiet_moi_buoi=cuoi - dau + 1,
-                        phong=phong,
-                    )
-                    for thu, dau, cuoi in buoi
-                )
-            # Bỏ lớp cũ không còn trong kế hoạch (chạy lại sau khi đổi số lớp/môn); đã chặn khi có đăng ký.
-            ClassSection.objects.filter(hoc_ky=hk).exclude(ma_lop__in=ma_lop_moi).delete()
-            tong_lop += len(ket_qua)
-            so_mon = len({ma for ma, _ in ket_qua})
-            self.stdout.write(f"{hk.ten_hk}: {len(ket_qua)} lớp ({so_mon} môn)")
+            so_lop, so_mon = tao_lop_hoc_ky(hk, nhom[hk.ten_hk], mon, gv_theo_khoa)
+            tong_lop += so_lop
+            self.stdout.write(f"{hk.ten_hk}: {so_lop} lớp ({so_mon} môn)")
         self._kiem_tra(nhom)
         self.stdout.write(f"Tổng {tong_lop} lớp học phần. Kiểm tra trùng lịch GV/phòng và thời khóa biểu: ĐẠT.")
 

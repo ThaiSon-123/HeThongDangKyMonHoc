@@ -421,7 +421,7 @@ def test_xuat_excel_theo_bo_loc(sv_api, login_as, hk, sv):
 # ------------------------------------------------------------------ lớp có thể đăng ký
 
 
-def test_lop_co_the_dang_ky_loc_ctdt_cho_trong_trung_lich_va_meta(sv_api, sv, hk):
+def test_lop_co_the_dang_ky_loc_ctdt_va_gan_ly_do_lop_khong_dang_ky_duoc_va_meta(sv_api, sv, hk):
     def trong_ctdt(mon):
         CurriculumCourse.objects.create(ctdt=sv.ctdt, mon_hoc=mon, hoc_ky_goi_y=2)
         return mon
@@ -436,11 +436,16 @@ def test_lop_co_the_dang_ky_loc_ctdt_cho_trong_trung_lich_va_meta(sv_api, sv, hk
 
     res = sv_api.get("/api/courses/available/")
     assert res.status_code == 200
-    ids = [r["id"] for r in res.data["results"]]
-    assert ids == [hop_le.id]
-    for loai in (ngoai_ctdt, day, da_dk, trung, ke_hoach):
-        assert loai.id not in ids
-    row = res.data["results"][0]
+    theo_id = {r["id"]: r for r in res.data["results"]}
+    # lớp đầy / trùng lịch vẫn hiện, kèm lý do; ngoài CTĐT, chưa mở, đã đăng ký thì không
+    assert set(theo_id) == {hop_le.id, day.id, trung.id}
+    assert theo_id[hop_le.id]["ma_ly_do"] is None and theo_id[hop_le.id]["ly_do"] is None
+    assert theo_id[day.id]["ma_ly_do"] == "LOP_DAY"
+    assert theo_id[trung.id]["ma_ly_do"] == "TRUNG_LICH"
+    assert theo_id[trung.id]["ly_do"] == f"Trùng lịch với lớp {da_dk.ma_lop}."
+    for loai in (ngoai_ctdt, da_dk, ke_hoach):
+        assert loai.id not in theo_id
+    row = theo_id[hop_le.id]
     assert row["hoc_ky_goi_y"] == 2 and row["khoi_kien_thuc"] == "chung"
     meta = res.data["meta"]
     assert meta["hoc_ky"] == hk.id and meta["trong_cua_so"] is True
@@ -453,6 +458,26 @@ def test_lop_co_the_dang_ky_loc_ctdt_cho_trong_trung_lich_va_meta(sv_api, sv, hk
     # ngày bắt đầu/kết thúc của học kỳ: giao diện dùng khi lớp không có ngày riêng
     assert meta["ngay_bat_dau"] == hk.ngay_bat_dau
     assert meta["ngay_ket_thuc"] == hk.ngay_ket_thuc
+
+
+def test_available_hien_mon_da_dat_va_thieu_tien_quyet_kem_ly_do(sv_api, sv, hk):
+    def trong_ctdt(mon):
+        CurriculumCourse.objects.create(ctdt=sv.ctdt, mon_hoc=mon)
+        return mon
+
+    nen, sau = trong_ctdt(CourseFactory(ma_mon="NEN1")), trong_ctdt(CourseFactory(ma_mon="SAU1"))
+    Prerequisite.objects.create(mon_hoc=sau, mon_tien_quyet=nen)
+    da_hoc = trong_ctdt(CourseFactory())
+    diem(sv, da_hoc, "A")
+    lop_sau, lop_da_hoc = tao_lop(hk, mon=sau, thu=2), tao_lop(hk, mon=da_hoc, thu=3)
+
+    theo_id = {r["id"]: r for r in sv_api.get("/api/courses/available/").data["results"]}
+
+    assert theo_id[lop_sau.id]["ma_ly_do"] == "THIEU_TIEN_QUYET"
+    assert theo_id[lop_sau.id]["ly_do"] == "Chưa đạt môn tiên quyết: NEN1."
+    assert theo_id[lop_da_hoc.id]["ma_ly_do"] == "DA_DAT_MON"
+    # cùng lý do với khi bấm đăng ký
+    assert dang_ky(sv_api, lop_sau).data["error"]["message"] == theo_id[lop_sau.id]["ly_do"]
 
 
 def test_available_hoc_ky_khong_hop_le_va_tim_kiem(sv_api, sv, hk):
@@ -489,8 +514,7 @@ def test_tkb_tu_dong_tra_ca_lop_trung_lich_nhung_van_loc_ctdt_cho_trong_da_dang_
     ids = {r["id"] for r in res.data["results"]}
     assert ids == {trung.id, tu_do.id}  # khác /courses/available/: lớp trùng lịch vẫn có mặt
     assert {ngoai_ctdt.id, day.id, da_dk.id}.isdisjoint(ids)
-    thuong = {r["id"] for r in sv_api.get("/api/courses/available/").data["results"]}
-    assert trung.id not in thuong  # đối chứng: endpoint thường đã lọc trùng lịch
+    assert all(r["ma_ly_do"] is None for r in res.data["results"])  # TKB tự động không gắn lý do
     assert res.data["meta"]["tin_chi_da_dang_ky"] == 3  # client cần meta để tính trần tín chỉ
     assert login_as(UserFactory(role=Role.GIAO_VIEN)).get(url).status_code == 403
 
@@ -539,7 +563,9 @@ def test_thoi_khoa_bieu_sv_la_lop_da_dang_ky_gv_la_lop_phu_trach(sv_api, login_a
     assert res.status_code == 200
     assert [x["ma_lop"] for x in res.data["lop_hoc_phan"]] == [lop_a.ma_lop]
     assert res.data["lop_hoc_phan"][0]["lich_hoc"][0]["tiet_ket_thuc"] == 3
-    assert [h["id"] for h in res.data["cac_hoc_ky"]] == [hk.id]  # kỳ tôi có lớp, để chọn xem kỳ khác
+    assert [h["id"] for h in res.data["cac_hoc_ky"]] == [
+        hk.id
+    ]  # kỳ tôi có lớp, để chọn xem kỳ khác
 
     gv_api = login_as(lop_b.giao_vien.user)
     res = gv_api.get("/api/timetable/my/")

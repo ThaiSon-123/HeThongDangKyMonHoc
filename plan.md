@@ -215,7 +215,7 @@ Phạm vi quyền chi tiết: ma trận ở **mục 9** (nguồn duy nhất).
 | ADM-02 | Quản lý tài khoản | Tạo/sửa/khóa/mở khóa/reset mật khẩu cho 5 vai trò. |
 | ADM-03 | Tra cứu hồ sơ | Chỉ đọc (sửa hồ sơ học vụ là của PĐT, PDT-01). |
 | ADM-04 | Xem ma trận quyền | **Chỉ đọc** ma trận mục 9; gán vai trò khi tạo tài khoản (ADM-02). |
-| ADM-05 | Cấu hình hệ thống | `SystemConfig`: `max_absent_pct`, `so_ngay_xin_sua_diem_danh`, `so_ngay_cho_phep_nhap_diem`, `backup_retention_days`, thông tin nhận chuyển khoản học phí (`ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan`). |
+| ADM-05 | Cấu hình hệ thống | `SystemConfig` chia theo người chịu trách nhiệm: **PĐT** sửa quy chế đào tạo (`max_absent_pct`, `so_ngay_xin_sua_diem_danh`, `so_ngay_cho_phep_nhap_diem`) ở `/pdt/config`; **Admin** sửa `backup_retention_days` ở màn Sao lưu. Đã bỏ thông tin nhận chuyển khoản (`ck_*`) — học phí trực tuyến chỉ qua VNPay. |
 | ADM-06 | Audit log | Admin xem tất cả; PĐT chỉ scope `training`; KT chỉ scope `finance`. |
 | ADM-07 | Thông báo hệ thống | Soạn/thu hồi thông báo toàn hệ thống. |
 | ADM-08 | Sao lưu | Tạo backup, xem danh sách (restore làm tay — mục 0). |
@@ -310,7 +310,7 @@ Quy ước: FK người dùng trỏ `User`; SV/GV phân biệt qua `role` + prof
 | **Notification** | `tieu_de`, `noi_dung`, `audience` ∈ {`ROLE`, `CLASS`, `USER`}, `target_refs` (JSON array), `nguoi_gui`, `ngay_gui`, `trang_thai` ∈ {`DA_GUI`, `THU_HOI`} | `ROLE` → mã role; `CLASS` → id `ClassSection`; `USER` → id `User`. Thu hồi → `THU_HOI` (biến khỏi danh sách người nhận). |
 | **NotificationRead** | `notification`, `user`, `da_doc`, `ngay_doc` | `(notification, user)` duy nhất. |
 | **AuditLog** | `user`, `hanh_dong` ∈ {`CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `PHAN_QUYEN`}, `doi_tuong`, `doi_tuong_id` (chuỗi id, không FK), `chi_tiet` (JSON), `thoi_gian`, `ip` | **Scope theo tiền tố `doi_tuong`:** `training` = User/Profile, Faculty, Major, Curriculum, CurriculumCourse, Course, Prerequisite, Semester, ClassSection, Schedule, Registration, Attendance*, Grade, Notification; `finance` = HocPhanGia, TuitionConfig, Discount, Payment, Tuition; còn lại (SystemConfig, backup) chỉ Admin. |
-| **SystemConfig** | `khoa`, `gia_tri` (chuỗi), `mo_ta` | ADM-05. Khóa: `max_absent_pct`, `so_ngay_xin_sua_diem_danh`, `so_ngay_cho_phep_nhap_diem`, `backup_retention_days`, `ck_ngan_hang`, `ck_so_tai_khoan`, `ck_chu_tai_khoan` (thông tin nhận chuyển khoản học phí). |
+| **SystemConfig** | `khoa`, `gia_tri` (chuỗi), `mo_ta` | ADM-05. Khóa: `max_absent_pct`, `so_ngay_xin_sua_diem_danh`, `so_ngay_cho_phep_nhap_diem` (PĐT), `backup_retention_days` (Admin). |
 
 **Công thức dẫn xuất của Tuition** (tính khi đọc, không lưu):
 ```
@@ -432,7 +432,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | POST | `/api/auth/logout/` | Mọi vai trò | Body `{refresh}` → `204`, blacklist refresh token (token của người khác → `400`). |
 | POST | `/api/auth/refresh/` | Public | Rotate + blacklist refresh cũ; chặn nếu `is_locked`. |
 | POST | `/api/auth/forgot-password/` | Public | **Luôn trả cùng một phản hồi** dù email có tồn tại hay không (kể cả tài khoản khóa). Mã đặt lại có dạng `<uid>.<token>`, TTL 30 phút, dùng 1 lần; dev trả kèm `token` trong response. Đếm throttle theo email. |
-| POST | `/api/auth/reset-password/` | Public | Body `{token, new_password}` → `204`; blacklist mọi refresh cũ. Token sai/hết hạn → `400` field `token`. |
+| POST | `/api/auth/reset-password/` | Public | Body `{email, code, new_password}` (mã xác thực 6 số gửi qua email, 30 phút, 1 lần, sai 5 lần thì hủy) → `204`; blacklist mọi refresh cũ. Mã sai/hết hạn → `400` field `code`. |
 | POST | `/api/auth/change-password/` | Mọi vai trò | Body `{old_password, new_password}` → `204`; blacklist refresh cũ (client phải đăng nhập lại). |
 | GET/PATCH | `/api/profiles/me/` | Mọi vai trò | Xem hồ sơ; sửa `email`, `sdt` (không sửa trường học vụ). |
 | GET | `/api/health/` · `/api/schema/` · `/api/docs/` | Public | Health, OpenAPI, Swagger. `health/?full=1` kiểm thêm Redis + Celery worker (chậm ~1 giây, dùng cho giám sát): chỉ DB hỏng mới `503`, Redis/worker hỏng → `status: degraded`. |
@@ -449,8 +449,10 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET/POST/PATCH | `/api/users/` | Tài khoản (ADM-02). Mỗi bản ghi kèm `has_profile` (`null` = vai trò không cần hồ sơ) và `profile` (tóm tắt hồ sơ SV/GV) để Admin biết tài khoản nào còn thiếu hồ sơ. Lọc `?role=&is_locked=&search=`. |
 | PATCH | `/api/users/{id}/lock/` | Body `{is_locked}`. Không tự khóa chính mình (`409`); không tự đổi vai trò của mình. |
 | POST | `/api/users/{id}/reset-password/` | Admin đặt mật khẩu mới (body `{new_password}`, áp chính sách mật khẩu) → `204`, thu hồi refresh cũ. |
+| GET | `/api/users/import-template/` | Admin tải file Excel mẫu (cột *Tên đăng nhập · Họ tên · Email · Vai trò · Mật khẩu* + sheet hướng dẫn). |
+| POST | `/api/users/import/` | Admin tạo tài khoản hàng loạt (multipart `file` .xlsx ≤ 2 MB, ≤ 1000 dòng, `xac_nhan`). Sai mẫu / không đọc được / rỗng → `400` field `file`. Đúng mẫu → `{rows[{dong, username, full_name, email, role, role_label, loi[]}], hop_le, loi}` (không trả mật khẩu); `xac_nhan=1` tạo các dòng hợp lệ (bỏ qua dòng lỗi), ghi audit từng tài khoản, thêm `da_tao`. Vai trò nhận nhãn tiếng Việt hoặc mã. |
 | GET | `/api/admin/permissions/` | Ma trận quyền (**chỉ đọc**, ADM-04): `{vai_tro[], results[{nhom, quyen, <ROLE>: {co, gioi_han}}]}` — nội dung cố định trong `apps/config/matrix.py` (bản máy đọc của mục 9, có test đối chiếu hành vi thật). |
-| GET/PATCH | `/api/admin/config/` | `SystemConfig` (ADM-05): đúng 7 khóa (`max_absent_pct` 0–100 · `so_ngay_xin_sua_diem_danh` 0–365 · `so_ngay_cho_phep_nhap_diem` ≥ 0 · `backup_retention_days` ≥ 1 · `ck_ngan_hang` · `ck_so_tai_khoan` chỉ số · `ck_chu_tai_khoan` chữ in hoa không dấu), trả `{items[{khoa, nhom, mo_ta, mac_dinh, gia_tri, cap_nhat_luc}], sua_lan_cuoi{boi, luc}}`. `PATCH` nhận `{khoa: giá_trị}` một phần; **một khóa sai thì không lưu khóa nào** (`400` theo field); mỗi khóa thật sự đổi ghi một audit log `UPDATE SystemConfig`. |
+| GET/PATCH | `/api/pdt/config/` (PĐT) · `/api/admin/config/` (Admin) | `SystemConfig` (ADM-05), mỗi endpoint chỉ thấy/sửa nhóm của mình — PĐT: `max_absent_pct` 0–100 · `so_ngay_xin_sua_diem_danh` 0–365 · `so_ngay_cho_phep_nhap_diem` ≥ 0; Admin: `backup_retention_days` ≥ 1 (khóa ngoài nhóm → `400`), trả `{items[{khoa, nhom, mo_ta, mac_dinh, gia_tri, cap_nhat_luc}], sua_lan_cuoi{boi, luc}}`. `PATCH` nhận `{khoa: giá_trị}` một phần; **một khóa sai thì không lưu khóa nào** (`400` theo field); mỗi khóa thật sự đổi ghi một audit log `UPDATE SystemConfig`. |
 | GET | `/api/admin/audit-logs/` | Admin/PĐT/KT; phạm vi do role quyết định (Admin tất cả, PĐT `training`, KT `finance`), `?scope=` chỉ thu hẹp thêm. Lọc `?hanh_dong=&doi_tuong=&nguoi_thuc_hien=&tu_ngay=&den_ngay=&search=`. |
 | GET | `/api/admin/backups/` | `{dang_chay, so_ngay_giu, results[{ten, dung_luong, tao_luc}]}` — file `hethongdangkymonhoc_*.dump` hoàn chỉnh trong `BACKUP_DIR`, mới nhất trước; `dang_chay` = có file `.partial` mới (tối đa 10 phút). |
 | POST | `/api/admin/backups/` | Tạo backup: `202 {trang_thai: DANG_CHAY}`, chạy nền qua job `backup_daily` (`pg_dump -Fc` ghi `.partial` rồi đổi tên). Đang có bản chạy → `409 TRANG_THAI_KHONG_HOP_LE`. Ghi audit `CREATE Backup`. Không có restore / tải xuống (khôi phục tay bằng `pg_restore`). |
@@ -463,7 +465,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET | `/api/profiles/pending-accounts/` | Tài khoản SV/GV chưa có hồ sơ (PĐT tạo hồ sơ, PDT-01). Lọc `?role=`, `?search=`. |
 | GET/POST/PATCH | `/api/faculties/` · `/api/majors/` · `/api/curriculums/` · `/api/courses/` | PDT-02..05. Không xóa, chỉ đổi `trang_thai`. `/api/courses/` lọc `?nganh=` (qua CTĐT) và `?khoa=`; `tong_tin_chi` do server tính (LT + TH). |
 | GET/POST/DELETE (+PATCH cho `curriculum-courses`) | `/api/curriculum-courses/` · `/api/prerequisites/` | Bản ghi nối: gán sai thì xóa. Tiên quyết chống chu trình (DFS) → `400`. |
-| GET/POST/PATCH | `/api/semesters/` | PDT-06; cửa sổ đăng ký sửa qua `PATCH /api/semesters/{id}/window/`, giới hạn tín chỉ qua `PATCH /api/semesters/{id}/` (PDT-07). |
+| GET/POST/PATCH | `/api/semesters/` | PDT-06; cửa sổ đăng ký được mở **trước** ngày bắt đầu kỳ (đăng ký trước) nhưng phải đóng trước ngày kết thúc kỳ; cửa sổ đăng ký sửa qua `PATCH /api/semesters/{id}/window/`, giới hạn tín chỉ qua `PATCH /api/semesters/{id}/` (PDT-07). |
 | POST | `/api/semesters/{id}/open/` · `/close/` | Mở/đóng học kỳ. |
 | GET/POST/PATCH | `/api/class-sections/` · GET/POST/PATCH/DELETE `/api/schedules/` | PDT-08/09. `class-sections` lọc `?hoc_ky=&mon_hoc=&giao_vien=&trang_thai=&nganh=&khoa=`; ngày lớp phải nằm trong học kỳ; trạng thái và `han_nhap_diem` chỉ đổi qua `open`/`close`/`grade-deadline` (hạn mới phải sau hạn hiện tại); response kèm `han_nhap_diem_hieu_luc` (BR-13). Lớp `DA_DONG` không sửa lớp/lịch; lớp đã mở phải còn ≥ 1 lịch. |
 | POST | `/api/class-sections/{id}/open/` · `/close/` | Mở lớp; đóng lớp. |
@@ -480,12 +482,12 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | Method | Endpoint | Mô tả |
 | :--- | :--- | :--- |
 | GET | `/api/curriculums/my/` | CTĐT của mình (SV-03), mỗi môn kèm `da_dat` (BR-04) và `tien_quyet[]` (mã môn tiên quyết, kể cả môn ngoài CTĐT). Client ghép `grades/my` + `registrations/history` để ra trạng thái *Đã đạt / Chưa đạt (F) / Đang học / Chưa học*. |
-| GET | `/api/courses/available/` | Lớp mở, **đã lọc** CTĐT/còn chỗ/không trùng lịch (SV-04). Kèm `meta{hoc_ky, ten_hk, trong_cua_so, tin_chi_toi_thieu, tin_chi_toi_da, tin_chi_toi_da_canh_bao, tin_chi_da_dang_ky, bi_canh_bao_hoc_vu}` (lấy từ `Semester` + đăng ký hiện tại). Mỗi lớp kèm `khoi_kien_thuc`, `loai_mon`, `hoc_ky_goi_y` theo CTĐT của SV. |
+| GET | `/api/courses/available/` | Mọi lớp mở của CTĐT mà SV chưa đăng ký (SV-04); lớp không đăng ký được vẫn trả về, kèm `ma_ly_do` + `ly_do` (cùng mã/câu với lỗi khi đăng ký: `DA_DAT_MON`, `DA_DANG_KY_MON`, `THIEU_TIEN_QUYET`, `LOP_DAY`, `TRUNG_LICH`); null = đăng ký được. Không truyền `?hoc_ky=` → học kỳ `MO` **mới nhất** (đăng ký trước cho kỳ sau; giao diện không còn lọc theo học kỳ). `meta.hoc_phi_qua_han`: câu nhắc khi SV nợ học phí quá hạn (null = được đăng ký); khi đó `POST /api/registrations/` trả `403 HOC_PHI_QUA_HAN`. Kèm `meta{hoc_ky, ten_hk, trong_cua_so, tin_chi_toi_thieu, tin_chi_toi_da, tin_chi_toi_da_canh_bao, tin_chi_da_dang_ky, bi_canh_bao_hoc_vu}` (lấy từ `Semester` + đăng ký hiện tại). Mỗi lớp kèm `khoi_kien_thuc`, `loai_mon`, `hoc_ky_goi_y` theo CTĐT của SV. |
 | GET | `/api/auto-schedule/available-courses/` | Cùng dạng với `courses/available/` (phân trang + `meta`, kèm `loai_mon`/`hoc_ky_goi_y`) nhưng **không lọc trùng lịch** (SV-06): lớp `MO` của học kỳ, môn thuộc CTĐT, còn chỗ, chưa đăng ký. Client ghép thêm `timetable/my` (lịch đã đăng ký, môn đã đăng ký) và `curriculums/my` (môn đã đạt). |
 | POST | `/api/registrations/` | Đăng ký (BR-01..07). **Bắt buộc** `Idempotency-Key`. |
 | DELETE | `/api/registrations/{id}/` | Hủy (BR-05). |
 | GET | `/api/registrations/history/` | Lịch sử (SV-09). |
-| GET | `/api/timetable/my/` | TKB (dùng chung cho GV; phân giải theo role token). |
+| GET | `/api/timetable/my/` | TKB (dùng chung cho GV; phân giải theo role token). SV còn nợ học phí **quá hạn** → `403 HOC_PHI_QUA_HAN` (kèm số tiền, kỳ, hạn) với mọi kỳ đã bắt đầu; kỳ chưa bắt đầu vẫn xem được để TKB tự động ghép lịch. |
 | GET | `/api/attendance/my/` | Điểm danh + tỷ lệ vắng của mình; mỗi lớp kèm `tong_so_buoi`, `canh_bao_vang`, `so_buoi_vang_cho_phep` (BR-20); mỗi buổi kèm `con_han_xin_sua`; gốc trả `so_ngay_xin_sua` và `cac_hoc_ky[{id, ten_hk}]` (kỳ SV có đăng ký, mới nhất trước — để chọn `?hoc_ky=`). |
 | GET/POST | `/api/attendance/requests/` | SV gửi / xem yêu cầu của mình; GV xem yêu cầu của lớp mình. POST dạng `multipart/form-data` (kèm tệp `minh_chung` tùy chọn); response GET có đường dẫn `minh_chung` (`GET /api/attendance/requests/{id}/minh-chung/`, chỉ GV lớp đó và SV chủ yêu cầu tải được). |
 | GET | `/api/grades/my/` | Điểm `KHOA` + GPA; kèm `thong_ke[]` theo học kỳ: `so_mon`, `tin_chi_hoc`, `tin_chi_dat`, `diem_tb`, `gpa`, `xep_loai` (BR-25g). |
@@ -493,7 +495,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | PATCH | `/api/tuition/my/plan/` | Đổi hình thức đóng `MOT_LAN` / `CHIA_DOT` (`409` nếu học phí chưa tính hoặc học kỳ chưa cấu hình đợt). `tuition/my` trả thêm `hinh_thuc`, `cac_dot[]`, `dot_tiep_theo`. |
 | POST | `/api/tuition/my/pay/` | `{muc: DOT_TIEP \| TOAN_BO \| TUY_Y, so_tien?}` → `201 {payment_url, txn_ref, so_tien}`; `400` khi chưa cấu hình VNPay. |
 | GET | `/api/tuition/my/pay/{txn_ref}/` | Trạng thái giao dịch của mình (`404` nếu của người khác). |
-| GET | `/api/tuition/vnpay/return/` · `/api/tuition/vnpay/ipn/` | Không đăng nhập; chỉ chữ ký HMAC-SHA512 làm căn cứ. Return chuyển trình duyệt về `APP_RESULT_URL?status=&txn=`; IPN trả `{RspCode, Message}`. |
+| GET | `/api/tuition/vnpay/return/` · `/api/tuition/vnpay/ipn/` | Không đăng nhập; chỉ chữ ký HMAC-SHA512 làm căn cứ. Return chuyển trình duyệt về `APP_RESULT_URL?status=&txn=`; `return/app/` (khi tạo mã với `nguon=APP` từ app điện thoại) ghi kết quả y hệt nhưng trả trang HTML tĩnh "hãy quay lại ứng dụng"; IPN trả `{RspCode, Message}`. |
 
 **Giáo viên**
 
@@ -515,6 +517,7 @@ Chi tiết schema: Swagger `/api/docs/`. Dưới đây liệt kê endpoint, vai 
 | GET/POST/PATCH | `/api/tuition/config/` · `/api/tuition/pricing/` · `/api/tuition/discounts/` | KT-01..05. Lọc `?hoc_ky=`; riêng `pricing` còn `?ap_dung_cho=<hoc_ky>` (giá của kỳ đó **và** giá "mọi học kỳ"). |
 | GET/PUT | `/api/tuition/installments/?hoc_ky=` | Cấu hình 3 đợt đóng học phí của học kỳ (KT-01). |
 | GET | `/api/tuition/` · `/api/tuition/{id}/` · `/api/tuition/debts/` · `/api/tuition/students/` | Danh sách (lọc `?hoc_ky=&nganh=&lop_hoc_phan=&search=&hien_thi=`); chi tiết từng môn + giao dịch; công nợ (gồm `can_hoan`, cờ `qua_han`, lọc `?qua_han=1`); tra SV (chỉ mã SV, họ tên, ngành) để lập miễn giảm. |
+| POST | `/api/tuition/remind/?hoc_ky=` | KT gửi **mail nhắc đóng học phí**: body `{tuition_ids?: [...], qua_han?: bool}` — có `tuition_ids` thì chỉ các dòng đó, không thì mọi SV còn nợ của học kỳ (chỉ quá hạn nếu `qua_han`). Trả `{da_gui, khong_co_email}`; ghi audit. |
 | POST | `/api/tuition/calculate/` | Tính lại hàng loạt theo `?hoc_ky=` (KT-06). |
 | POST | `/api/tuition/payments/` | Ghi `THU`/`HOAN` (BR-26). Hỗ trợ `Idempotency-Key`. |
 | GET | `/api/tuition/payments/{id}/receipt/` | Biên lai Excel (KT-10). |
@@ -632,7 +635,7 @@ lib/
 | Vai trò | Route | Nền tảng |
 | :--- | :--- | :--- |
 | Public | `/login`, `/forgot-password` | Web + App |
-| Admin | `/admin`, `/admin/accounts`, `/admin/permissions`, `/admin/config`, `/admin/logs`, `/admin/backups`, `/admin/notifications` | Web |
+| Admin | `/admin`, `/admin/accounts`, `/admin/permissions`, `/admin/logs`, `/admin/backups` (kèm số ngày giữ), `/admin/notifications` | Web |
 | PĐT | `/pdt`, `/pdt/profiles`, `/pdt/faculties`, `/pdt/majors`, `/pdt/curriculums`, `/pdt/courses`, `/pdt/semesters`, `/pdt/classes`, `/pdt/registrations`, `/pdt/grade-sheets`, `/pdt/reports`, `/pdt/notifications`, `/pdt/logs` | Web |
 | SV | `/student`, `/student/profile`, `/student/curriculum`, `/student/register`, `/student/auto-schedule`, `/student/schedule`, `/student/grades`, `/student/attendance`, `/student/tuition`, `/student/tuition/pay`, `/student/notifications` | Web + App |
 | GV | `/teacher`, `/teacher/profile`, `/teacher/classes`, `/teacher/schedule`, `/teacher/attendance`, `/teacher/grades`, `/teacher/notifications` | Web + App |

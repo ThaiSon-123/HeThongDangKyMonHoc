@@ -11,6 +11,7 @@ import '../../features/training/curriculums_screen.dart';
 import '../../features/training/faculties_screen.dart';
 import '../../features/training/majors_screen.dart';
 import '../../features/training/profiles_screen.dart';
+import '../../features/training/quy_che_screen.dart';
 import '../../features/training/registrations_screen.dart';
 import '../../features/training/semesters_screen.dart';
 import '../auth/auth_user.dart';
@@ -56,6 +57,12 @@ const pdtRoutes = RoleRoutes(
       builder: PdtGradeSheetsScreen.new,
     ),
     RouteDef(
+      '/pdt/config',
+      'Cấu hình',
+      subtitle: 'Quy chế điểm danh và nhập điểm áp dụng cho toàn trường',
+      builder: QuyCheScreen.new,
+    ),
+    RouteDef(
       '/pdt/reports',
       'Báo cáo đào tạo',
       subtitle: 'Số liệu đăng ký theo học kỳ, ngành và môn',
@@ -93,6 +100,7 @@ const pdtRoutes = RoleRoutes(
       NavItem('Lớp học phần', '/pdt/classes', Icons.groups_outlined),
       NavItem('Đăng ký', '/pdt/registrations', Icons.assignment_outlined),
       NavItem('Duyệt điểm', '/pdt/grade-sheets', Icons.fact_check_outlined),
+      NavItem('Cấu hình', '/pdt/config', Icons.settings_outlined),
     ]),
     NavGroup('KHÁC', [
       NavItem('Báo cáo', '/pdt/reports', Icons.bar_chart_outlined),

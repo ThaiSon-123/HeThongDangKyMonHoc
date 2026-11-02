@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_failure.dart';
+import '../../core/auth/auth_user.dart';
 import '../../core/auth/auth_repository.dart';
 import '../../core/layout.dart';
 import '../../shared/widgets/alert_banner.dart';
@@ -11,6 +12,7 @@ import '../../shared/widgets/labeled_field.dart';
 import 'my_profile.dart';
 
 /// Form sửa email / số điện thoại (PATCH /profiles/me/ — chỉ hai trường này).
+/// Sinh viên chỉ sửa sđt: email SV (nhận mã quên mật khẩu) do Phòng đào tạo quản lý.
 class ContactForm extends ConsumerStatefulWidget {
   const ContactForm({super.key, required this.profile});
 
@@ -28,6 +30,8 @@ class _ContactFormState extends ConsumerState<ContactForm> {
   String? _banner;
   bool _loading = false;
 
+  bool get _khoaEmail => widget.profile.role == UserRole.student;
+
   @override
   void dispose() {
     _email.dispose();
@@ -40,7 +44,9 @@ class _ContactFormState extends ConsumerState<ContactForm> {
     final sdt = _sdt.text.replaceAll(RegExp(r'\s+'), '');
     setState(() {
       _banner = null;
-      _emailError = email.contains('@') ? null : 'Nhập email hợp lệ.';
+      _emailError = _khoaEmail || email.contains('@')
+          ? null
+          : 'Nhập email hợp lệ.';
       _sdtError = sdt.isEmpty || RegExp(r'^\+?[0-9]{8,14}$').hasMatch(sdt)
           ? null
           : 'Số điện thoại không hợp lệ.';
@@ -54,7 +60,7 @@ class _ContactFormState extends ConsumerState<ContactForm> {
       await ref
           .read(authRepositoryProvider)
           .updateContact(
-            email: email,
+            email: _khoaEmail ? null : email,
             sdt: widget.profile.hasPhone ? sdt : null,
           );
       if (!mounted) return;
@@ -62,7 +68,9 @@ class _ContactFormState extends ConsumerState<ContactForm> {
       setState(() => _loading = false);
       showAppToast(
         context,
-        widget.profile.hasPhone
+        _khoaEmail
+            ? 'Đã cập nhật số điện thoại.'
+            : widget.profile.hasPhone
             ? 'Đã cập nhật email và số điện thoại.'
             : 'Đã cập nhật email.',
       );
@@ -94,9 +102,12 @@ class _ContactFormState extends ConsumerState<ContactForm> {
           label: 'Email',
           controller: _email,
           error: _emailError,
+          helper: _khoaEmail
+              ? 'Email do Phòng đào tạo quản lý, liên hệ PĐT nếu cần đổi.'
+              : null,
           keyboardType: TextInputType.emailAddress,
           autofillHints: const [AutofillHints.email],
-          enabled: !_loading,
+          enabled: !_loading && !_khoaEmail,
         ),
         if (widget.profile.hasPhone) ...[
           const SizedBox(height: 16),

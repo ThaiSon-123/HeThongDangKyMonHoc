@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,8 +13,9 @@ import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/labeled_field.dart';
 import '../profile/change_password_card.dart';
 
-/// Quên & đặt lại mật khẩu, 3 bước (design.md 4.2; mockup `Web-QuenMatKhau`, `App-QuenMatKhau`).
-/// Bước 1 luôn hiện cùng một thông điệp dù email có tồn tại hay không.
+/// Quên & đặt lại mật khẩu, 3 bước (design.md 4.2; mockup `Web-QuenMatKhau`, `App-QuenMatKhau`):
+/// email → mã xác thực 6 số gửi qua email + mật khẩu mới → hoàn tất.
+/// Email không có trong hệ thống / tài khoản bị khóa → backend báo lỗi dưới ô Email.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -24,50 +26,56 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _email = TextEditingController();
-  final _token = TextEditingController();
+  final _code = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   int _step = 1;
   bool _loading = false;
   String? _emailError;
-  String? _tokenError;
+  String? _codeError;
   String? _passwordError;
   String? _confirmError;
   String? _banner;
+  String? _notice; // sau khi bấm "Gửi lại mã"
 
   @override
   void dispose() {
     _email.dispose();
-    _token.dispose();
+    _code.dispose();
     _password.dispose();
     _confirm.dispose();
     super.dispose();
   }
 
   String _failureMessage(ApiFailure f) => f.isRateLimited
-      ? 'Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.'
+      ? 'Bạn đã yêu cầu mã quá 3 lần trong 15 phút. Vui lòng đợi rồi thử lại.'
       : f.isNetwork
       ? 'Không thể kết nối máy chủ. Kiểm tra mạng rồi thử lại.'
       : 'Có lỗi xảy ra, vui lòng thử lại.';
 
   Future<void> _sendEmail() async {
     final email = _email.text.trim();
+    final resend = _step == 2;
     setState(() {
       _banner = null;
+      _notice = null;
       _emailError = email.contains('@') ? null : 'Nhập email hợp lệ.';
     });
     if (_emailError != null) return;
     setState(() => _loading = true);
     try {
-      final devToken = await ref
+      final devCode = await ref
           .read(authRepositoryProvider)
           .forgotPassword(email);
       if (!mounted) return;
-      // Dev: backend trả kèm mã → điền sẵn (prod không có, người dùng dán mã từ email).
-      if (devToken != null) _token.text = devToken;
+      // Dev: backend trả kèm mã → điền sẵn (prod không có, người dùng nhập mã từ email).
+      if (devCode != null) _code.text = devCode;
       setState(() {
         _loading = false;
         _step = 2;
+        if (resend) {
+          _notice = 'Đã gửi lại mã xác thực mới. Mã cũ không còn dùng được.';
+        }
       });
     } on ApiFailure catch (f) {
       if (!mounted) return;
@@ -82,7 +90,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Future<void> _reset() async {
     setState(() {
       _banner = null;
-      _tokenError = _token.text.trim().isEmpty ? 'Nhập mã đặt lại.' : null;
+      _notice = null;
+      _codeError = _code.text.trim().length == 6
+          ? null
+          : 'Nhập đủ 6 chữ số của mã xác thực.';
       _passwordError = passwordMeetsPolicy(_password.text)
           ? null
           : passwordPolicyError;
@@ -90,16 +101,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           ? null
           : 'Mật khẩu nhập lại không khớp.';
     });
-    if (_tokenError != null ||
-        _passwordError != null ||
-        _confirmError != null) {
+    if (_codeError != null || _passwordError != null || _confirmError != null) {
       return;
     }
     setState(() => _loading = true);
     try {
       await ref
           .read(authRepositoryProvider)
-          .resetPassword(_token.text.trim(), _password.text);
+          .resetPassword(_email.text.trim(), _code.text.trim(), _password.text);
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -109,9 +118,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _tokenError = f.fields['token'];
+        _codeError = f.fields['code'];
         _passwordError = f.fields['new_password'];
-        if (_tokenError == null && _passwordError == null) {
+        if (_codeError == null && _passwordError == null) {
           _banner = _failureMessage(f);
         }
       });
@@ -120,8 +129,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
   Widget _steps(bool compact) {
     final labels = compact
-        ? const ['Email', 'Mật khẩu mới', 'Xong']
-        : const ['Nhập email', 'Mã và mật khẩu mới', 'Hoàn tất'];
+        ? const ['Email', 'Mã xác thực', 'Xong']
+        : const ['Nhập email', 'Mã xác thực', 'Hoàn tất'];
     final dot = compact ? 24.0 : 26.0;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -189,7 +198,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               const SizedBox(height: 6),
             ],
             const Text(
-              'Nhập email gắn với tài khoản. Chúng tôi sẽ gửi hướng dẫn đặt lại mật khẩu.',
+              'Nhập email gắn với tài khoản. Chúng tôi sẽ gửi mã xác thực 6 số để bạn đặt lại mật khẩu.',
               style: TextStyle(
                 fontSize: 14,
                 color: AppColors.muted,
@@ -214,7 +223,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ),
             const SizedBox(height: 16),
             AppButton(
-              label: 'Gửi yêu cầu',
+              label: 'Gửi mã xác thực',
               loading: _loading,
               onPressed: _sendEmail,
             ),
@@ -231,9 +240,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               ),
               const SizedBox(height: 10),
             ],
-            const AlertBanner(
+            AlertBanner(
               kind: BannerKind.info,
-              message: 'Nếu email tồn tại trong hệ thống, hướng dẫn đã được gửi. Mã có hiệu lực 30 phút và chỉ dùng một lần.',
+              message:
+                  _notice ??
+                  'Mã xác thực 6 số đã được gửi tới ${_email.text.trim()}. '
+                      'Mã có hiệu lực 30 phút và chỉ dùng một lần.',
             ),
             const SizedBox(height: 16),
             if (_banner != null) ...[
@@ -241,12 +253,39 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               const SizedBox(height: 16),
             ],
             LabeledField(
-              label: 'Mã đặt lại',
-              controller: _token,
-              hint: 'Dán mã từ email',
-              error: _tokenError,
+              label: 'Mã xác thực',
+              controller: _code,
+              hint: 'Gồm 6 chữ số trong email',
+              error: _codeError,
+              keyboardType: TextInputType.number,
+              autofillHints: const [AutofillHints.oneTimeCode],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
               enabled: !_loading,
             ),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: _loading ? null : _sendEmail,
+                  child: const Text('Gửi lại mã'),
+                ),
+                TextButton(
+                  onPressed: _loading
+                      ? null
+                      : () => setState(() {
+                          _step = 1;
+                          _banner = null;
+                          _notice = null;
+                          _code.clear();
+                        }),
+                  child: const Text('Đổi email'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
             const SizedBox(height: 16),
             PasswordField(
               label: 'Mật khẩu mới',

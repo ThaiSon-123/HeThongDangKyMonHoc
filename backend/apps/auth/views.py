@@ -1,7 +1,11 @@
 from django.conf import settings
-from drf_spectacular.utils import extend_schema
-from rest_framework import status
+from django.db import transaction
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -9,7 +13,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenViewBase
 
 from apps.audit.models import HanhDong
-from apps.auth import services
+from apps.auth import nhap_excel, services
 from apps.auth.models import User
 from apps.auth.serializers import (
     ChangePasswordSerializer,
@@ -28,6 +32,7 @@ from apps.auth.serializers import (
 )
 from apps.auth.throttles import ForgotPasswordThrottle
 from core.exceptions import Codes, business_error
+from core.export import XLSX
 from core.mixins import AuditLogMixin
 from core.permissions import IsAdmin
 
@@ -82,10 +87,10 @@ class ForgotPasswordView(PublicView):
     def post(self, request):
         s = ForgotPasswordSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        token = services.request_password_reset(s.validated_data["email"])
+        code = services.request_password_reset(s.validated_data["email"])
         body = {"detail": services.RESET_MESSAGE}
-        if token and settings.PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE:
-            body["token"] = token  # chỉ dev
+        if code and settings.PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE:
+            body["code"] = code  # chỉ dev
         return Response(body)
 
 
@@ -154,3 +159,37 @@ class UserViewSet(AuditLogMixin):
         services.admin_reset_password(user, s.validated_data["new_password"])
         self._audit(HanhDong.UPDATE, user, {"hanh_dong": "reset_password"})
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(responses={(200, XLSX): OpenApiTypes.BINARY})
+    @action(detail=False, methods=["get"], url_path="import-template")
+    def import_template(self, request):
+        """File Excel mẫu để tạo tài khoản hàng loạt."""
+        return nhap_excel.file_mau()
+
+    @extend_schema(
+        request={
+            "multipart/form-data": inline_serializer(
+                "UserImport",
+                {
+                    "file": serializers.FileField(),
+                    "xac_nhan": serializers.BooleanField(required=False),
+                },
+            )
+        },
+        responses=OpenApiTypes.OBJECT,
+    )
+    @action(detail=False, methods=["post"], url_path="import", parser_classes=[MultiPartParser])
+    def import_excel(self, request):
+        """Đọc file Excel theo mẫu → `{rows[], hop_le, loi}` (mỗi dòng kèm `loi[]`; không trả mật khẩu).
+        `xac_nhan=true`: tạo các dòng hợp lệ (bỏ qua dòng lỗi) → thêm `da_tao`. Sai mẫu → `400` field `file`."""
+        rows = nhap_excel.doc_file(request.FILES.get("file"))
+        hop_le = sum(1 for r in rows if not r["loi"])
+        body = {"rows": nhap_excel.xem_truoc(rows), "hop_le": hop_le, "loi": len(rows) - hop_le}
+        if str(request.data.get("xac_nhan", "")).lower() in ("1", "true"):
+            if not hop_le:
+                raise ValidationError({"file": ["Không có tài khoản hợp lệ nào để tạo."]})
+            with transaction.atomic():
+                for u in nhap_excel.tao_tai_khoan(rows):
+                    self._audit(HanhDong.CREATE, u, {"hanh_dong": "nhap_excel", "role": u.role})
+            body["da_tao"] = hop_le
+        return Response(body)

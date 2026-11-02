@@ -422,7 +422,7 @@ Admin tạo tài khoản (ADM-02) → Gán vai trò (ADM-04)
 | POST | `/api/auth/login/` | Public | Đăng nhập, trả access + refresh token. |
 | POST | `/api/auth/refresh/` | Public | Làm mới access token. |
 | POST | `/api/auth/forgot-password/` | Public | Yêu cầu đặt lại mật khẩu (rate limit 3/15p/email). |
-| POST | `/api/auth/reset-password/` | Public | Đặt lại mật khẩu bằng token. |
+| POST | `/api/auth/reset-password/` | Public | Đặt lại mật khẩu bằng mã xác thực 6 số gửi qua email. |
 | POST | `/api/auth/change-password/` | Mọi vai trò | Đổi mật khẩu khi đã đăng nhập. |
 | GET | `/api/health/` | Public | Kiểm tra hệ thống sống. |
 | GET | `/api/profiles/me/` | Mọi vai trò | Xem hồ sơ cá nhân (BR-23). |
@@ -440,7 +440,7 @@ Admin tạo tài khoản (ADM-02) → Gán vai trò (ADM-04)
 | POST | `/api/admin/permissions/` | Admin | Gán quyền theo vai trò (ADM-04). |
 | GET | `/api/admin/audit-logs/` | Admin / PĐT / KT | Nhật ký thao tác (ADM-06). `?scope=all` (Admin) / `training` (PĐT) / `finance` (KT); server filter theo role. |
 | POST | `/api/admin/backups/` | Admin | Khởi tạo/phục hồi backup (ADM-08). |
-| GET/PATCH | `/api/admin/config/` | Admin | Cấu hình hệ thống (ADM-05). |
+| GET/PATCH | `/api/admin/config/` · `/api/pdt/config/` | Admin · PĐT | Cấu hình hệ thống (ADM-05): Admin — số ngày giữ bản sao lưu; PĐT — quy chế đào tạo (điểm danh, nhập điểm). |
 
 ### 10.3. Phòng đào tạo
 

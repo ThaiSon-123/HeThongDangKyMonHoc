@@ -126,7 +126,7 @@ void main() {
     );
 
     testWidgets(
-      'tab Tiên quyết: chọn môn, thêm; vòng bị server chặn hiện lỗi',
+      'tab Tiên quyết: bảng mọi cặp đã thiết lập, lọc, thêm (vòng bị chặn), bỏ',
       (t) async {
         final api = pdtApi({
           'GET /courses/': (_) => reply(
@@ -136,6 +136,12 @@ void main() {
               mon(2, 'CNTT201', 'Cấu trúc dữ liệu'),
             ]),
           ),
+          'GET /faculties/': (_) => reply(
+            200,
+            pageOf([
+              {'id': 9, 'ma_khoa': 'CNTT', 'ten_khoa': 'Công nghệ thông tin'},
+            ]),
+          ),
           'GET /prerequisites/': (_) => reply(
             200,
             pageOf([
@@ -143,41 +149,54 @@ void main() {
                 'id': 5,
                 'mon_hoc': 2,
                 'ma_mon': 'CNTT201',
+                'ten_mon': 'Cấu trúc dữ liệu',
                 'mon_tien_quyet': 1,
                 'ma_mon_tien_quyet': 'CNTT101',
+                'ten_mon_tien_quyet': 'Nhập môn lập trình',
               },
             ]),
           ),
           'POST /prerequisites/': (_) => reply(400, {
             'mon_tien_quyet': ['Tạo vòng lặp tiên quyết (chu trình).'],
           }),
+          'DELETE /prerequisites/5/': (_) => reply(204, {}),
         });
         await openPdt(t, api, '/pdt/courses');
         await tapText(t, 'Tiên quyết');
-        expect(
-          find.text(
-            'Chọn một môn ở trên để xem và chỉnh môn tiên quyết của môn đó.',
-          ),
-          findsOneWidget,
-        );
 
-        await enterField(t, 'Chọn môn cần thiết lập tiên quyết', 'Cấu trúc');
+        // hiện ngay các cặp đã thiết lập, không phải chọn môn trước
+        expect(find.text('Cấu trúc dữ liệu'), findsOneWidget);
+        expect(find.text('Nhập môn lập trình'), findsOneWidget);
+        expect(find.text('MÔN TIÊN QUYẾT (PHẢI ĐẠT TRƯỚC)'), findsOneWidget);
+
+        await enterField(t, 'Khoa / viện', 'Công');
         await t.pumpAndSettle();
-        await tapText(t, 'Cấu trúc dữ liệu (CNTT201)', index: 0);
-        expect(find.text('CNTT101'), findsOneWidget); // chip tiên quyết hiện có
-        expect(api.queries['GET /prerequisites/']!['mon_hoc'], 2);
+        await tapText(t, 'Công nghệ thông tin', index: 0);
+        expect(api.queries['GET /prerequisites/']!['mon_hoc__khoa'], 9);
 
-        await enterField(t, 'Thêm môn tiên quyết', 'Nhập');
+        await tapText(t, '+ Thêm tiên quyết');
+        await enterField(t, 'Môn học', 'Nhập');
         await t.pumpAndSettle();
         await tapText(t, 'Nhập môn lập trình (CNTT101)', index: 0);
-        await tapText(t, 'Thêm');
+        await enterField(t, 'Môn tiên quyết', 'Cấu');
+        await t.pumpAndSettle();
+        await tapText(t, 'Cấu trúc dữ liệu (CNTT201)', index: 0);
+        await tapText(t, 'Lưu');
         expect(api.bodies['POST /prerequisites/'], {
-          'mon_hoc': 2,
-          'mon_tien_quyet': 1,
+          'mon_hoc': 1,
+          'mon_tien_quyet': 2,
         });
         expect(
           find.text('Tạo vòng lặp tiên quyết (chu trình).'),
           findsOneWidget,
+        );
+        await tapText(t, 'Hủy');
+
+        await tapText(t, 'Bỏ');
+        await tapText(t, 'Bỏ', index: 1); // nút trong hộp xác nhận
+        expect(
+          api.log.any((l) => l.startsWith('DELETE /prerequisites/5/')),
+          isTrue,
         );
       },
     );

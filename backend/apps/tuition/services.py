@@ -5,15 +5,19 @@ import uuid
 from collections.abc import Mapping, Sequence
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
+from urllib.parse import urljoin
 
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
+from django.utils.html import format_html, strip_tags
+from django.utils.safestring import mark_safe
 from rest_framework.exceptions import ValidationError
 
 from apps.audit.models import AuditLog, HanhDong
 from apps.auth.models import Role, User
-from apps.config.models import SystemConfig
 from apps.notifications.models import Audience, Notification
 from apps.notifications.services import gui_cho_nguoi_dung
 from apps.profiles.models import StudentProfile
@@ -290,32 +294,11 @@ def ghi_thanh_toan(kt, tuition_id, loai, so_tien, phuong_thuc, request_id=None):
     return p, True
 
 
-# ----------------------------------------------------------------- thanh toán QR cho SV
-
-
-def thong_tin_chuyen_khoan(ho_so, hoc_ky):
-    return {
-        "ngan_hang": SystemConfig.objects.filter(khoa="ck_ngan_hang")
-        .values_list("gia_tri", flat=True)
-        .first()
-        or "",
-        "so_tai_khoan": SystemConfig.objects.filter(khoa="ck_so_tai_khoan")
-        .values_list("gia_tri", flat=True)
-        .first()
-        or "",
-        "chu_tai_khoan": SystemConfig.objects.filter(khoa="ck_chu_tai_khoan")
-        .values_list("gia_tri", flat=True)
-        .first()
-        or "",
-        # KT đối soát theo nội dung này (KT-08)
-        "noi_dung_ck": f"HOCPHI {ho_so.ma_sv} HK{hoc_ky.id}",
-    }
-
-
-def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip):
+def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip, tu_app=False):
     """Tạo `OnlineTransaction` `CHO` và URL VNPay. `muc`: `TOAN_BO` (toàn bộ `con_no`), `DOT_TIEP` (đợt
     chưa đóng đầu tiên nếu đang `CHIA_DOT`, ngược lại toàn bộ), `TUY_Y` (`0 < so_tien ≤ con_no`).
-    Trả `(giao_dich, payment_url)`."""
+    `tu_app`: thanh toán từ app điện thoại → VNPay trả về `.../return/app/` (trang kết quả tĩnh,
+    không chuyển sang bản Web). Trả `(giao_dich, payment_url)`."""
     if not vnpay.da_cau_hinh():
         raise ValidationError({"vnpay": ["Chưa cấu hình cổng thanh toán VNPay."]})
     t = Tuition.objects.filter(sinh_vien=sv_user, hoc_ky=hoc_ky).first()
@@ -339,7 +322,8 @@ def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip):
         so_tien = con_no
     giao_dich = OnlineTransaction.objects.create(tuition=t, so_tien=so_tien)
     order_info = f"HOCPHI {sv_user.sinh_vien.ma_sv} HK{hoc_ky.id}"
-    url = vnpay.tao_url(giao_dich.txn_ref.hex, so_tien, order_info, ip, timezone.now())
+    return_url = urljoin(settings.VNPAY_RETURN_URL, "app/") if tu_app else None
+    url = vnpay.tao_url(giao_dich.txn_ref.hex, so_tien, order_info, ip, timezone.now(), return_url)
     return giao_dich, url
 
 
@@ -409,6 +393,97 @@ def xac_nhan_vnpay(params: Mapping[str, str]):
     except Exception:
         log.exception("Lỗi xử lý kết quả VNPay")
         return "99", None
+
+
+# ----------------------------------------------------------------- quá hạn / nhắc nợ
+
+
+def hoc_phi_qua_han(sv_user, hom_nay=None):
+    """Các khoản học phí còn nợ đã quá hạn của một SV: `[{ten_hk, con_no, han_dong}]` (rỗng = không nợ quá hạn)."""
+    hom_nay = hom_nay or timezone.localdate()
+    out = []
+    for t in Tuition.objects.filter(
+        sinh_vien=sv_user, trang_thai=TrangThaiHocPhi.DA_TINH
+    ).select_related("hoc_ky"):
+        dx = dan_xuat_cua(t)
+        if dx["con_no"] <= 0:
+            continue
+        lich = lich_dot(dx["phai_nop"], dx["thuc_thu"], dot_cua_hoc_ky(t.hoc_ky_id))
+        han, qua_han = han_va_qua_han(t.hinh_thuc, dx, han_dong(t.hoc_ky_id), lich, hom_nay)
+        if qua_han:
+            out.append({"ten_hk": t.hoc_ky.ten_hk, "con_no": dx["con_no"], "han_dong": han})
+    return out
+
+
+def loi_qua_han(sv_user, viec):
+    """Câu nhắc nợ quá hạn của SV (`None` = không nợ quá hạn); `viec` = việc bị chặn, vd "xem thời khóa biểu"."""
+    no = hoc_phi_qua_han(sv_user)
+    if not no:
+        return None
+    tong = sum(k["con_no"] for k in no)
+    ds = ", ".join(f"{k['ten_hk']} (hạn {k['han_dong']:%d/%m/%Y})" for k in no)
+    return f"Bạn còn nợ học phí {_vnd(tong)} đã quá hạn: {ds}. Vui lòng đóng học phí để {viec}."
+
+
+def chan_neu_qua_han(sv_user, viec):
+    """SV còn nợ quá hạn → `403 HOC_PHI_QUA_HAN` (không xem TKB / không đăng ký môn)."""
+    if loi := loi_qua_han(sv_user, viec):
+        raise business_error(Codes.HOC_PHI_QUA_HAN, loi)
+
+
+def _vnd(so):
+    return f"{so:,.0f}".replace(",", ".") + " ₫"
+
+
+def _mail_nhac_no(ho_ten, ten_hk, con_no, han, qua_han):
+    tinh_trang = (
+        f"đã <b>quá hạn</b> đóng (hạn {han:%d/%m/%Y})"
+        if qua_han
+        else (f"cần đóng trước ngày <b>{han:%d/%m/%Y}</b>" if han else "chưa được thanh toán")
+    )
+    return format_html(
+        '<div style="font-family:Arial,sans-serif;background:#F4F5FA;padding:32px 16px">'
+        '<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:16px;'
+        'overflow:hidden;border:1px solid #E3E6EE">'
+        '<div style="background:#1F2A5C;color:#fff;padding:20px 28px;font-size:18px;'
+        'font-weight:700">Hệ thống Đăng ký Môn học — Phòng Kế toán</div>'
+        '<div style="padding:28px;color:#212121;font-size:15px;line-height:1.6">'
+        "<p>Xin chào <b>{}</b>,</p>"
+        "<p>Học phí <b>{}</b> của bạn {}. Số tiền còn nợ:</p>"
+        '<div style="margin:20px 0;text-align:center;font-size:30px;font-weight:700;'
+        'color:{};background:#F4F5FA;border-radius:12px;padding:16px 0">{}</div>'
+        "<p>Vui lòng đăng nhập hệ thống, vào mục <b>Học phí → Thanh toán</b> để đóng qua VNPay, "
+        "hoặc đóng trực tiếp tại Phòng Kế toán.</p>"
+        '<p style="color:#6B7280;font-size:13px">Sinh viên quá hạn đóng học phí sẽ không xem được '
+        "thời khóa biểu. Nếu bạn đã đóng, vui lòng bỏ qua email này.</p>"
+        "</div></div></div>",
+        ho_ten,
+        ten_hk,
+        mark_safe(tinh_trang),  # chỉ gồm chuỗi cố định + ngày
+        "#C62828" if qua_han else "#1F2A5C",
+        _vnd(con_no),
+    )
+
+
+def gui_mail_nhac_no(rows):
+    """Gửi mail nhắc đóng học phí cho các dòng công nợ (`views._hang`) còn nợ, qua một kết nối SMTP.
+    Trả `(số mail đã gửi, số SV không có email)`.
+    ponytail: gửi đồng bộ trong request — vài trăm mail còn ổn; nhiều hơn thì chuyển sang task Celery."""
+    users = User.objects.in_bulk([r["sinh_vien"] for r in rows])
+    thu, khong_email = [], 0
+    for r in rows:
+        email = users[r["sinh_vien"]].email
+        if not email:
+            khong_email += 1
+            continue
+        tieu_de = f"Nhắc đóng học phí {r['ten_hk']}" + (" — ĐÃ QUÁ HẠN" if r["qua_han"] else "")
+        html = _mail_nhac_no(r["ho_ten"], r["ten_hk"], r["con_no"], r["han_dong"], r["qua_han"])
+        m = EmailMultiAlternatives(tieu_de, strip_tags(html), None, [email])
+        m.attach_alternative(html, "text/html")
+        thu.append(m)
+    if thu:
+        get_connection().send_messages(thu)
+    return len(thu), khong_email
 
 
 # ----------------------------------------------------------------- job quá hạn (mục 7.8)
