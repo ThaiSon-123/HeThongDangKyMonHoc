@@ -55,6 +55,8 @@ class TuitionConfig(models.Model):
         Semester, on_delete=models.CASCADE, related_name="chinh_sach_hoc_phi"
     )
     han_dong = models.DateField()
+    # Trước ngày này SV chưa thanh toán trực tuyến được (đóng một lần và chia đợt); null = không giới hạn
+    ngay_bat_dau_dong = models.DateField(null=True, blank=True)
     ghi_chu = models.TextField(blank=True)
 
     class Meta:

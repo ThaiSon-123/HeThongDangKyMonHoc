@@ -109,14 +109,29 @@ FakeAdapter api({
   ...extra,
 });
 
-Future<void> open(WidgetTester t, FakeAdapter a, {Size size = bigScreen}) =>
-    openStudent(
-      t,
-      a,
-      '/student/auto-schedule',
-      size: size,
-      overrides: [autoScheduleDelayProvider.overrideWithValue(Duration.zero)],
-    );
+/// Mở màn TKB tự động rồi tích các môn ở vị trí [chon] (mặc định 2 môn bắt buộc đầu danh sách:
+/// Trí tuệ nhân tạo, Học máy) — màn không tích sẵn môn nào.
+Future<void> open(
+  WidgetTester t,
+  FakeAdapter a, {
+  Size size = bigScreen,
+  List<int> chon = const [0, 1],
+}) async {
+  await openStudent(
+    t,
+    a,
+    '/student/auto-schedule',
+    size: size,
+    overrides: [autoScheduleDelayProvider.overrideWithValue(Duration.zero)],
+  );
+  for (final i in chon) {
+    final o = find.byType(Checkbox);
+    if (o.evaluate().length <= i) continue;
+    await t.ensureVisible(o.at(i));
+    await t.tap(o.at(i));
+    await t.pumpAndSettle();
+  }
+}
 
 void main() {
   testWidgets(
@@ -141,21 +156,18 @@ void main() {
   );
 
   testWidgets(
-    'bước 1: môn bắt buộc chọn sẵn, môn đã đăng ký không hiện, môn đã đạt bị khóa',
+    'bước 1: không tích sẵn môn nào, môn đã đăng ký không hiện, môn đã đạt bị khóa',
     (t) async {
-      await open(t, api());
+      await open(t, api(), chon: const []);
       expect(find.text('Chọn môn và ưu tiên'), findsOneWidget);
       expect(find.text('Trí tuệ nhân tạo'), findsOneWidget);
       expect(find.text('Học máy'), findsOneWidget);
       expect(find.text('An toàn thông tin'), findsOneWidget);
       expect(find.text('Môn đã đăng ký'), findsNothing);
       expect(find.text('Đã đạt'), findsOneWidget);
-      // Bắt buộc & chưa đạt = Trí tuệ nhân tạo + Học máy.
-      expect(find.text('Đã chọn 2 môn · 6 tín chỉ'), findsOneWidget);
+      expect(find.text('Đã chọn 0 môn · 0 tín chỉ'), findsOneWidget);
       expect(
-        find.text(
-          'Học kỳ 2, 2026–2027 · môn bắt buộc theo học kỳ gợi ý được chọn sẵn',
-        ),
+        find.text('Học kỳ 2, 2026–2027 · tích chọn các môn bạn muốn học'),
         findsOneWidget,
       );
     },
@@ -531,7 +543,7 @@ void main() {
     }
 
     Future<void> toiBuoc2(WidgetTester t) async {
-      await open(t, api(lops: lopNhieu));
+      await open(t, api(lops: lopNhieu), chon: const [0, 1, 2]);
       await tapText(t, 'Gợi ý tổ hợp');
     }
 

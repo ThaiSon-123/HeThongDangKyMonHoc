@@ -3,6 +3,7 @@
 from datetime import date
 
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.config.models import SystemConfig
@@ -108,8 +109,14 @@ class MajorSerializer(serializers.ModelSerializer):
         return _khoa_hoat_dong(self, khoa)
 
 
+class HocKyGoiYSerializer(serializers.Serializer):
+    ky = serializers.IntegerField()
+    ten = serializers.CharField()
+
+
 class CurriculumSerializer(serializers.ModelSerializer):
     nganh_ten = serializers.CharField(source="nganh.ten_nganh", read_only=True)
+    cac_hoc_ky = serializers.SerializerMethodField()  # tên học kỳ thật để chọn học kỳ gợi ý
 
     class Meta:
         model = Curriculum
@@ -121,7 +128,12 @@ class CurriculumSerializer(serializers.ModelSerializer):
             "khoa_tuyen_sinh",
             "tong_tin_chi_yeu_cau",
             "trang_thai",
+            "cac_hoc_ky",
         ]
+
+    @extend_schema_field(HocKyGoiYSerializer(many=True))
+    def get_cac_hoc_ky(self, obj):
+        return services.cac_hoc_ky_goi_y(obj)
 
     def validate(self, attrs):
         # DRF không tự kiểm unique có điều kiện khi PATCH một phần → tự kiểm, báo lỗi field.
@@ -185,6 +197,7 @@ class CurriculumCourseSerializer(serializers.ModelSerializer):
     ma_mon = serializers.CharField(source="mon_hoc.ma_mon", read_only=True)
     ten_mon = serializers.CharField(source="mon_hoc.ten_mon", read_only=True)
     tong_tin_chi = serializers.IntegerField(source="mon_hoc.tong_tin_chi", read_only=True)
+    ten_hk_goi_y = serializers.SerializerMethodField()
 
     class Meta:
         model = CurriculumCourse
@@ -198,7 +211,11 @@ class CurriculumCourseSerializer(serializers.ModelSerializer):
             "khoi_kien_thuc",
             "loai_mon",
             "hoc_ky_goi_y",
+            "ten_hk_goi_y",
         ]
+
+    def get_ten_hk_goi_y(self, obj) -> str:
+        return services.ten_hoc_ky_goi_y(obj.ctdt, obj.hoc_ky_goi_y)
 
     def update(self, instance, validated_data):
         # CTĐT và môn chỉ đặt lúc gán; muốn đổi thì xóa rồi gán lại.
@@ -347,6 +364,12 @@ class ClassSectionSerializer(serializers.ModelSerializer):
     tong_tin_chi = serializers.IntegerField(source="mon_hoc.tong_tin_chi", read_only=True)
     tin_chi_ly_thuyet = serializers.IntegerField(source="mon_hoc.tin_chi_ly_thuyet", read_only=True)
     tin_chi_thuc_hanh = serializers.IntegerField(source="mon_hoc.tin_chi_thuc_hanh", read_only=True)
+    mon_khoa = serializers.IntegerField(source="mon_hoc.khoa_id", read_only=True)
+    # null = xóa lớp / đổi giáo viên được; ngược lại là lý do không được
+    ly_do_khoa = serializers.SerializerMethodField()
+
+    def get_ly_do_khoa(self, obj) -> str | None:
+        return services.ly_do_khoa_lop(obj)
 
     def get_han_nhap_diem_hieu_luc(self, obj) -> date:
         return han_nhap_diem_cua(self, obj)
@@ -388,6 +411,8 @@ class ClassSectionSerializer(serializers.ModelSerializer):
             "tin_chi_thuc_hanh",
             "tong_so_buoi",
             "lich_hoc",
+            "mon_khoa",
+            "ly_do_khoa",
         ]
         # Trạng thái đổi qua open/close/job; sĩ số hiện tại do đăng ký (Pha 3); hạn điểm qua grade-deadline.
         read_only_fields = ["si_so_hien_tai", "han_nhap_diem", "trang_thai"]
@@ -421,6 +446,10 @@ class ClassSectionSerializer(serializers.ModelSerializer):
             if ngay and not hoc_ky.ngay_bat_dau <= ngay <= hoc_ky.ngay_ket_thuc:
                 loi[ten] = ["Phải nằm trong thời gian học kỳ."]
         if inst and "giao_vien" in attrs and attrs["giao_vien"] != inst.giao_vien:
+            if ly_do := services.ly_do_khoa_lop(inst):
+                raise serializers.ValidationError(
+                    {"giao_vien": [f"Không đổi được giáo viên: {ly_do[0].lower()}{ly_do[1:]}"]}
+                )
             for lich in inst.lich_hoc.all():
                 xung_dot = services.xung_dot_lich(
                     inst.hoc_ky_id,
@@ -443,8 +472,8 @@ class GradeDeadlineSerializer(serializers.Serializer):
     han_nhap_diem = serializers.DateField()
 
     def validate_han_nhap_diem(self, value):
-        # Gia hạn = dời hạn ra xa hơn hạn đang đặt (nếu có).
-        hien_tai = self.context["lop"].han_nhap_diem
-        if hien_tai and value <= hien_tai:
+        # Gia hạn = dời hạn ra xa hơn hạn đang áp dụng (hạn riêng của lớp, hoặc theo cấu hình).
+        hien_tai = services.han_nhap_diem_hieu_luc(self.context["lop"])
+        if value <= hien_tai:
             raise serializers.ValidationError("Hạn mới phải sau hạn hiện tại.")
         return value

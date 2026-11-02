@@ -274,11 +274,16 @@ class _CurriculumCoursesState extends ConsumerState<_CurriculumCourses> {
     'trang_thai': 'HOAT_DONG',
   };
 
-  static final _ky = <(Object, String)>[
-    for (var i = 1; i <= 12; i++) (i, 'Kỳ $i'),
-  ];
+  /// Học kỳ gợi ý = tên học kỳ thật theo lộ trình của CTĐT đang xem (server trả `cac_hoc_ky`).
+  List<(Object, String)> _ky(Json ctdt) {
+    final ds = [
+      for (final h in ctdt['cac_hoc_ky'] as List? ?? const [])
+        (((h as Map)['ky'] as num).toInt(), '${h['ten']}'),
+    ];
+    return ds.isNotEmpty ? ds : [for (var i = 1; i <= 12; i++) (i, 'Kỳ $i')];
+  }
 
-  static final _specs = <FieldSpec>[
+  List<FieldSpec> _specs(Json ctdt) => <FieldSpec>[
     SelectSpec(
       'mon_hoc',
       'Môn học',
@@ -289,7 +294,7 @@ class _CurriculumCoursesState extends ConsumerState<_CurriculumCourses> {
     ),
     ChoiceSpec('khoi_kien_thuc', 'Khối kiến thức', khoiKienThuc, half: true),
     ChoiceSpec('loai_mon', 'Loại môn', loaiMon, half: true),
-    ChoiceSpec('hoc_ky_goi_y', 'Học kỳ gợi ý', _ky, half: true),
+    ChoiceSpec('hoc_ky_goi_y', 'Học kỳ gợi ý', _ky(ctdt), half: true),
   ];
 
   Future<void> _form([Json? row]) async {
@@ -300,7 +305,7 @@ class _CurriculumCoursesState extends ConsumerState<_CurriculumCourses> {
       context,
       title: row == null ? 'Gán môn vào CTĐT' : 'Sửa môn trong CTĐT',
       saveLabel: row == null ? 'Gán môn' : 'Lưu',
-      specs: _specs,
+      specs: _specs(ctdt),
       initial: row,
       note: 'Đổi khối kiến thức có thể làm thay đổi học phí.',
       initialSelected: row == null
@@ -410,7 +415,7 @@ class _CurriculumCoursesState extends ConsumerState<_CurriculumCourses> {
             ListColumn('TC', width: 60),
             ListColumn('Khối kiến thức', width: 150),
             ListColumn('Loại môn', width: 120),
-            ListColumn('Học kỳ gợi ý', width: 120),
+            ListColumn('Học kỳ gợi ý', width: 230),
             ListColumn('', width: 150),
           ],
           cells: (r) => [
@@ -431,7 +436,11 @@ class _CurriculumCoursesState extends ConsumerState<_CurriculumCourses> {
             Text('${r.num0('tong_tin_chi')}'),
             Text(_nhan(khoiKienThuc, r.str('khoi_kien_thuc'))),
             Text(_nhan(loaiMon, r.str('loai_mon'))),
-            Text('Kỳ ${r.num0('hoc_ky_goi_y')}'),
+            Text(
+              r.str('ten_hk_goi_y').isEmpty
+                  ? 'Kỳ ${r.num0('hoc_ky_goi_y')}'
+                  : r.str('ten_hk_goi_y'),
+            ),
             RowActions([
               RowButton('Sửa', () => _form(r)),
               RowButton('Bỏ', () => _remove(r), danger: true),

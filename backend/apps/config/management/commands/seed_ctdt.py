@@ -220,11 +220,13 @@ class Command(BaseCommand):
         cot = {ten: i for i, ten in enumerate(dau) if ten}
         hoc_ky = 0
         dem = 0
+        lo_trinh = []  # tên học kỳ thật theo thứ tự kỳ gợi ý → Curriculum.lo_trinh
         for r in ws.iter_rows(min_row=2, values_only=True):
             ma, ten = r[cot["Mã MH"]], r[cot["Tên môn học"]]
             if not ma:
                 if ten:  # dòng "Học kỳ N - Năm học ..." mở học kỳ gợi ý kế tiếp
                     hoc_ky += 1
+                    lo_trinh.append(" ".join(ten.split()))
                 continue
             tin_chi = sum(map(int, TIN_CHI.search(ten).groups()))
             # Chỉ môn có chữ "Thực hành" trong tên mới tính tín chỉ thực hành (giá TH); còn lại là lý thuyết.
@@ -256,4 +258,6 @@ class Command(BaseCommand):
                 },
             )
             dem += 1
+        ctdt.lo_trinh = lo_trinh
+        ctdt.save(update_fields=["lo_trinh"])
         return dem

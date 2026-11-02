@@ -19,7 +19,7 @@ from apps.grades.serializers import (
     MyGradesSerializer,
 )
 from apps.registration.models import Registration, TrangThaiDangKy
-from apps.training.models import ClassSection, TrangThaiLop
+from apps.training.models import ClassSection, Semester, TrangThaiHocKy, TrangThaiLop
 from core.mixins import write_audit
 from core.pagination import StandardPagination
 from core.permissions import HasRole, IsGiaoVien, IsPhongDaoTao, IsSinhVien
@@ -122,7 +122,9 @@ class ClassGradesApproveView(APIView):
 
 
 class MyGradesView(APIView):
-    """`GET /api/grades/my/` (SV-11): chỉ điểm `KHOA` + GPA + thống kê từng học kỳ (BR-25g)."""
+    """`GET /api/grades/my/` (SV-11): điểm `KHOA` + GPA + thống kê từng học kỳ (BR-25g). Có đủ mọi học kỳ
+    SV có đăng ký và các học kỳ đang mở: môn chưa có điểm chính thức là dòng điểm rỗng (`diem_chu` = ""),
+    kỳ chưa có điểm nào có `tin_chi_dat`/`diem_tb`/`gpa`/`xep_loai` = null. GPA/tín chỉ tích lũy chỉ từ `KHOA`."""
 
     permission_classes = [IsSinhVien]
 
@@ -144,10 +146,61 @@ class MyGradesView(APIView):
                 "diem_chu": g.diem_chu,
                 "gpa_thang_4": g.gpa_thang_4,
             }
-            for g in Grade.objects.filter(sinh_vien=request.user, trang_thai=TrangThaiDiem.KHOA)
-            .select_related("lop_hoc_phan__mon_hoc", "lop_hoc_phan__hoc_ky")
-            .order_by("-lop_hoc_phan__hoc_ky__ngay_bat_dau", "lop_hoc_phan__mon_hoc__ma_mon")
+            for g in Grade.objects.filter(
+                sinh_vien=request.user, trang_thai=TrangThaiDiem.KHOA
+            ).select_related("lop_hoc_phan__mon_hoc", "lop_hoc_phan__hoc_ky")
         ]
+        co_diem = {(d["hoc_ky"], d["ma_lop"]) for d in diem}
+        chua_diem = [
+            r.lop_hoc_phan
+            for r in Registration.objects.filter(
+                sinh_vien=request.user, trang_thai=TrangThaiDangKy.DA_DANG_KY
+            ).select_related("lop_hoc_phan__mon_hoc", "lop_hoc_phan__hoc_ky")
+            if (r.lop_hoc_phan.hoc_ky_id, r.lop_hoc_phan.ma_lop) not in co_diem
+        ]
+        diem += [
+            {
+                "hoc_ky": lop.hoc_ky_id,
+                "ten_hk": lop.hoc_ky.ten_hk,
+                "ma_lop": lop.ma_lop,
+                "ma_mon": lop.mon_hoc.ma_mon,
+                "ten_mon": lop.mon_hoc.ten_mon,
+                "tin_chi": lop.mon_hoc.tong_tin_chi,
+                "diem_qua_trinh": None,
+                "diem_giua_ky": None,
+                "diem_cuoi_ky": None,
+                "diem_tong_ket": None,
+                "diem_chu": "",
+                "gpa_thang_4": None,
+            }
+            for lop in chua_diem
+        ]
+        # Kỳ chưa có điểm chính thức (có đăng ký, hoặc đang mở): thẻ học kỳ với số liệu "—".
+        da_co = {s["hoc_ky"] for s in tong["thong_ke"]}
+        ky_them = Semester.objects.filter(
+            Q(id__in={lop.hoc_ky_id for lop in chua_diem}) | Q(trang_thai=TrangThaiHocKy.MO)
+        ).exclude(id__in=da_co)
+        for hk in ky_them:
+            lops = [lop for lop in chua_diem if lop.hoc_ky_id == hk.id]
+            tong["thong_ke"].append(
+                {
+                    "hoc_ky": hk.id,
+                    "ten_hk": hk.ten_hk,
+                    "so_mon": len(lops),
+                    "tin_chi_hoc": sum(lop.mon_hoc.tong_tin_chi for lop in lops),
+                    "tin_chi_dat": None,
+                    "diem_tb": None,
+                    "gpa": None,
+                    "xep_loai": None,
+                }
+            )
+        bat_dau = dict(
+            Semester.objects.filter(id__in={s["hoc_ky"] for s in tong["thong_ke"]}).values_list(
+                "id", "ngay_bat_dau"
+            )
+        )
+        tong["thong_ke"].sort(key=lambda s: bat_dau[s["hoc_ky"]])
+        diem.sort(key=lambda d: (-bat_dau[d["hoc_ky"]].toordinal(), d["ma_mon"]))
         return Response(MyGradesSerializer({**tong, "diem": diem}).data)
 
 

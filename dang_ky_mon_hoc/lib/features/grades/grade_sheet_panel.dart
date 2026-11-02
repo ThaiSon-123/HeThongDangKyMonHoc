@@ -20,8 +20,14 @@ import 'grade_calc.dart';
 
 Widget gradeStatusChip(String? trangThai) => switch (trangThai) {
   'NHAP_TAM' => StatusChip.of('Nháp', StatusChip.yellow),
-  'CHINH_THUC' => StatusChip.of('Chính thức', StatusChip.indigo),
-  'KHOA' => StatusChip.of('Đã khóa', StatusChip.green),
+  'CHINH_THUC' => StatusChip.of(
+    'Đã khóa',
+    StatusChip.indigo,
+  ), // GV đã khóa, chờ PĐT duyệt
+  'KHOA' => StatusChip.of(
+    'Chính thức',
+    StatusChip.green,
+  ), // PĐT đã duyệt, SV thấy
   _ => StatusChip.of('Chưa nhập', StatusChip.gray),
 };
 
@@ -131,19 +137,23 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
     return v == null ? null : formatScore(v);
   }
 
-  Future<void> _save(Json d) async {
+  /// Các dòng đang sửa được; null (kèm toast) nếu có ô điểm sai định dạng.
+  List<_Row>? _dongHopLe() {
     final editable = _rows.where((r) => r.editable).toList();
     if (editable.any((r) => r.invalid)) {
       showAppToast(
         context,
         'Có ô điểm sai định dạng (0–10, tối đa 2 chữ số thập phân).',
       );
-      return;
+      return null;
     }
-    await _run(
-      () => ref.read(trainingApiProvider).put(_path, {
+    return editable;
+  }
+
+  Future<Object?> _gui(List<_Row> rows) =>
+      ref.read(trainingApiProvider).put(_path, {
         'records': [
-          for (final r in editable)
+          for (final r in rows)
             {
               'sinh_vien': r.id,
               'diem_qua_trinh': _dec(r.qt.text),
@@ -151,17 +161,28 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
               'diem_cuoi_ky': _dec(r.ck.text),
             },
         ],
-      }),
-      widget.isPdt ? 'Đã lưu điểm chính thức (nhập hộ).' : 'Đã lưu điểm nháp.',
+      });
+
+  Future<void> _save(Json d) async {
+    final rows = _dongHopLe();
+    if (rows == null) return;
+    await _run(
+      () => _gui(rows),
+      widget.isPdt ? 'Đã lưu và khóa điểm (nhập hộ).' : 'Đã lưu điểm nháp.',
     );
   }
 
-  Future<void> _lock(bool lock) => _run(
-    () => ref.read(trainingApiProvider).create('${_path}lock/', {
-      'action': lock ? 'lock' : 'unlock',
-    }),
-    lock ? 'Đã khóa điểm cả lớp.' : 'Đã mở khóa điểm cả lớp.',
-  );
+  /// Khóa: lưu luôn điểm đang nhập trên màn hình rồi khóa — không cần bấm "Lưu nháp" trước.
+  Future<void> _lock(bool lock) async {
+    final rows = lock ? _dongHopLe() : const <_Row>[];
+    if (rows == null) return;
+    await _run(() async {
+      if (rows.isNotEmpty) await _gui(rows);
+      return ref.read(trainingApiProvider).create('${_path}lock/', {
+        'action': lock ? 'lock' : 'unlock',
+      });
+    }, lock ? 'Đã lưu và khóa điểm cả lớp.' : 'Đã mở khóa điểm cả lớp.');
+  }
 
   Future<void> _approve(Json d) async {
     final ok = await showConfirmDialog(
@@ -212,6 +233,9 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
     final nhap = d['co_the_nhap'] == true;
     final datKhongDat = d.str('loai_danh_gia') == 'DAT_KHONG_DAT';
     final lopDong = d.str('lop_trang_thai') == 'DA_DONG';
+    // PĐT đã duyệt cả lớp → điểm chính thức, không ai sửa được nữa.
+    final daDuyet =
+        _rows.isNotEmpty && _rows.every((r) => r.trangThai == 'KHOA');
     final compact = isCompact(context);
     final han = d['han_nhap_diem'] == null ? '' : d.str('han_nhap_diem');
     final con = han.isEmpty ? null : soNgayDen(han, ref.read(clockProvider)());
@@ -242,11 +266,11 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
             onPressed: () => _extend(d),
           ),
         ),
-      if (nhap)
+      if (nhap && !daDuyet)
         SizedBox(
           width: widget.isPdt ? 200 : 150,
           child: AppButton(
-            label: widget.isPdt ? 'Lưu điểm chính thức' : 'Lưu nháp',
+            label: widget.isPdt ? 'Lưu và khóa điểm' : 'Lưu nháp',
             height: 44,
             outlined: d['co_the_khoa'] == true || widget.isPdt,
             loading: _busy,
@@ -320,13 +344,21 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
                 message: 'Liên hệ Phòng đào tạo để gia hạn hoặc nhập hộ.',
               ),
             )
+          else if (daDuyet)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: AlertBanner(
+                kind: BannerKind.info,
+                message: 'Phòng đào tạo đã duyệt — điểm chính thức, sinh viên đã thấy và không chỉnh sửa được nữa.',
+              ),
+            )
           else if (lopDong)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: AlertBanner(
                 kind: BannerKind.info,
                 message: widget.isPdt
-                    ? 'Lớp đã đóng — duyệt điểm cả lớp khi mọi sinh viên đã có điểm chính thức.'
+                    ? 'Lớp đã đóng — duyệt điểm cả lớp khi giáo viên đã khóa điểm của mọi sinh viên.'
                     : 'Lớp đã đóng — điểm đã khóa, chờ Phòng đào tạo duyệt.',
               ),
             )

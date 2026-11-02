@@ -14,6 +14,7 @@ Map<String, dynamic> mon(
   String khoi = 'chung',
   String loai = 'bat_buoc',
   List<String> tq = const [],
+  String? tenKy,
 }) => {
   'mon_hoc': id,
   'ma_mon': ma,
@@ -22,6 +23,7 @@ Map<String, dynamic> mon(
   'khoi_kien_thuc': khoi,
   'loai_mon': loai,
   'hoc_ky_goi_y': ky,
+  'ten_hk_goi_y': ?tenKy,
   'da_dat': daDat,
   'tien_quyet': tq,
 };
@@ -124,6 +126,31 @@ void main() {
       expect(m.diem, '6.10');
     });
   });
+
+  test(
+    'tên học kỳ lấy theo lộ trình CTĐT (ten_hk_goi_y) khi server có trả',
+    () {
+      final c = {
+        ...ctdt(),
+        'mon': [
+          mon(
+            1,
+            'OTO101',
+            'Cơ học',
+            4,
+            tenKy: 'Học kỳ 1 - Năm học 2024 - 2025',
+          ),
+          mon(2, 'OTO102', 'Vẽ kỹ thuật', 2),
+        ],
+      };
+      final ds = gopMonCtdt(c, {'diem': []}, const []);
+      expect(
+        ds[0].tenKy,
+        'Học kỳ 1 - Năm học 2024 - 2025',
+      ); // có học kỳ hè: không theo công thức
+      expect(ds[1].tenKy, ''); // không có → màn hình dùng nhanKy
+    },
+  );
 
   test('nhanKy: năm học tính từ khóa tuyển sinh', () {
     expect(nhanKy(1, 'K2023'), 'Học kỳ 1 · Năm học 2023–2024');

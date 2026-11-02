@@ -191,6 +191,17 @@ def han_dong(hoc_ky_id):
     return cfg.han_dong if cfg else None
 
 
+def ngay_bat_dau_dong(hoc_ky_id):
+    cfg = TuitionConfig.objects.filter(hoc_ky_id=hoc_ky_id).first()
+    return cfg.ngay_bat_dau_dong if cfg else None
+
+
+def toi_ngay_dong(hoc_ky_id, hom_nay=None):
+    """Đã tới ngày bắt đầu đóng học phí của học kỳ (kỳ không đặt ngày → luôn đúng)."""
+    bat_dau = ngay_bat_dau_dong(hoc_ky_id)
+    return bat_dau is None or (hom_nay or timezone.localdate()) >= bat_dau
+
+
 def dot_cua_hoc_ky(hoc_ky_id):
     """3 đợt đã cấu hình của học kỳ theo `thu_tu`; `[]` nếu chưa đủ 3 đợt."""
     dots = list(TuitionInstallment.objects.filter(hoc_ky_id=hoc_ky_id).order_by("thu_tu"))
@@ -301,6 +312,11 @@ def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip, tu_app=False):
     không chuyển sang bản Web). Trả `(giao_dich, payment_url)`."""
     if not vnpay.da_cau_hinh():
         raise ValidationError({"vnpay": ["Chưa cấu hình cổng thanh toán VNPay."]})
+    if not toi_ngay_dong(hoc_ky.id):
+        raise business_error(
+            Codes.TRANG_THAI_KHONG_HOP_LE,
+            f"Chưa tới ngày bắt đầu đóng học phí ({ngay_bat_dau_dong(hoc_ky.id):%d/%m/%Y}).",
+        )
     t = Tuition.objects.filter(sinh_vien=sv_user, hoc_ky=hoc_ky).first()
     if t is None or t.trang_thai != TrangThaiHocPhi.DA_TINH:
         raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Học phí chưa được tính.")

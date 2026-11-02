@@ -218,6 +218,11 @@ void main() {
               'khoa_tuyen_sinh': 'K2023',
               'tong_tin_chi_yeu_cau': 130,
               'trang_thai': 'HOAT_DONG',
+              'cac_hoc_ky': [
+                {'ky': 1, 'ten': 'Học kỳ 1 - Năm học 2023 - 2024'},
+                {'ky': 2, 'ten': 'Học kỳ 2 - Năm học 2023 - 2024'},
+                {'ky': 3, 'ten': 'Học kỳ 3 - Năm học 2023 - 2024'},
+              ],
             },
           ]),
         ),
@@ -245,6 +250,7 @@ void main() {
               'khoi_kien_thuc': 'chuyen_nganh',
               'loai_mon': 'tu_chon',
               'hoc_ky_goi_y': 3,
+              'ten_hk_goi_y': 'Học kỳ 3 - Năm học 2023 - 2024',
             },
           ]),
         ),
@@ -256,7 +262,13 @@ void main() {
       await tapText(t, 'Xem môn');
       expect(api.queries['GET /curriculum-courses/']!['ctdt'], 1);
       expect(find.text('Cơ sở ngành'), findsOneWidget);
-      expect(find.text('Kỳ 3'), findsOneWidget);
+      expect(find.text('Học kỳ 3 - Năm học 2023 - 2024'), findsOneWidget);
+      expect(find.text('Kỳ 1'), findsOneWidget); // dòng chưa có tên → "Kỳ N"
+
+      // form sửa: ô học kỳ gợi ý là tên học kỳ thật theo lộ trình của CTĐT
+      await tapText(t, 'Sửa', index: 1);
+      expect(find.text('Học kỳ 3 - Năm học 2023 - 2024'), findsWidgets);
+      await tapText(t, 'Hủy');
       expect(find.textContaining('còn thiếu 123 tín chỉ'), findsOneWidget);
 
       await tapText(t, 'Bỏ');
@@ -270,10 +282,16 @@ void main() {
 
   group('Học kỳ', () {
     testWidgets(
-      'chọn dòng → chi tiết; đóng bị chặn hiện thông điệp; sửa giới hạn tín chỉ',
+      'bấm dòng → chi tiết mở ngay dưới dòng đó; đóng bị chặn; sửa giới hạn tín chỉ',
       (t) async {
         final api = pdtApi({
-          'GET /semesters/': (_) => reply(200, pageOf([hocKy()])),
+          'GET /semesters/': (_) => reply(
+            200,
+            pageOf([
+              hocKy(),
+              {...hocKy(tt: 'DONG'), 'id': 8, 'ten_hk': 'Học kỳ 1'},
+            ]),
+          ),
           'POST /semesters/7/close/': (_) => apiError(
             409,
             'TRANG_THAI_KHONG_HOP_LE',
@@ -283,11 +301,14 @@ void main() {
               reply(200, {...hocKy(), 'tin_chi_toi_da': 20}),
         });
         await openPdt(t, api, '/pdt/semesters');
-        expect(find.text('Chọn một học kỳ ở bảng phía trên.'), findsOneWidget);
-        expect(find.text('12-24'), findsOneWidget);
+        expect(find.text('Đóng học kỳ'), findsNothing); // chưa mở chi tiết
 
         await tapText(t, 'Học kỳ 2');
         expect(find.text('Học kỳ 2 · 2026-2027'), findsOneWidget);
+        // chi tiết nằm giữa dòng vừa bấm và dòng học kỳ kế tiếp
+        final yChiTiet = t.getTopLeft(find.text('Học kỳ 2 · 2026-2027')).dy;
+        expect(yChiTiet, greaterThan(t.getTopLeft(find.text('Học kỳ 2')).dy));
+        expect(yChiTiet, lessThan(t.getTopLeft(find.text('Học kỳ 1')).dy));
         expect(
           find.text('05/01/2027 08:00 – 19/01/2027 08:00'),
           findsOneWidget,
@@ -308,11 +329,85 @@ void main() {
           20,
         );
         expect(find.textContaining('Tối đa 20'), findsOneWidget);
+
+        await tapText(t, 'Học kỳ 2'); // bấm lại → thu gọn
+        expect(find.text('Đóng học kỳ'), findsNothing);
       },
     );
   });
 
   group('Lớp học phần', () {
+    FakeAdapter apiLop(String? lyDoKhoa) => pdtApi({
+      'GET /class-sections/': (_) => reply(200, pageOf([lop(tt: 'MO')])),
+      'GET /class-sections/3/': (_) =>
+          reply(200, {...lop(tt: 'MO'), 'mon_khoa': 2, 'ly_do_khoa': lyDoKhoa}),
+      'GET /semesters/': (_) => reply(200, pageOf([hocKy()])),
+      'GET /registrations/': (_) => reply(200, pageOf([])),
+      'GET /profiles/teachers/': (_) => reply(
+        200,
+        pageOf([
+          {'id': 9, 'ma_gv': 'GV09', 'ho_ten': 'Lê Văn Bình'},
+        ]),
+      ),
+      'PATCH /class-sections/3/': (_) => reply(200, lop(tt: 'MO')),
+      'DELETE /class-sections/3/': (_) => reply(204, {}),
+    });
+
+    testWidgets('chưa học, chưa ai đăng ký: đổi giáo viên và xóa lớp được', (
+      t,
+    ) async {
+      final api = apiLop(null);
+      await openPdt(t, api, '/pdt/classes');
+      await tapText(t, 'Nhập môn lập trình');
+
+      await tapText(t, 'Sửa lớp');
+      expect(
+        find.text('Chỉ gợi ý giáo viên cùng khoa / viện với môn.'),
+        findsOneWidget,
+      ); // có ô Giáo viên
+      await enterField(t, 'Giáo viên', 'Lê');
+      await t.pumpAndSettle();
+      await tapText(t, 'Lê Văn Bình (GV09)', index: 0);
+      await tapText(t, 'Lưu');
+      expect((api.bodies['PATCH /class-sections/3/'] as Map)['giao_vien'], 9);
+      expect(
+        api.queries['GET /profiles/teachers/']!['khoa'],
+        2,
+      ); // GV cùng khoa với môn
+
+      await tapText(t, 'Xóa lớp');
+      await tapText(t, 'Xóa lớp', index: 1); // nút trong hộp xác nhận
+      expect(
+        api.log.any((l) => l.startsWith('DELETE /class-sections/3/')),
+        isTrue,
+      );
+      expect(find.text('Đã xóa lớp CNTT101-01.'), findsOneWidget);
+    });
+
+    testWidgets(
+      'đã có đăng ký: không có nút Xóa lớp, không đổi được giáo viên',
+      (t) async {
+        await openPdt(
+          t,
+          apiLop('Lớp đã có sinh viên đăng ký.'),
+          '/pdt/classes',
+        );
+        await tapText(t, 'Nhập môn lập trình');
+        expect(find.text('Xóa lớp'), findsNothing);
+        await tapText(t, 'Sửa lớp');
+        expect(
+          find.text('Chỉ gợi ý giáo viên cùng khoa / viện với môn.'),
+          findsNothing,
+        ); // không có ô Giáo viên
+        expect(
+          find.textContaining(
+            'Không đổi được giáo viên: lớp đã có sinh viên đăng ký',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('bảng; chi tiết: thêm lịch (Chủ nhật), mở lớp', (t) async {
       var lichDs = <Map<String, dynamic>>[];
       var tt = 'KE_HOACH';

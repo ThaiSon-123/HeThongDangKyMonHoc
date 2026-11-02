@@ -120,8 +120,9 @@ def bang_diem_lop(lop, user):
         "co_the_nhap": dang_hoc and (not qua_han if la_gv else True),
         "co_the_khoa": la_gv and dang_hoc and not qua_han and bool(rows) and co_nhap_tam,
         "co_the_mo_khoa": la_gv and dang_hoc and not qua_han and co_chinh_thuc,
+        # Duyệt ngay khi cả lớp đã có điểm chính thức — không phải chờ lớp đóng.
         "co_the_duyet": user.role == Role.PHONG_DAO_TAO
-        and lop.trang_thai == TrangThaiLop.DA_DONG
+        and lop.trang_thai in (TrangThaiLop.DANG_HOC, TrangThaiLop.DA_DONG)
         and bool(rows)
         and all(r["trang_thai"] == TrangThaiDiem.CHINH_THUC for r in rows),
         "records": rows,
@@ -216,14 +217,21 @@ def doi_khoa_lop(lop_id, gv, khoa, hom_nay=None):
 
 @transaction.atomic
 def duyet_lop(lop_id):
-    """PĐT duyệt cả lớp `DA_DONG`: `CHINH_THUC` → `KHOA`, cập nhật GPA/tín chỉ tích lũy đồng bộ
-    (BR-25e) và báo cho từng SV. Trả số SV."""
+    """PĐT duyệt cả lớp `DANG_HOC`/`DA_DONG` khi mọi SV đã có điểm chính thức: `CHINH_THUC` → `KHOA`,
+    cập nhật GPA/tín chỉ tích lũy đồng bộ (BR-25e) và báo cho từng SV. Trả số SV."""
     lop = _khoa_lop(lop_id)
-    if lop.trang_thai != TrangThaiLop.DA_DONG:
-        raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Chỉ duyệt điểm khi lớp đã đóng.")
+    if lop.trang_thai not in (TrangThaiLop.DANG_HOC, TrangThaiLop.DA_DONG):
+        raise business_error(
+            Codes.TRANG_THAI_KHONG_HOP_LE, "Chỉ duyệt điểm khi lớp đang học hoặc đã đóng."
+        )
     diem = list(Grade.objects.filter(lop_hoc_phan=lop))
     if not diem:
         raise business_error(Codes.TRANG_THAI_KHONG_HOP_LE, "Lớp chưa có điểm để duyệt.")
+    thieu = len({r.sinh_vien_id for r in sinh_vien_lop(lop)} - {g.sinh_vien_id for g in diem})
+    if thieu:
+        raise business_error(
+            Codes.TRANG_THAI_KHONG_HOP_LE, f"Còn {thieu} sinh viên chưa có điểm, chưa duyệt được."
+        )
     if any(g.trang_thai == TrangThaiDiem.NHAP_TAM for g in diem):
         raise business_error(
             Codes.TRANG_THAI_KHONG_HOP_LE, "Còn điểm chưa khóa (giáo viên chưa khóa điểm)."

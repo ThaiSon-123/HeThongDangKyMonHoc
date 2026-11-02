@@ -111,7 +111,8 @@ def test_dang_ky_diem_danh_diem_hoc_phi(login_as):
         ).status_code
         == 200
     )
-    assert sv_api.get("/api/grades/my/").data["diem"] == []
+    # chưa duyệt: SV thấy môn nhưng điểm để trống
+    assert [d["diem_chu"] for d in sv_api.get("/api/grades/my/").data["diem"]] == [""]
 
     # 5. Hết ngày học, đủ điểm → lớp DA_DONG; PĐT duyệt → KHOA; SV thấy điểm + GPA (BR-25)
     assert training.chuyen_trang_thai_lop_hang_ngay(hom_nay) == (0, 1)

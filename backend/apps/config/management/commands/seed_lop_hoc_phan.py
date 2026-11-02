@@ -11,7 +11,6 @@ Chạy lại an toàn khi chưa có đăng ký (kết quả cố định); đã 
 
 import re
 from collections import Counter, defaultdict
-from datetime import timedelta
 
 import openpyxl
 from django.core.management.base import BaseCommand, CommandError
@@ -172,7 +171,7 @@ def tao_lop_hoc_ky(hk, nhom_hk, mon, gv_theo_khoa):
                 "si_so_toi_da": 40 if m.so_tiet_ly_thuyet == 0 else 60,
                 "ngay_bat_dau": hk.ngay_bat_dau,
                 "ngay_ket_thuc": hk.ngay_ket_thuc,
-                "han_nhap_diem": hk.ngay_ket_thuc + timedelta(days=14),
+                "han_nhap_diem": None,  # theo cấu hình so_ngay_cho_phep_nhap_diem
                 "trang_thai": trang_thai,
             },
         )

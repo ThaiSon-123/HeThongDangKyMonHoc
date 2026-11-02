@@ -12,6 +12,7 @@ from apps.tuition.models import (
     Payment,
     PhuongThuc,
     TuitionConfig,
+    TuitionInstallment,
 )
 
 TIEN = {"max_digits": 14, "decimal_places": 2}
@@ -22,7 +23,33 @@ class TuitionConfigSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TuitionConfig
-        fields = ["id", "hoc_ky", "ten_hk", "han_dong", "ghi_chu"]
+        fields = ["id", "hoc_ky", "ten_hk", "ngay_bat_dau_dong", "han_dong", "ghi_chu"]
+
+    def validate(self, attrs):
+        def g(k):
+            return attrs.get(k, getattr(self.instance, k, None))
+
+        bat_dau, han, hoc_ky = g("ngay_bat_dau_dong"), g("han_dong"), g("hoc_ky")
+        if bat_dau and han and bat_dau > han:
+            raise serializers.ValidationError(
+                {"ngay_bat_dau_dong": ["Ngày bắt đầu đóng phải trước hoặc bằng hạn đóng."]}
+            )
+        if bat_dau and hoc_ky:
+            dot_som = (
+                TuitionInstallment.objects.filter(hoc_ky=hoc_ky, han_dong__lt=bat_dau)
+                .order_by("thu_tu")
+                .first()
+            )
+            if dot_som:
+                raise serializers.ValidationError(
+                    {
+                        "ngay_bat_dau_dong": [
+                            f"Hạn đợt {dot_som.thu_tu} ({dot_som.han_dong:%d/%m/%Y}) sớm hơn ngày bắt đầu "
+                            "đóng — sửa lịch chia đợt trước."
+                        ]
+                    }
+                )
+        return attrs
 
 
 class InstallmentSerializer(serializers.Serializer):
@@ -34,6 +61,8 @@ class InstallmentSerializer(serializers.Serializer):
 
 
 class InstallmentsPutSerializer(serializers.Serializer):
+    """`context["ngay_bat_dau_dong"]`: ngày bắt đầu đóng của học kỳ — hạn mọi đợt không được sớm hơn."""
+
     dots = InstallmentSerializer(many=True)
 
     def validate_dots(self, dots):
@@ -44,6 +73,11 @@ class InstallmentsPutSerializer(serializers.Serializer):
             raise serializers.ValidationError("Tổng tỷ lệ 3 đợt phải bằng 100%.")
         if not dots[0]["han_dong"] < dots[1]["han_dong"] < dots[2]["han_dong"]:
             raise serializers.ValidationError("Hạn đóng phải tăng dần theo đợt.")
+        bat_dau = self.context.get("ngay_bat_dau_dong")
+        if bat_dau and dots[0]["han_dong"] < bat_dau:
+            raise serializers.ValidationError(
+                f"Hạn đợt 1 không được sớm hơn ngày bắt đầu đóng học phí ({bat_dau:%d/%m/%Y})."
+            )
         return dots
 
 
@@ -259,6 +293,10 @@ class MyPayStatusSerializer(serializers.Serializer):
 
 
 class MyTuitionSerializer(TuitionDetailSerializer):
+    ngay_bat_dau_dong = serializers.DateField(allow_null=True)
+    duoc_thanh_toan = (
+        serializers.BooleanField()
+    )  # đã tới ngày bắt đầu đóng (hoặc kỳ không đặt ngày)
     cac_dot = DotMySerializer(many=True)  # lịch 3 đợt nếu học kỳ đã cấu hình, ngược lại []
     dot_tiep_theo = DotTiepTheoSerializer(allow_null=True)  # chỉ có khi CHIA_DOT
     cac_hoc_ky = HocKyCoHocPhiSerializer(

@@ -132,7 +132,14 @@ class _HanDongState extends ConsumerState<_HanDong> {
       hocKyLabel,
       lockedOnEdit: true,
     ),
-    DateSpec('han_dong', 'Hạn đóng'),
+    DateSpec(
+      'ngay_bat_dau_dong',
+      'Ngày bắt đầu đóng',
+      required: false,
+      half: true,
+      helper: 'Trước ngày này sinh viên chưa thanh toán được. Để trống = đóng được ngay.',
+    ),
+    DateSpec('han_dong', 'Hạn đóng', half: true),
     TextSpec('ghi_chu', 'Ghi chú', required: false),
   ];
 
@@ -140,9 +147,13 @@ class _HanDongState extends ConsumerState<_HanDong> {
     final api = ref.read(trainingApiProvider);
     final saved = await showEntityForm(
       context,
-      title: row == null ? 'Thêm hạn đóng' : 'Hạn đóng — ${row.str('ten_hk')}',
-      saveLabel: 'Lưu hạn đóng',
-      note: 'Mỗi học kỳ có một hạn đóng học phí. Sau hạn, sinh viên còn nợ được tính là quá hạn.',
+      title: row == null
+          ? 'Thêm thời gian đóng học phí'
+          : 'Thời gian đóng học phí — ${row.str('ten_hk')}',
+      saveLabel: 'Lưu',
+      note:
+          'Sinh viên thanh toán được từ ngày bắt đầu đóng (áp dụng cả đóng một lần và chia đợt — '
+          'hạn các đợt không được sớm hơn ngày này). Sau hạn đóng, sinh viên còn nợ được tính là quá hạn.',
       specs: _specs,
       initial: row,
       initialSelected: row == null
@@ -162,14 +173,15 @@ class _HanDongState extends ConsumerState<_HanDong> {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       const _TieuDe(
-        'Hạn đóng học phí',
-        'Mỗi học kỳ có một hạn đóng. Sau hạn, sinh viên còn nợ được tính là quá hạn.',
+        'Thời gian đóng học phí',
+        'Mỗi học kỳ có ngày bắt đầu đóng và hạn đóng. Trước ngày bắt đầu, sinh viên chưa thanh toán được; '
+            'sau hạn, sinh viên còn nợ được tính là quá hạn.',
       ),
       const SizedBox(height: 16),
       ListToolbar(
         children: [
           _LocHocKy((id) => _ctl.setFilter('hoc_ky', id)),
-          AddButton('+ Thêm hạn đóng', _form),
+          AddButton('+ Thêm thời gian đóng', _form),
         ],
       ),
       const SizedBox(height: 16),
@@ -177,9 +189,10 @@ class _HanDongState extends ConsumerState<_HanDong> {
         controller: _ctl,
         path: _configPath,
         minWidth: 640,
-        emptyText: 'Chưa có hạn đóng nào.',
+        emptyText: 'Chưa có thời gian đóng nào.',
         columns: const [
           ListColumn('Học kỳ', flex: 2),
+          ListColumn('Bắt đầu đóng', width: 140),
           ListColumn('Hạn đóng', width: 140),
           ListColumn('Ghi chú', flex: 3),
           ListColumn('', width: 90),
@@ -188,6 +201,11 @@ class _HanDongState extends ConsumerState<_HanDong> {
           Text(
             r.str('ten_hk'),
             style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            r['ngay_bat_dau_dong'] == null
+                ? 'Ngay'
+                : formatYmd(r.str('ngay_bat_dau_dong')),
           ),
           Text(formatYmd(r.str('han_dong'))),
           Text(

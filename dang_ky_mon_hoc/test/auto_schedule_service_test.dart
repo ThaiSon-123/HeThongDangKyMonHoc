@@ -38,6 +38,21 @@ MonChon mon(
 
 const t2 = Buoi(2, 1, 3);
 
+/// `(điểm đạt, điểm tối đa)` của dòng lý do bắt đầu bằng [dau].
+(int, int) diemCua(ToHop t, String dau) {
+  final d = t.lyDo.firstWhere((l) => l.text.startsWith(dau)).diem!.split('/');
+  return (int.parse(d[0]), int.parse(d[1]));
+}
+
+/// Điểm tổ hợp đúng bằng tổng điểm các tiêu chí; tổng điểm tối đa luôn là 100.
+void kiemTraCongDon(ToHop t) {
+  final co = t.lyDo.where((l) => l.diem != null).map((l) => l.diem!.split('/'));
+  expect(co.fold<int>(0, (s, d) => s + int.parse(d[0])), t.diem);
+  if (co.isNotEmpty) {
+    expect(co.fold<int>(0, (s, d) => s + int.parse(d[1])), 100);
+  }
+}
+
 void main() {
   group('Buoi / Ca', () {
     test('trùng lịch BR-03: cùng thứ và giao tiết', () {
@@ -123,7 +138,7 @@ void main() {
       );
     });
 
-    test('điểm cơ bản: 70 + 4 khi học ≤ 4 ngày/tuần; lý do đúng', () {
+    test('đạt mọi tiêu chí → 100; mỗi lý do kèm điểm đạt/tối đa', () {
       final v = DauVao(
         mon: [
           mon(1, [
@@ -132,43 +147,92 @@ void main() {
         ],
       );
       final t = goiY(v).single;
-      expect(t.diem, 74);
+      expect(t.diem, 100);
       expect(t.tongTinChi, 3);
       expect(t.lyDo.map((l) => l.text), [
+        'Xếp được 1/1 môn đã chọn (3/3 tín chỉ).',
         'Chỉ học 1 ngày/tuần, lịch gọn.',
         'Không trùng tiết giữa các môn đã chọn.',
       ]);
+      expect(t.lyDo.every((l) => l.dat), isTrue);
+      kiemTraCongDon(t);
+    });
+
+    test('môn không xếp được bị trừ điểm (trước đây vẫn được điểm cao)', () {
+      final v = DauVao(
+        lichCoSan: const [Buoi(4, 1, 3)],
+        mon: [
+          mon(1, [
+            lop(1, 'A', [t2]),
+          ]),
+          mon(2, [
+            lop(2, 'B', [const Buoi(4, 2, 4)]), // vướng lớp đã đăng ký
+          ]),
+        ],
+      );
+      final t = goiY(v).single;
+      expect(t.chon.keys, [1]);
+      final (dat, toiDa) = diemCua(t, 'Xếp được 1/2 môn');
+      expect(dat, (toiDa / 2).round()); // mất nửa điểm "xếp đủ môn"
+      expect(t.diem, lessThanOrEqualTo(100 - toiDa ~/ 2));
+      expect(t.lyDo.first.text, contains('thiếu môn bắt buộc: Môn 2'));
+      kiemTraCongDon(t);
     });
 
     test(
-      'tránh ngày: −12 mỗi buổi vào ngày tránh; lớp không vướng được ưu tiên',
+      'thiếu môn bắt buộc bị trừ nặng hơn thiếu môn tự chọn cùng tín chỉ',
       () {
-        final v = DauVao(
-          uuTien: const UuTien(tranhNgay: {7}),
+        DauVao dauVao({required bool bbBiVuong}) => DauVao(
+          lichCoSan: const [Buoi(4, 1, 3)],
           mon: [
             mon(1, [
-              lop(1, 'A-T7', [const Buoi(7, 1, 3)]),
-              lop(1, 'A-T3', [const Buoi(3, 1, 3)]),
+              lop(1, 'BB', [bbBiVuong ? const Buoi(4, 1, 3) : t2]),
             ]),
+            mon(2, [
+              lop(2, 'TC', [bbBiVuong ? t2 : const Buoi(4, 1, 3)]),
+            ], batBuoc: false),
           ],
         );
-        final r = goiY(v);
-        expect(r.first.chon[1]!.maLop, 'A-T3');
-        expect(r.first.diem, 74);
-        expect(r.first.lyDo.first.dat, isTrue);
-        expect(
-          r.first.lyDo.first.text,
-          'Không có buổi nào vào Thứ 7 như bạn muốn tránh.',
-        );
-        final xau = r.last;
-        expect(xau.chon[1]!.maLop, 'A-T7');
-        expect(xau.diem, 70 - 12 + 4);
-        expect(xau.lyDo.first.dat, isFalse);
-        expect(xau.lyDo.first.text, contains('A-T7 (Thứ 7)'));
+        final thieuBb = goiY(dauVao(bbBiVuong: true)).single;
+        final thieuTc = goiY(dauVao(bbBiVuong: false)).single;
+        expect(thieuBb.diem, lessThan(thieuTc.diem));
       },
     );
 
-    test('ngày muốn học +6 mỗi môn; ca ưu tiên +4 mỗi môn đúng ca', () {
+    test('tránh ngày: tính theo từng buổi; lớp không vướng được ưu tiên', () {
+      final v = DauVao(
+        uuTien: const UuTien(tranhNgay: {7}),
+        mon: [
+          mon(1, [
+            lop(1, 'A-T7', [const Buoi(7, 1, 3)]),
+            lop(1, 'A-T3', [const Buoi(3, 1, 3)]),
+          ]),
+        ],
+      );
+      final r = goiY(v);
+      expect(r.first.chon[1]!.maLop, 'A-T3');
+      expect(r.first.diem, 100);
+      expect(
+        r.first.lyDo.any(
+          (l) =>
+              l.dat &&
+              l.text == 'Không có buổi nào vào Thứ 7 như bạn muốn tránh.',
+        ),
+        isTrue,
+      );
+      final xau = r.last;
+      expect(xau.chon[1]!.maLop, 'A-T7');
+      final (dat, toiDa) = diemCua(xau, 'Có 1/1 buổi vào ngày bạn muốn tránh');
+      expect(dat, 0);
+      expect(xau.diem, 100 - toiDa);
+      expect(
+        xau.lyDo.firstWhere((l) => l.text.startsWith('Có 1/1')).text,
+        contains('A-T7 (Thứ 7)'),
+      );
+      kiemTraCongDon(xau);
+    });
+
+    test('ngày muốn học và ca ưu tiên tính theo tỷ lệ buổi đạt, không cộng dồn theo số môn', () {
       final v = DauVao(
         uuTien: const UuTien(ngayMuon: {8}, ca: Ca.sang),
         mon: [
@@ -181,19 +245,39 @@ void main() {
         ],
       );
       final t = goiY(v).single;
-      // 70 + 6 (A có buổi Chủ nhật) + 4 (A đúng ca sáng) + 4 (≤ 4 ngày)
-      expect(t.diem, 84);
       expect(
         t.lyDo.map((l) => l.text),
         containsAll([
-          '1/2 môn có buổi vào ngày bạn muốn học (Chủ nhật).',
-          'Chỉ 1/2 môn học đúng ca ưu tiên; còn lại: B-C (ca chiều).',
+          '1/2 buổi học vào ngày bạn muốn học (Chủ nhật).',
+          '1/2 buổi học đúng ca ưu tiên (sáng); lệch ca: B-C (ca chiều).',
         ]),
       );
+      final (ngayDat, ngayToiDa) = diemCua(t, '1/2 buổi học vào ngày');
+      final (caDat, caToiDa) = diemCua(t, '1/2 buổi học đúng ca');
+      expect(ngayDat, (ngayToiDa / 2).round());
+      expect(caDat, (caToiDa / 2).round());
+      expect(t.diem, lessThan(100));
+      kiemTraCongDon(t);
+    });
+
+    test('nhiều môn đều lệch ca → điểm ca bằng 0 dù có nhiều môn', () {
+      final v = DauVao(
+        uuTien: const UuTien(ca: Ca.sang),
+        mon: [
+          for (var m = 1; m <= 3; m++)
+            mon(m, [
+              lop(m, 'M$m', [Buoi(1 + m, 6, 8)]), // cả 3 môn học chiều
+            ]),
+        ],
+      );
+      final t = goiY(v).single;
+      expect(diemCua(t, '0/3 buổi học đúng ca').$1, 0);
+      expect(t.diem, lessThan(100));
+      kiemTraCongDon(t);
     });
 
     test(
-      'giáo viên mong muốn: +8 khi xếp đúng, −10 và nêu lý do khi không',
+      'giáo viên mong muốn: đạt trọn khi đúng, mất điểm tiêu chí khi sai',
       () {
         final dung = lop(1, 'A-01', [t2], gv: 7, gvTen: 'Vũ Đức Anh');
         final khac = lop(1, 'A-02', [const Buoi(3, 1, 3)], gv: 1);
@@ -204,17 +288,20 @@ void main() {
         );
         final r = goiY(v);
         expect(r.first.chon[1], dung);
-        expect(r.first.diem, 70 + 4 + 8);
+        expect(r.first.diem, 100);
         expect(
-          r.first.lyDo.last.text,
-          'Đúng giáo viên mong muốn: Môn 1 – Vũ Đức Anh.',
+          r.first.lyDo.any(
+            (l) => l.text == 'Đúng giáo viên mong muốn: Môn 1 – Vũ Đức Anh.',
+          ),
+          isTrue,
         );
         expect(r.last.chon[1], khac);
-        expect(r.last.diem, 70 + 4 - 10);
-        expect(
-          r.last.lyDo.last.text,
-          'Chưa xếp được giáo viên mong muốn: Môn 1 học với Nguyễn Thị Mai thay vì Vũ Đức Anh.',
+        final (dat, toiDa) = diemCua(
+          r.last,
+          'Đúng giáo viên mong muốn 0/1 môn: Môn 1 học với Nguyễn Thị Mai thay vì Vũ Đức Anh',
         );
+        expect(dat, 0);
+        expect(r.last.diem, 100 - toiDa);
       },
     );
 
@@ -284,25 +371,35 @@ void main() {
       expect(t.khongXep, hasLength(1));
     });
 
-    test('điểm kẹp trong [40, 99]', () {
-      final nhieuBuoi = [for (var i = 0; i < 6; i++) Buoi(7, 1 + i, 1 + i)];
-      final xau = DauVao(
-        uuTien: const UuTien(tranhNgay: {7}),
+    test('không xếp được môn nào → 0 điểm', () {
+      final v = DauVao(
+        lichCoSan: const [Buoi(2, 1, 5)],
         mon: [
-          mon(1, [lop(1, 'A', nhieuBuoi)]),
+          mon(1, [
+            lop(1, 'A', [t2]),
+          ]),
         ],
       );
-      expect(goiY(xau).single.diem, 40);
-      final tot = DauVao(
-        uuTien: const UuTien(ngayMuon: {2, 3, 4, 5, 6}, ca: Ca.sang),
+      expect(goiY(v).single.diem, 0);
+    });
+
+    test('tổ hợp sắp theo điểm giảm dần', () {
+      final v = DauVao(
+        uuTien: const UuTien(tranhNgay: {7}, ca: Ca.sang),
         mon: [
-          for (var m = 1; m <= 5; m++)
-            mon(m, [
-              lop(m, 'M$m', [Buoi(1 + m, 1, 3)], gv: 7),
-            ], gv: 7),
+          mon(1, [
+            lop(1, 'A-T7', [const Buoi(7, 6, 8)]),
+            lop(1, 'A-T2', [t2]),
+            lop(1, 'A-T3', [const Buoi(3, 6, 8)]),
+          ]),
         ],
       );
-      expect(goiY(tot).single.diem, 99);
+      final r = goiY(v);
+      expect(r.map((t) => t.chon[1]!.maLop).first, 'A-T2');
+      expect(
+        r.map((t) => t.diem).toList(),
+        [...r.map((t) => t.diem)]..sort((a, b) => b - a),
+      );
     });
   });
 
@@ -329,8 +426,16 @@ void main() {
           1: a2,
           2: b1,
         }); // đổi tay sang lớp trùng → báo trùng
-        expect(doi.lyDo.last.dat, isFalse);
-        expect(doi.lyDo.last.text, contains('A-02 và B-01'));
+        final trung = doi.lyDo.firstWhere(
+          (l) => l.text.startsWith('Trùng tiết'),
+        );
+        expect(trung.dat, isFalse);
+        expect(trung.text, contains('A-02 và B-01'));
+        expect(
+          trung.diem,
+          startsWith('0/'),
+        ); // trùng tiết mất trọn điểm tiêu chí
+        expect(doi.diem, lessThan(t.diem));
       },
     );
   });

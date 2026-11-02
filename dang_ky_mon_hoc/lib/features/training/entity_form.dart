@@ -338,8 +338,11 @@ class _EntityDialogState extends ConsumerState<_EntityDialog> {
       case SelectSpec():
         final query = s.queryOf?.call(_selected) ?? const {};
         return ApiSelect(
-          // Đổi bộ lọc cha → dựng lại ô để xóa chữ đang gõ và tải gợi ý mới.
-          key: ValueKey('${s.key}|$query|${_selected[s.key]?.id}'),
+          // Đổi bộ lọc / ô cha → dựng lại ô để xóa chữ đang gõ và tải gợi ý mới. Không gắn id của
+          // chính ô: gõ vào ô đã chọn sẵn (bỏ chọn) mà dựng lại thì mất chữ vừa gõ.
+          key: ValueKey(
+            '${s.key}|$query|${s.dependsOn.map((d) => _selected[d]?.id)}',
+          ),
           label: s.label,
           path: s.path,
           query: query,

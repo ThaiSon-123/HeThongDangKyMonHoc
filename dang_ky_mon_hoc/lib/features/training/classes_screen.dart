@@ -479,21 +479,76 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
     );
   }
 
+  /// Đổi giáo viên chỉ khi lớp chưa học, chưa tới ngày bắt đầu, chưa ai đăng ký (`ly_do_khoa` null).
   Future<void> _edit() async {
     final lop = _lop!;
     final api = ref.read(trainingApiProvider);
+    final doiGv = lop['ly_do_khoa'] == null;
     final saved = await showEntityForm(
       context,
       title: 'Sửa lớp học phần',
-      specs: const [
-        TextSpec('si_so_toi_da', 'Sĩ số tối đa', number: true, half: true),
-        DateSpec('ngay_bat_dau', 'Ngày bắt đầu', required: false, half: true),
-        DateSpec('ngay_ket_thuc', 'Ngày kết thúc', required: false, half: true),
+      note: doiGv
+          ? null
+          : 'Không đổi được giáo viên: ${lop.str('ly_do_khoa').toLowerCase()}',
+      specs: [
+        if (doiGv)
+          SelectSpec(
+            'giao_vien',
+            'Giáo viên',
+            '/profiles/teachers/',
+            giaoVienLabel,
+            queryOf: (_) => {'khoa': lop['mon_khoa']},
+            helper: 'Chỉ gợi ý giáo viên cùng khoa / viện với môn.',
+          ),
+        const TextSpec(
+          'si_so_toi_da',
+          'Sĩ số tối đa',
+          number: true,
+          half: true,
+        ),
+        const DateSpec(
+          'ngay_bat_dau',
+          'Ngày bắt đầu',
+          required: false,
+          half: true,
+        ),
+        const DateSpec(
+          'ngay_ket_thuc',
+          'Ngày kết thúc',
+          required: false,
+          half: true,
+        ),
       ],
       initial: lop,
+      initialSelected: {
+        'giao_vien': {
+          'id': lop['giao_vien'],
+          'ho_ten': lop['giao_vien_ten'],
+          'ma_gv': '',
+        },
+      },
       submit: (body) => api.update(_path, lop.id, body),
     );
     if (saved) _done();
+  }
+
+  Future<void> _delete() async {
+    final lop = _lop!;
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Xóa lớp học phần?',
+      message:
+          'Xóa ${lop.str('ma_lop')} (${lop.str('ten_mon')}) cùng lịch học của lớp? Không hoàn tác được.',
+      actionLabel: 'Xóa lớp',
+      danger: true,
+    );
+    if (!ok || !mounted) return;
+    await runAction(
+      context,
+      () => ref.read(trainingApiProvider).delete(_path, lop.id),
+      success: 'Đã xóa lớp ${lop.str('ma_lop')}.',
+      onDone: () => Navigator.of(context).pop(true),
+    );
   }
 
   Future<void> _extend() async {
@@ -628,6 +683,8 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
             if (tt == 'KE_HOACH') RowButton('Mở lớp', () => _openOrClose(true)),
             if (tt == 'DANG_HOC')
               RowButton('Đóng lớp', () => _openOrClose(false), danger: true),
+            if (lop['ly_do_khoa'] == null)
+              RowButton('Xóa lớp', _delete, danger: true),
           ],
         ),
         const SizedBox(height: 8),

@@ -192,7 +192,9 @@ class IsPdtKtOrGiaoVien(HasRole):
     roles = (Role.PHONG_DAO_TAO, Role.KE_TOAN, Role.GIAO_VIEN)
 
 
-class ClassSectionViewSet(_PdtViewSet):
+class ClassSectionViewSet(_CoXoaViewSet):
+    """PĐT xóa lớp chỉ khi lớp chưa học, chưa tới ngày bắt đầu và chưa có đăng ký (`ly_do_khoa`)."""
+
     permission_classes = [PdtWriteKtRead]  # KT chỉ đọc; GV chỉ xem chi tiết lớp mình (`retrieve`)
     audit_model = "ClassSection"
     queryset = (
@@ -214,6 +216,11 @@ class ClassSectionViewSet(_PdtViewSet):
         if request.user.role == Role.GIAO_VIEN:
             lop_cua_gv(request.user, lop.pk)
         return Response(self.get_serializer(lop).data)
+
+    def perform_destroy(self, instance):
+        if ly_do := services.ly_do_khoa_lop(instance):
+            raise services.sai_trang_thai(f"Không xóa được lớp: {ly_do[0].lower()}{ly_do[1:]}")
+        super().perform_destroy(instance)
 
     def perform_update(self, serializer):
         lop = super().perform_update(serializer)

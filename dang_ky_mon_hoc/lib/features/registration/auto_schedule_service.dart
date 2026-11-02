@@ -156,7 +156,7 @@ class MonChon {
   String get tenHienThi => hocLai ? '$ten (học lại)' : ten;
 }
 
-/// Ưu tiên cá nhân (client; điểm theo plan mục 7.2).
+/// Ưu tiên cá nhân (client; cách chấm điểm xem [danhGia] và plan mục 7.2).
 class UuTien {
   const UuTien({this.tranhNgay = const {}, this.ngayMuon = const {}, this.ca});
 
@@ -185,12 +185,14 @@ class DauVao {
   final int tranTinChi;
 }
 
-/// Một dòng giải thích điểm: [dat] = ✓ (đạt) hoặc ! (chưa đạt / bị vướng).
+/// Một dòng giải thích điểm: [dat] = ✓ (đạt trọn) hoặc ! (chưa đạt / bị vướng); [diem] = `"đạt/tối đa"`
+/// của tiêu chí (null = dòng chỉ giải thích, không có điểm riêng).
 class LyDo {
-  const LyDo(this.dat, this.text);
+  const LyDo(this.dat, this.text, [this.diem]);
 
   final bool dat;
   final String text;
+  final String? diem;
 }
 
 class ToHop {
@@ -214,9 +216,14 @@ class ToHop {
   Set<int> get idLop => {for (final l in chon.values) l.id};
 }
 
-const _diemCoBan = 70;
-const _diemToiThieu = 40;
-const _diemToiDa = 99;
+// Trọng số tiêu chí; chỉ tiêu chí đang dùng mới tính, rồi quy về thang 100 (plan mục 7.2).
+const _wXepMon = 40;
+const _wKhongTrung = 15;
+const _wTranhNgay = 15;
+const _wNgayMuon = 10;
+const _wCa = 10;
+const _wGiaoVien = 10;
+const _wGon = 5;
 const _nhanhMoiMon = 6; // số lớp thử cho mỗi môn khi rẽ nhánh
 const _beRong = 60; // số tổ hợp dở dang giữ lại sau mỗi môn (beam search)
 
@@ -229,8 +236,8 @@ class _Dang {
   final int diem;
 }
 
-/// Sinh các tổ hợp tìm được (tối đa [toiDa] nếu có, mặc định là tất cả), sắp theo (xếp được nhiều môn
-/// hơn, điểm cao hơn). Beam search chỉ giữ [_beRong] tổ hợp tốt nhất nên danh sách không quá [_beRong].
+/// Sinh các tổ hợp tìm được (tối đa [toiDa] nếu có, mặc định là tất cả), sắp theo điểm giảm dần (cùng
+/// điểm thì tổ hợp xếp được nhiều môn hơn đứng trước). Beam search chỉ giữ [_beRong] tổ hợp tốt nhất nên danh sách không quá [_beRong].
 ///
 /// Môn bắt buộc theo `kyGoiY` đứng trước. Duyệt từng môn bằng *beam search*: giữ [_beRong] tổ hợp dở
 /// dang tốt nhất (theo điểm riêng từng lớp) nên các tổ hợp khác nhau ngay từ những môn đầu, không
@@ -286,8 +293,8 @@ List<ToHop> goiY(DauVao v, {int? toiDa}) {
     if (daCo.add(khoa)) toHop.add(danhGia(v, d.chon));
   }
   toHop.sort((a, b) {
-    final xep = b.chon.length - a.chon.length;
-    return xep != 0 ? xep : b.diem - a.diem;
+    final diem = b.diem - a.diem;
+    return diem != 0 ? diem : b.chon.length - a.chon.length;
   });
   return toiDa == null ? toHop : toHop.take(toiDa).toList();
 }
@@ -304,155 +311,215 @@ int _diemRieng(Lop l, MonChon m, UuTien u) {
   return d;
 }
 
+class _TieuChi {
+  _TieuChi(this.trongSo, this.tyLe, this.text);
+
+  final int trongSo;
+  final double tyLe; // 0..1
+  final String text;
+}
+
+/// Điểm tối đa mỗi tiêu chí trên thang 100 (chia theo trọng số, phần lẻ dồn cho phần dư lớn nhất) —
+/// đạt trọn mọi tiêu chí thì tổng đúng 100.
+List<int> _diemToiDa(List<int> trongSo) {
+  final tong = trongSo.fold<int>(0, (s, w) => s + w);
+  final tho = [for (final w in trongSo) 100 * w / tong];
+  final ket = [for (final x in tho) x.floor()];
+  final thuTu = List.generate(trongSo.length, (i) => i)
+    ..sort((i, j) => (tho[j] - ket[j]).compareTo(tho[i] - ket[i]));
+  final du = 100 - ket.fold<int>(0, (s, x) => s + x);
+  for (var k = 0; k < du; k++) {
+    ket[thuTu[k]]++;
+  }
+  return ket;
+}
+
 /// Chấm điểm và giải thích một tổ hợp [chon] (`monId → lớp`). Dùng cả khi SV đổi lớp của một môn.
+///
+/// Mỗi tiêu chí có trọng số và **tỷ lệ đạt** 0..1; điểm = Σ (điểm tối đa của tiêu chí × tỷ lệ đạt),
+/// thang 100, chỉ tính tiêu chí đang dùng: xếp đủ môn (tín chỉ xếp được / đã chọn, môn bắt buộc nặng gấp
+/// đôi), không trùng tiết, tránh ngày / ngày muốn học / ca ưu tiên (tính theo **từng buổi**), giáo viên
+/// mong muốn (theo môn), lịch gọn (≤ 4 ngày/tuần). Không đạt chỗ nào thì mất đúng phần điểm đó.
 ToHop danhGia(DauVao v, Map<int, Lop> chon) {
   final u = v.uuTien;
-  final lyDo = <LyDo>[];
-  var diem = _diemCoBan;
   final mon = {for (final m in v.mon) m.id: m};
   final lopChon = chon.values.toList();
   final tinChiMoi = lopChon.fold<int>(0, (s, l) => s + l.tinChi);
+  final buoi = [for (final l in lopChon) ...l.lich];
 
   // Môn không xếp được: nêu buổi gây vướng hoặc vượt trần tín chỉ.
-  final lichDaXep = [...v.lichCoSan, for (final l in lopChon) ...l.lich];
+  final lichDaXep = [...v.lichCoSan, ...buoi];
   final khongXep = <int, String>{};
   for (final m in v.mon) {
     if (chon.containsKey(m.id)) continue;
     khongXep[m.id] = _lyDoKhongXep(m, lichDaXep, v, tinChiMoi);
   }
 
-  // 1. Ngày muốn tránh.
-  if (u.tranhNgay.isNotEmpty) {
-    final vi = [
-      for (final l in lopChon)
-        for (final b in l.lich)
-          if (u.tranhNgay.contains(b.thu)) (l, b),
-    ];
-    diem -= 12 * vi.length;
-    final ten = (u.tranhNgay.toList()..sort()).map(thuDayDu).join(', ');
-    lyDo.add(
-      vi.isEmpty
-          ? LyDo(true, 'Không có buổi nào vào $ten như bạn muốn tránh.')
-          : LyDo(
-              false,
-              'Có ${vi.length} buổi vào ngày bạn muốn tránh: '
-              '${vi.map((e) => '${e.$1.maLop} (${thuDayDu(e.$2.thu)})').join(', ')}.',
-            ),
-    );
-  }
+  final tieuChi = <_TieuChi>[];
 
-  // 2. Ngày muốn học.
-  if (u.ngayMuon.isNotEmpty && lopChon.isNotEmpty) {
-    final dung = lopChon
-        .where((l) => l.lich.any((b) => u.ngayMuon.contains(b.thu)))
-        .toList();
-    diem += 6 * dung.length;
-    final ten = (u.ngayMuon.toList()..sort()).map(thuDayDu).join(', ');
-    lyDo.add(
-      LyDo(
-        dung.length == lopChon.length,
-        '${dung.length}/${lopChon.length} môn có buổi vào ngày bạn muốn học ($ten).',
+  // 1. Xếp đủ các môn đã chọn (môn bắt buộc nặng gấp đôi).
+  if (v.mon.isNotEmpty) {
+    int nang(MonChon m) => m.tinChi * (m.batBuoc ? 2 : 1);
+    final tong = v.mon.fold<int>(0, (s, m) => s + nang(m));
+    final xep = v.mon
+        .where((m) => chon.containsKey(m.id))
+        .fold<int>(0, (s, m) => s + nang(m));
+    final tcChon = v.mon.fold<int>(0, (s, m) => s + m.tinChi);
+    final thieuBb = [
+      for (final m in v.mon)
+        if (m.batBuoc && !chon.containsKey(m.id)) m.ten,
+    ];
+    tieuChi.add(
+      _TieuChi(
+        _wXepMon,
+        tong == 0 ? 1 : xep / tong,
+        'Xếp được ${chon.length}/${v.mon.length} môn đã chọn ($tinChiMoi/$tcChon tín chỉ)'
+        '${thieuBb.isEmpty ? '' : '; thiếu môn bắt buộc: ${thieuBb.join(', ')}'}.',
       ),
     );
   }
 
-  // 3. Ca học ưu tiên.
-  if (u.ca != null && lopChon.isNotEmpty) {
-    final dung = lopChon.where((l) => l.lich.every(u.ca!.chua)).toList();
-    diem += 4 * dung.length;
-    final sai = lopChon.where((l) => !dung.contains(l)).toList();
-    if (sai.isEmpty) {
-      lyDo.add(
-        LyDo(
-          true,
-          'Cả ${lopChon.length} môn học đúng ca bạn ưu tiên (${u.ca!.ten}).',
-        ),
-      );
-    } else if (dung.isEmpty) {
-      lyDo.add(const LyDo(false, 'Không có môn nào học đúng ca bạn ưu tiên.'));
-    } else {
-      lyDo.add(
-        LyDo(
-          false,
-          'Chỉ ${dung.length}/${lopChon.length} môn học đúng ca ưu tiên; còn lại: '
-          '${sai.map((l) => '${l.maLop} (ca ${_caText(l)})').join(', ')}.',
+  if (lopChon.isNotEmpty) {
+    // 2. Ngày muốn tránh — theo từng buổi.
+    if (u.tranhNgay.isNotEmpty) {
+      final vi = [
+        for (final l in lopChon)
+          for (final b in l.lich)
+            if (u.tranhNgay.contains(b.thu)) (l, b),
+      ];
+      final ten = (u.tranhNgay.toList()..sort()).map(thuDayDu).join(', ');
+      tieuChi.add(
+        _TieuChi(
+          _wTranhNgay,
+          1 - vi.length / buoi.length,
+          vi.isEmpty
+              ? 'Không có buổi nào vào $ten như bạn muốn tránh.'
+              : 'Có ${vi.length}/${buoi.length} buổi vào ngày bạn muốn tránh: '
+                    '${vi.map((e) => '${e.$1.maLop} (${thuDayDu(e.$2.thu)})').join(', ')}.',
         ),
       );
     }
-  }
 
-  // 4. Số ngày học mỗi tuần (gồm cả lớp đã đăng ký).
-  final ngay = {for (final b in lichDaXep) b.thu};
-  if (ngay.isNotEmpty) {
-    final gon = ngay.length <= 4;
-    if (gon) diem += 4;
-    lyDo.add(
-      LyDo(
-        gon,
-        gon
-            ? 'Chỉ học ${ngay.length} ngày/tuần, lịch gọn.'
-            : 'Học ${ngay.length} ngày/tuần, nhiều hơn 4 ngày.',
+    // 3. Ngày muốn học — theo từng buổi.
+    if (u.ngayMuon.isNotEmpty) {
+      final dung = buoi.where((b) => u.ngayMuon.contains(b.thu)).length;
+      final ten = (u.ngayMuon.toList()..sort()).map(thuDayDu).join(', ');
+      tieuChi.add(
+        _TieuChi(
+          _wNgayMuon,
+          dung / buoi.length,
+          '$dung/${buoi.length} buổi học vào ngày bạn muốn học ($ten).',
+        ),
+      );
+    }
+
+    // 4. Ca học ưu tiên — theo từng buổi.
+    if (u.ca != null) {
+      final dung = buoi.where(u.ca!.chua).length;
+      final sai = lopChon.where((l) => !l.lich.every(u.ca!.chua)).toList();
+      tieuChi.add(
+        _TieuChi(
+          _wCa,
+          dung / buoi.length,
+          sai.isEmpty
+              ? 'Cả ${buoi.length} buổi học đúng ca bạn ưu tiên (${u.ca!.ten}).'
+              : '$dung/${buoi.length} buổi học đúng ca ưu tiên (${u.ca!.ten}); lệch ca: '
+                    '${sai.map((l) => '${l.maLop} (ca ${_caText(l)})').join(', ')}.',
+        ),
+      );
+    }
+
+    // 5. Số ngày học mỗi tuần (gồm cả lớp đã đăng ký): ≤ 4 đạt trọn, 5 được nửa, ≥ 6 không được.
+    final ngay = {for (final b in lichDaXep) b.thu}.length;
+    tieuChi.add(
+      _TieuChi(
+        _wGon,
+        ngay <= 4
+            ? 1
+            : ngay == 5
+            ? 0.5
+            : 0,
+        ngay <= 4
+            ? 'Chỉ học $ngay ngày/tuần, lịch gọn.'
+            : 'Học $ngay ngày/tuần, nhiều hơn 4 ngày.',
       ),
     );
-  }
 
-  // 5. Không trùng tiết (luôn đúng với tổ hợp do goiY sinh ra; có thể sai khi SV tự đổi lớp).
-  final trung = <String>[];
-  for (var i = 0; i < lopChon.length; i++) {
-    for (var j = i + 1; j < lopChon.length; j++) {
-      if (lopChon[i].trungVoi(lopChon[j].lich)) {
-        trung.add('${lopChon[i].maLop} và ${lopChon[j].maLop}');
+    // 6. Không trùng tiết (luôn đúng với tổ hợp do goiY sinh ra; có thể sai khi SV tự đổi lớp).
+    final trung = <String>[];
+    for (var i = 0; i < lopChon.length; i++) {
+      for (var j = i + 1; j < lopChon.length; j++) {
+        if (lopChon[i].trungVoi(lopChon[j].lich)) {
+          trung.add('${lopChon[i].maLop} và ${lopChon[j].maLop}');
+        }
+      }
+      final voiCoSan = lopChon[i].buoiVuongVoi(v.lichCoSan);
+      if (voiCoSan != null) {
+        trung.add('${lopChon[i].maLop} và lớp đã đăng ký (${voiCoSan.nhan})');
       }
     }
-    final voiCoSan = lopChon[i].buoiVuongVoi(v.lichCoSan);
-    if (voiCoSan != null) {
-      trung.add('${lopChon[i].maLop} và lớp đã đăng ký (${voiCoSan.nhan})');
-    }
-  }
-  lyDo.add(
-    trung.isEmpty
-        ? LyDo(
-            true,
-            v.lichCoSan.isEmpty ? 'Không trùng tiết giữa các môn đã chọn.' : 'Không trùng tiết giữa các môn đã chọn và các lớp bạn đã đăng ký.',
-          )
-        : LyDo(false, 'Trùng tiết: ${trung.join('; ')}.'),
-  );
+    tieuChi.add(
+      _TieuChi(
+        _wKhongTrung,
+        trung.isEmpty ? 1 : 0,
+        trung.isEmpty
+            ? (v.lichCoSan.isEmpty
+                  ? 'Không trùng tiết giữa các môn đã chọn.'
+                  : 'Không trùng tiết giữa các môn đã chọn và các lớp bạn đã đăng ký.')
+            : 'Trùng tiết: ${trung.join('; ')}.',
+      ),
+    );
 
-  // 6. Giáo viên mong muốn.
-  for (final l in lopChon) {
-    final m = mon[l.monId];
-    final mong = m?.giaoVienMongMuon;
-    if (m == null || mong == null) continue;
-    if (l.giaoVienId == mong) {
-      diem += 8;
-      lyDo.add(
-        LyDo(true, 'Đúng giáo viên mong muốn: ${m.ten} – ${l.giaoVien}.'),
-      );
-    } else {
-      diem -= 10;
-      final ten = m.lop
-          .where((x) => x.giaoVienId == mong)
-          .firstOrNull
-          ?.giaoVien;
-      lyDo.add(
-        LyDo(
-          false,
-          'Chưa xếp được giáo viên mong muốn: ${m.ten} học với ${l.giaoVien}'
-          '${ten == null ? '' : ' thay vì $ten'}.',
+    // 7. Giáo viên mong muốn — theo môn có chọn giáo viên (môn không xếp được tính là chưa đạt).
+    final coMong = v.mon.where((m) => m.giaoVienMongMuon != null).toList();
+    if (coMong.isNotEmpty) {
+      final phan = <String>[];
+      var dung = 0;
+      for (final m in coMong) {
+        final l = chon[m.id];
+        if (l == null) {
+          phan.add('chưa xếp được ${m.ten}');
+        } else if (l.giaoVienId == m.giaoVienMongMuon) {
+          dung++;
+          phan.add('${m.ten} – ${l.giaoVien}');
+        } else {
+          final ten = m.lop
+              .where((x) => x.giaoVienId == m.giaoVienMongMuon)
+              .firstOrNull
+              ?.giaoVien;
+          phan.add(
+            '${m.ten} học với ${l.giaoVien}${ten == null ? '' : ' thay vì $ten'}',
+          );
+        }
+      }
+      tieuChi.add(
+        _TieuChi(
+          _wGiaoVien,
+          dung / coMong.length,
+          dung == coMong.length
+              ? 'Đúng giáo viên mong muốn: ${phan.join('; ')}.'
+              : 'Đúng giáo viên mong muốn $dung/${coMong.length} môn: ${phan.join('; ')}.',
         ),
       );
     }
   }
+
+  final toiDa = _diemToiDa([for (final c in tieuChi) c.trongSo]);
+  var diem = 0;
+  final lyDo = <LyDo>[];
+  for (final (i, c) in tieuChi.indexed) {
+    final dat = (toiDa[i] * c.tyLe).round();
+    diem += dat;
+    lyDo.add(LyDo(c.tyLe >= 1, c.text, '$dat/${toiDa[i]}'));
+  }
   for (final e in khongXep.entries) {
-    final m = mon[e.key]!;
-    if (m.giaoVienMongMuon != null) diem -= 10;
-    lyDo.add(LyDo(false, 'Không xếp được ${m.ten}: ${e.value}'));
+    lyDo.add(LyDo(false, 'Không xếp được ${mon[e.key]!.ten}: ${e.value}'));
   }
 
   return ToHop(
     chon: Map.of(chon),
     khongXep: khongXep,
-    diem: diem.clamp(_diemToiThieu, _diemToiDa),
+    diem: diem,
     lyDo: lyDo,
     tongTinChi: tinChiMoi,
   );

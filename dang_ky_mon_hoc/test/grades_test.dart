@@ -236,7 +236,7 @@ void main() {
         await open(t, api);
         expect(find.text('8.10'), findsOneWidget); // tổng kết từ server
         expect(find.text('B'), findsOneWidget); // chip điểm chữ
-        expect(find.text('Chính thức'), findsOneWidget);
+        expect(find.text('Đã khóa'), findsOneWidget); // GV đã khóa (CHINH_THUC)
 
         // Ô nhập theo thứ tự trong bảng: mỗi dòng 3 ô QT, GK, CK.
         Future<void> nhap(String label, int idx, String v) async {
@@ -284,56 +284,108 @@ void main() {
       },
     );
 
-    testWidgets('Khóa điểm / Mở khóa gọi lock; quá hạn: banner và khóa nhập', (
-      t,
-    ) async {
-      var khoa = false;
-      final api = gv(
-        () => khoa
-            ? sheet(
-                [
+    testWidgets(
+      'Khóa điểm: tự lưu điểm đang nhập rồi khóa (không cần Lưu nháp); Mở khóa',
+      (t) async {
+        var khoa = false;
+        final api = gv(
+          () => khoa
+              ? sheet(
+                  [
+                    row(
+                      21,
+                      'SV1',
+                      'Trần Hoàng Nam',
+                      tt: 'CHINH_THUC',
+                      tk: '8.00',
+                      chu: 'B',
+                    ),
+                  ],
+                  moKhoa: true,
+                  nhap: true,
+                )
+              : sheet([
                   row(
                     21,
                     'SV1',
                     'Trần Hoàng Nam',
-                    tt: 'CHINH_THUC',
-                    tk: '8.00',
-                    chu: 'B',
+                    tt: 'NHAP_TAM',
+                    qt: '8',
+                    gk: '8',
+                    ck: '8',
                   ),
-                ],
-                moKhoa: true,
-                nhap: true,
-              )
-            : sheet([
-                row(
-                  21,
-                  'SV1',
-                  'Trần Hoàng Nam',
-                  tt: 'NHAP_TAM',
-                  qt: '8',
-                  gk: '8',
-                  ck: '8',
-                ),
-              ], khoa: true),
-        extra: {
-          'POST /class-sections/3/grades/lock/': (o) {
-            khoa = (o.data as Map)['action'] == 'lock';
-            return reply(200, {});
+                ], khoa: true),
+          extra: {
+            'PUT /class-sections/3/grades/': (_) => reply(200, {}),
+            'POST /class-sections/3/grades/lock/': (o) {
+              khoa = (o.data as Map)['action'] == 'lock';
+              return reply(200, {});
+            },
           },
-        },
-      );
-      await open(t, api);
-      await tapText(t, 'Khóa điểm cả lớp');
-      expect(api.bodies['POST /class-sections/3/grades/lock/'], {
-        'action': 'lock',
-      });
-      expect(find.text('Đã khóa điểm cả lớp.'), findsOneWidget);
-      expect(find.text('Mở khóa'), findsOneWidget);
-      await tapText(t, 'Mở khóa');
-      expect(api.bodies['POST /class-sections/3/grades/lock/'], {
-        'action': 'unlock',
-      });
-    });
+        );
+        await open(t, api);
+        // sửa điểm cuối kỳ rồi khóa luôn, không bấm "Lưu nháp"
+        final oCk = find.byType(TextField).at(2);
+        await t.enterText(oCk, '9');
+        await t.pumpAndSettle();
+        await tapText(t, 'Khóa điểm cả lớp');
+        expect(
+          (api.bodies['PUT /class-sections/3/grades/'] as Map)['records'],
+          [
+            {
+              'sinh_vien': 21,
+              'diem_qua_trinh': '8.00',
+              'diem_giua_ky': '8.00',
+              'diem_cuoi_ky': '9.00',
+            },
+          ],
+        );
+        final thuTu = [
+          for (final l in api.log)
+            if (l.contains('/grades/') && !l.startsWith('GET')) l.split(' ')[0],
+        ];
+        expect(thuTu, ['PUT', 'POST']); // lưu trước, khóa sau
+        expect(api.bodies['POST /class-sections/3/grades/lock/'], {
+          'action': 'lock',
+        });
+        expect(find.text('Đã lưu và khóa điểm cả lớp.'), findsOneWidget);
+        expect(find.text('Mở khóa'), findsOneWidget);
+        await tapText(t, 'Mở khóa');
+        expect(api.bodies['POST /class-sections/3/grades/lock/'], {
+          'action': 'unlock',
+        });
+      },
+    );
+
+    testWidgets(
+      'PĐT đã duyệt: hiện Chính thức, không còn nút Lưu nháp / Mở khóa',
+      (t) async {
+        final api = gv(
+          () => sheet([
+            row(
+              21,
+              'SV1',
+              'Trần Hoàng Nam',
+              tt: 'KHOA',
+              qt: '8',
+              gk: '8',
+              ck: '8',
+              tk: '8.00',
+              chu: 'B',
+            ),
+          ], nhap: true),
+        );
+        await open(t, api);
+        expect(find.text('Chính thức'), findsOneWidget);
+        expect(find.text('Lưu nháp'), findsNothing);
+        expect(find.text('Mở khóa'), findsNothing);
+        expect(find.text('Khóa điểm cả lớp'), findsNothing);
+        expect(
+          find.textContaining('không chỉnh sửa được nữa', findRichText: true),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('quá hạn: cảnh báo, ô nhập bị khóa, không có nút Lưu', (
       t,
@@ -442,7 +494,7 @@ void main() {
         });
         await openPdt(t, api, '/pdt/grade-sheets');
         expect(
-          find.textContaining('Chính thức 2 · Đã khóa 0 · Chưa nhập 0'),
+          find.textContaining('Đã khóa 2 · Chính thức 0 · Chưa nhập 0'),
           findsOneWidget,
         );
         expect(find.byType(GradeSheetPanel), findsNothing);
@@ -472,7 +524,11 @@ void main() {
         );
         expect(find.text('Đã duyệt điểm cả lớp.'), findsOneWidget);
         expect(find.text('Duyệt cả lớp'), findsNothing); // đã KHOA: hết nút
-        expect(find.textContaining('Đã khóa 2'), findsOneWidget);
+        expect(find.textContaining('Chính thức 2'), findsOneWidget);
+        expect(
+          find.textContaining('Phòng đào tạo đã duyệt', findRichText: true),
+          findsOneWidget,
+        );
       },
     );
 
@@ -506,7 +562,7 @@ void main() {
         });
         await openPdt(t, api, '/pdt/grade-sheets');
         await tapText(t, 'Nhập môn lập trình');
-        expect(find.text('Lưu điểm chính thức'), findsOneWidget);
+        expect(find.text('Lưu và khóa điểm'), findsOneWidget);
         await t.enterText(
           find
               .descendant(
@@ -516,14 +572,14 @@ void main() {
               .at(2), // ô CK của dòng duy nhất (bảng có 3 ô/dòng)
           '6',
         );
-        await tapText(t, 'Lưu điểm chính thức');
+        await tapText(t, 'Lưu và khóa điểm');
         expect(
           ((api.bodies['PUT /class-sections/3/grades/'] as Map)['records']
                   as List)
               .single['diem_cuoi_ky'],
           '6.00',
         );
-        expect(find.text('Đã lưu điểm chính thức (nhập hộ).'), findsOneWidget);
+        expect(find.text('Đã lưu và khóa điểm (nhập hộ).'), findsOneWidget);
 
         await tapText(t, 'Gia hạn');
         expect(
@@ -621,14 +677,74 @@ void main() {
       expect(find.text('Nhập môn lập trình'), findsOneWidget);
     });
 
-    testWidgets('chưa có điểm KHOA: thông báo thay vì bảng trống', (t) async {
+    testWidgets('chưa có học kỳ nào: thông báo thay vì bảng trống', (t) async {
       await openStudent(
         t,
         svApi({'GET /grades/my/': (_) => reply(200, my(trong: true))}),
         '/student/grades',
       );
       expect(find.text('Chưa có'), findsWidgets);
-      expect(find.textContaining('Chưa có điểm chính thức'), findsOneWidget);
+      expect(find.textContaining('Chưa có học kỳ nào'), findsOneWidget);
     });
+
+    testWidgets(
+      'kỳ chưa có điểm chính thức: vẫn có trong ô chọn, điểm hiện —',
+      (t) async {
+        await openStudent(
+          t,
+          svApi({
+            'GET /grades/my/': (_) => reply(200, {
+              'gpa': null,
+              'tin_chi_tich_luy': 0,
+              'xep_loai': null,
+              'thong_ke': [
+                {
+                  'hoc_ky': 9,
+                  'ten_hk': 'Học kỳ 1 - Năm học 2026 - 2027',
+                  'so_mon': 1,
+                  'tin_chi_hoc': 3,
+                  'tin_chi_dat': null,
+                  'diem_tb': null,
+                  'gpa': null,
+                  'xep_loai': null,
+                },
+                {
+                  'hoc_ky': 10,
+                  'ten_hk': 'Học kỳ 2 - Năm học 2026 - 2027',
+                  'so_mon': 0,
+                  'tin_chi_hoc': 0,
+                  'tin_chi_dat': null,
+                  'diem_tb': null,
+                  'gpa': null,
+                  'xep_loai': null,
+                },
+              ],
+              'diem': [
+                {
+                  'hoc_ky': 9,
+                  'ten_hk': 'Học kỳ 1 - Năm học 2026 - 2027',
+                  'ma_lop': 'L1',
+                  'ma_mon': 'LING270',
+                  'ten_mon': 'Thực hành Điện toán đám mây',
+                  'tin_chi': 3,
+                  'diem_qua_trinh': null,
+                  'diem_giua_ky': null,
+                  'diem_cuoi_ky': null,
+                  'diem_tong_ket': null,
+                  'diem_chu': '',
+                  'gpa_thang_4': null,
+                },
+              ],
+            }),
+          }),
+          '/student/grades',
+        );
+        expect(find.text('Học kỳ 1 - Năm học 2026 - 2027'), findsWidgets);
+        expect(find.text('Học kỳ 2 - Năm học 2026 - 2027'), findsWidgets);
+        expect(find.text('Thực hành Điện toán đám mây'), findsOneWidget);
+        expect(find.text('—'), findsWidgets); // điểm chưa có
+        expect(find.text('Chưa có môn nào trong học kỳ này.'), findsOneWidget);
+      },
+    );
   });
 }

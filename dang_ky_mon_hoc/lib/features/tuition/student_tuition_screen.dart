@@ -193,7 +193,13 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
         ),
         const SizedBox(height: 6),
         hienThiChip(d.str('hien_thi')),
-        if (conNo > 0) ...[
+        if (conNo > 0 && d['duoc_thanh_toan'] == false) ...[
+          const SizedBox(height: 14),
+          Text(
+            'Bắt đầu đóng học phí từ ${formatYmd(d.str('ngay_bat_dau_dong'))}.',
+            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
+        ] else if (conNo > 0) ...[
           const SizedBox(height: 14),
           SizedBox(
             width: compact ? double.infinity : 240,
@@ -450,7 +456,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
           ),
         const SizedBox(height: 4),
         const Text(
-          'Thanh toán trực tiếp tại phòng Kế toán hoặc chuyển khoản qua mã QR.',
+          'Thanh toán qua VNPay hoặc trực tiếp tại phòng Kế toán.',
           style: TextStyle(fontSize: 12, color: AppColors.muted),
         ),
       ],
@@ -694,7 +700,14 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
           ),
           const SizedBox(height: 16),
         ],
-        if (conNo > 0)
+        if (conNo > 0 && d['duoc_thanh_toan'] == false)
+          AlertBanner(
+            kind: BannerKind.info,
+            title: 'Chưa tới thời gian đóng học phí.',
+            message:
+                'Bạn có thể thanh toán từ ngày ${formatYmd(d.str('ngay_bat_dau_dong'))}.',
+          )
+        else if (conNo > 0)
           _Card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

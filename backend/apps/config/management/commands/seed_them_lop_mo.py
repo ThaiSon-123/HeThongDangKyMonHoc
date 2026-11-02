@@ -9,7 +9,6 @@ Chạy lại an toàn: môn đã đủ lớp thì không thêm.
 
 import re
 from collections import Counter, defaultdict
-from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -123,7 +122,6 @@ class Command(BaseCommand):
                     si_so_toi_da=40 if mon.so_tiet_ly_thuyet == 0 else 60,
                     ngay_bat_dau=hk.ngay_bat_dau,
                     ngay_ket_thuc=hk.ngay_ket_thuc,
-                    han_nhap_diem=hk.ngay_ket_thuc + timedelta(days=14),
                     trang_thai=TrangThaiLop.MO,
                 )
                 Schedule.objects.bulk_create(

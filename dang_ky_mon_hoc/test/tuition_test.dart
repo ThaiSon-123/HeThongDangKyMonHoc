@@ -654,6 +654,34 @@ void main() {
       expect(find.text('Thanh toán học phí'), findsNothing);
     });
 
+    testWidgets(
+      'chưa tới ngày bắt đầu đóng: ẩn nút Thanh toán, trang thanh toán chỉ báo ngày bắt đầu',
+      (t) async {
+        final chuaToi = {
+          ...my(),
+          'ngay_bat_dau_dong': '2027-02-01',
+          'duoc_thanh_toan': false,
+        };
+        final api = svApi({'GET /tuition/my/': (_) => reply(200, chuaToi)});
+        await openStudent(t, api, '/student/tuition');
+        expect(find.text('Thanh toán học phí'), findsNothing);
+        expect(
+          find.text('Bắt đầu đóng học phí từ 01/02/2027.'),
+          findsOneWidget,
+        );
+
+        await openStudent(t, api, '/student/tuition/pay');
+        expect(
+          find.textContaining(
+            'Chưa tới thời gian đóng học phí.',
+            findRichText: true,
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Tạo mã thanh toán'), findsNothing);
+      },
+    );
+
     testWidgets('lịch 3 đợt là bảng có tiêu đề cột; có thanh tiến độ đã nộp', (
       t,
     ) async {

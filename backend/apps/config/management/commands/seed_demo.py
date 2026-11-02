@@ -301,7 +301,7 @@ class Command(BaseCommand):
                     "si_so_toi_da": si_so,
                     "ngay_bat_dau": hk.ngay_bat_dau,
                     "ngay_ket_thuc": hk.ngay_ket_thuc,
-                    "han_nhap_diem": hk.ngay_ket_thuc + timedelta(days=14),
+                    "han_nhap_diem": None,  # theo cấu hình so_ngay_cho_phep_nhap_diem
                     "trang_thai": trang_thai,
                 },
             )[0]

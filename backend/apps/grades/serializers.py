@@ -74,7 +74,7 @@ class MyGradeStatSerializer(serializers.Serializer):
     ten_hk = serializers.CharField()
     so_mon = serializers.IntegerField()
     tin_chi_hoc = serializers.IntegerField()
-    tin_chi_dat = serializers.IntegerField()
+    tin_chi_dat = serializers.IntegerField(allow_null=True)  # null = kỳ chưa có điểm chính thức
     diem_tb = serializers.DecimalField(max_digits=4, decimal_places=2, allow_null=True)
     gpa = serializers.DecimalField(max_digits=3, decimal_places=2, allow_null=True)
     xep_loai = serializers.CharField(allow_null=True)

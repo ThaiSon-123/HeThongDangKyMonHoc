@@ -223,3 +223,28 @@ def test_khoa_va_nganh_tra_so_luong_dang_hoat_dong(pdt):
     assert sorted(n["so_ctdt"] for n in nganh) == [0, 0]
     CurriculumFactory(nganh_id=nganh[0]["id"])
     assert pdt.get(f"/api/majors/{nganh[0]['id']}/").data["so_ctdt"] == 1
+
+
+def test_ten_hoc_ky_goi_y_theo_lo_trinh_hoac_suy_tu_khoa_tuyen_sinh(pdt):
+    from apps.training.services import ten_hoc_ky_goi_y
+
+    co_he = CurriculumFactory(
+        khoa_tuyen_sinh="D23",
+        lo_trinh=[
+            "Học kỳ 1 - Năm học 2023 - 2024",
+            "Học kỳ 2 - Năm học 2023 - 2024",
+            "Học kỳ 3 - Năm học 2023 - 2024",
+            "Học kỳ 1 - Năm học 2024 - 2025",
+        ],
+    )
+    assert ten_hoc_ky_goi_y(co_he, 4) == "Học kỳ 1 - Năm học 2024 - 2025"  # tính cả học kỳ hè
+    khong = CurriculumFactory(khoa_tuyen_sinh="K2023", lo_trinh=[])
+    assert ten_hoc_ky_goi_y(khong, 8) == "Học kỳ 2 - Năm học 2026 - 2027"
+    assert ten_hoc_ky_goi_y(CurriculumFactory(khoa_tuyen_sinh="mới"), 3) == "Kỳ 3"
+
+    mon = CourseFactory()
+    CurriculumCourse.objects.create(ctdt=co_he, mon_hoc=mon, hoc_ky_goi_y=3)
+    r = pdt.get(f"/api/curriculum-courses/?ctdt={co_he.id}").data["results"][0]
+    assert r["ten_hk_goi_y"] == "Học kỳ 3 - Năm học 2023 - 2024"
+    ds = pdt.get(f"/api/curriculums/{co_he.id}/").data["cac_hoc_ky"]
+    assert [d["ky"] for d in ds] == [1, 2, 3, 4] and ds[2]["ten"].startswith("Học kỳ 3")

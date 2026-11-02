@@ -12,6 +12,7 @@ from apps.config.models import SystemConfig
 from apps.grades.models import Grade, TrangThaiDiem
 from apps.registration.models import Registration
 from apps.training.models import (
+    ClassSection,
     TrangThaiDon,
     TrangThaiHocKy,
     TrangThaiLop,
@@ -225,8 +226,13 @@ def test_lop_da_dong_khong_sua_duoc(pdt):
     )
 
 
+def hk_sau():
+    """Học kỳ chưa bắt đầu (đổi GV / xóa lớp chỉ được khi lớp chưa tới ngày học)."""
+    return SemesterFactory(ngay_bat_dau=date(2099, 1, 5), ngay_ket_thuc=date(2099, 5, 30))
+
+
 def test_doi_giao_vien_trung_lich_bi_chan(pdt):
-    hk = SemesterFactory()
+    hk = hk_sau()
     gv = TeacherProfileFactory()
     ScheduleFactory(lop_hoc_phan=ClassSectionFactory(hoc_ky=hk, giao_vien=gv), phong="P1")
     lop = ClassSectionFactory(hoc_ky=hk)
@@ -236,6 +242,38 @@ def test_doi_giao_vien_trung_lich_bi_chan(pdt):
     assert (
         pdt.patch(f"{CLS}{lop.id}/", {"giao_vien": TeacherProfileFactory().id}).status_code == 200
     )
+
+
+def test_xoa_lop_va_doi_giao_vien_chi_khi_chua_hoc_chua_bat_dau_chua_ai_dang_ky(pdt):
+    from apps.registration.models import Registration
+
+    lop = ClassSectionFactory(hoc_ky=hk_sau(), trang_thai=TrangThaiLop.MO)
+    ScheduleFactory(lop_hoc_phan=lop)
+    assert pdt.get(f"{CLS}{lop.id}/").data["ly_do_khoa"] is None
+
+    # đã có đăng ký (kể cả đã hủy) → không đổi GV, không xóa
+    Registration.objects.create(
+        sinh_vien=StudentProfileFactory().user, lop_hoc_phan=lop, trang_thai="DA_HUY"
+    )
+    assert pdt.get(f"{CLS}{lop.id}/").data["ly_do_khoa"] == "Lớp đã có sinh viên đăng ký."
+    res = pdt.patch(f"{CLS}{lop.id}/", {"giao_vien": TeacherProfileFactory().id})
+    assert res.status_code == 400 and "đã có sinh viên đăng ký" in res.data["giao_vien"][0]
+    assert pdt.delete(f"{CLS}{lop.id}/").status_code == 409
+
+    # lớp đã tới ngày học → không xóa
+    da_hoc = ClassSectionFactory(hoc_ky=SemesterFactory(), trang_thai=TrangThaiLop.MO)
+    assert pdt.delete(f"{CLS}{da_hoc.id}/").status_code == 409
+
+    # lớp chưa học, chưa ai đăng ký → đổi GV và xóa được (kèm lịch, ghi audit)
+    trong = ClassSectionFactory(hoc_ky=hk_sau(), trang_thai=TrangThaiLop.KE_HOACH)
+    ScheduleFactory(lop_hoc_phan=trong)
+    gv_moi = TeacherProfileFactory()
+    assert pdt.patch(f"{CLS}{trong.id}/", {"giao_vien": gv_moi.id}).status_code == 200
+    assert pdt.delete(f"{CLS}{trong.id}/").status_code == 204
+    assert not ClassSection.objects.filter(id=trong.id).exists()
+    assert AuditLog.objects.filter(
+        doi_tuong="ClassSection", doi_tuong_id=str(trong.id), hanh_dong="DELETE"
+    ).exists()
 
 
 def test_loc_lop_theo_hoc_ky_khoa_nganh(pdt):

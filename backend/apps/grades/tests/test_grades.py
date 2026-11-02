@@ -290,13 +290,32 @@ def test_khoa_bat_bien_khong_mo_khoa_duoc(login_as):
 # --------------------------------------------------------------- duyệt (PDT-12) + GPA (BR-25)
 
 
+def test_duyet_ngay_khi_lop_dang_hoc_neu_ca_lop_da_co_diem_chinh_thuc(login_as, pdt):
+    lop, sv = tao_lop(n_sv=2)
+    gv = gv_api(login_as, lop)
+    gv.put(url(lop), {"records": [rec(sv[0], 9, 9, 9)]}, format="json")
+    assert gv.post(url(lop, "lock/"), {"action": "lock"}, format="json").status_code == 409
+    res = pdt.post(url(lop, "approve/"))  # sv[1] chưa có điểm
+    assert res.status_code == 409 and "1 sinh viên chưa có điểm" in res.data["error"]["message"]
+
+    gv.put(url(lop), {"records": [rec(sv[1], 5, 5, 5)]}, format="json")
+    assert pdt.post(url(lop, "approve/")).status_code == 409  # còn điểm nháp (GV chưa khóa)
+    assert pdt.get(url(lop)).data["co_the_duyet"] is False
+
+    assert gv.post(url(lop, "lock/"), {"action": "lock"}, format="json").status_code == 200
+    assert pdt.get(url(lop)).data["co_the_duyet"] is True
+    assert pdt.post(url(lop, "approve/")).status_code == 200
+    lop.refresh_from_db()
+    assert lop.trang_thai == TrangThaiLop.DANG_HOC  # lớp vẫn học, tự đóng sau ngày kết thúc
+    assert login_as(sv[0].user).get("/api/grades/my/").data["diem"][0]["diem_chu"] == "A"
+
+
 def test_luong_day_du_nhap_khoa_dong_duyet_sv_xem_gpa_dung(login_as, pdt):
     lop, sv = tao_lop(n_sv=2, mon_hoc=CourseFactory(tin_chi_ly_thuyet=3, tong_tin_chi=3))
     gv = gv_api(login_as, lop)
     gv.put(url(lop), {"records": [rec(sv[0], 9, 9, 9), rec(sv[1], 5, 5, 5)]}, format="json")
     assert gv.post(url(lop, "lock/"), {"action": "lock"}, format="json").status_code == 200
 
-    assert pdt.post(url(lop, "approve/")).status_code == 409  # lớp chưa đóng
     # lớp kết thúc → job/PĐT đóng (điều kiện: đủ điểm CHINH_THUC)
     lop.ngay_ket_thuc = date(2020, 1, 1)
     lop.han_nhap_diem = date(2099, 1, 1)
@@ -305,7 +324,9 @@ def test_luong_day_du_nhap_khoa_dong_duyet_sv_xem_gpa_dung(login_as, pdt):
     lop.refresh_from_db()
     assert lop.trang_thai == TrangThaiLop.DA_DONG
     assert StudentProfile.objects.get(user=sv[0].user).gpa is None  # chưa duyệt → chưa có GPA
-    assert login_as(sv[0].user).get("/api/grades/my/").data["diem"] == []  # SV chỉ thấy điểm KHOA
+    # Chưa KHOA: SV thấy môn nhưng điểm để trống ("—" trên giao diện)
+    chua = login_as(sv[0].user).get("/api/grades/my/").data["diem"]
+    assert [(d["diem_chu"], d["diem_tong_ket"]) for d in chua] == [("", None)]
 
     res = pdt.post(url(lop, "approve/"))
     assert res.status_code == 200 and res.data["so_sinh_vien"] == 2
@@ -368,8 +389,9 @@ def test_hoc_lai_mon_f_chi_tinh_lan_moi_nhat_theo_ngay_bat_dau_hoc_ky():
     sv = StudentProfileFactory()
     cu = SemesterFactory(ngay_bat_dau=date(2025, 2, 1))
     moi = SemesterFactory(ngay_bat_dau=date(2025, 9, 1))
-    mon, mon2 = CourseFactory(tong_tin_chi=3, tin_chi_ly_thuyet=3), CourseFactory(
-        tong_tin_chi=3, tin_chi_ly_thuyet=3
+    mon, mon2 = (
+        CourseFactory(tong_tin_chi=3, tin_chi_ly_thuyet=3),
+        CourseFactory(tong_tin_chi=3, tin_chi_ly_thuyet=3),
     )
     # tạo lớp HK mới TRƯỚC để id/ngày tạo bản ghi không thể đánh lừa: phải dùng ngay_bat_dau của học kỳ
     khoa(sv, lop_hk(mon, moi), "6.0", "C", "2.0")  # học lại, đạt C

@@ -115,6 +115,7 @@ QUYEN = {
     ("POST", "/api/class-sections/"): "P",
     ("GET", "/api/class-sections/{id}/"): "PKG",
     ("PATCH", "/api/class-sections/{id}/"): "P",
+    ("DELETE", "/api/class-sections/{id}/"): "P",
     ("POST", "/api/class-sections/{id}/open/"): "P",
     ("POST", "/api/class-sections/{id}/close/"): "P",
     ("POST", "/api/class-sections/{id}/grade-deadline/"): "P",

@@ -102,7 +102,10 @@ class InstallmentsView(APIView):
     )
     def put(self, request):
         hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
-        s = InstallmentsPutSerializer(data=request.data)
+        s = InstallmentsPutSerializer(
+            data=request.data,
+            context={"ngay_bat_dau_dong": services.ngay_bat_dau_dong(hoc_ky.id)},
+        )
         s.is_valid(raise_exception=True)
         with transaction.atomic():
             TuitionInstallment.objects.filter(hoc_ky=hoc_ky).delete()
@@ -505,6 +508,8 @@ class MyTuitionView(APIView):
         )
         row["chi_tiet"] = chi_tiet
         row["payments"] = payments
+        row["ngay_bat_dau_dong"] = services.ngay_bat_dau_dong(hoc_ky.id)
+        row["duoc_thanh_toan"] = services.toi_ngay_dong(hoc_ky.id)
         row["cac_hoc_ky"] = (
             Semester.objects.filter(
                 Q(id=hoc_ky.id)

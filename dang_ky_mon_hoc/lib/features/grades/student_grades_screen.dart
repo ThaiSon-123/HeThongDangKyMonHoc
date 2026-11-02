@@ -103,7 +103,7 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
             if (stats.isEmpty)
               const _Card(
                 child: Text(
-                  'Chưa có điểm chính thức. Điểm hiển thị sau khi Phòng đào tạo duyệt.',
+                  'Chưa có học kỳ nào. Điểm hiển thị sau khi Phòng đào tạo duyệt.',
                   style: TextStyle(color: AppColors.muted),
                 ),
               ),
@@ -227,7 +227,20 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
                 ],
               ),
             ),
-            if (compact)
+            if (rows.isEmpty)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  compact ? 16 : 20,
+                  0,
+                  compact ? 16 : 20,
+                  16,
+                ),
+                child: const Text(
+                  'Chưa có môn nào trong học kỳ này.',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+              )
+            else if (compact)
               for (final g in rows) _theMon(g)
             else
               _bang(rows),

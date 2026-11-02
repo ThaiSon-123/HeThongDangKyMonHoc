@@ -1,6 +1,7 @@
 """Nghiệp vụ dữ liệu đào tạo (PDT-02..09): chống chu trình tiên quyết, vòng đời học kỳ/lớp (mục 6),
 kiểm tra lịch (BR-08/09). View chỉ parse + permission + serialize."""
 
+import re
 from collections import defaultdict
 from datetime import timedelta
 
@@ -102,6 +103,33 @@ def hoc_ky_mac_dinh():
     )
 
 
+def _nam_nhap_hoc(khoa_tuyen_sinh):
+    """`D23` / `K23` / `K2023` / `2023` → 2023; không có số → None."""
+    so = re.search(r"\d+", khoa_tuyen_sinh or "")
+    if not so:
+        return None
+    n = int(so.group())
+    return 2000 + n if n < 100 else n
+
+
+def ten_hoc_ky_goi_y(ctdt, ky):
+    """Tên học kỳ thật của kỳ gợi ý thứ `ky` trong CTĐT: theo `lo_trinh` nếu có, không thì suy từ khóa
+    tuyển sinh (2 học kỳ/năm); không suy được → "Kỳ N"."""
+    if 1 <= ky <= len(ctdt.lo_trinh):
+        return ctdt.lo_trinh[ky - 1]
+    nam = _nam_nhap_hoc(ctdt.khoa_tuyen_sinh)
+    if nam is None:
+        return f"Kỳ {ky}"
+    nam += (ky - 1) // 2
+    return f"Học kỳ {(ky - 1) % 2 + 1} - Năm học {nam} - {nam + 1}"
+
+
+def cac_hoc_ky_goi_y(ctdt):
+    """`[{ky, ten}]` để chọn học kỳ gợi ý khi gán môn: cả lộ trình (hoặc 2 kỳ × số năm đào tạo)."""
+    so_ky = len(ctdt.lo_trinh) or 2 * (ctdt.nganh.thoi_gian_dao_tao or 4)
+    return [{"ky": k, "ten": ten_hoc_ky_goi_y(ctdt, k)} for k in range(1, so_ky + 1)]
+
+
 def hoc_ky_dang_ky():
     """Học kỳ để đăng ký môn / TKB tự động: kỳ `MO` mới nhất (đăng ký trước cho kỳ sau trong khi kỳ
     hiện tại vẫn đang học); không có kỳ `MO` thì như `hoc_ky_mac_dinh`."""
@@ -143,6 +171,19 @@ def han_nhap_diem_hieu_luc(lop, so_ngay=None):
     if so_ngay is None:
         so_ngay = SystemConfig.get_int("so_ngay_cho_phep_nhap_diem", 14)
     return ngay_ket_thuc_lop(lop) + timedelta(days=so_ngay)
+
+
+def ly_do_khoa_lop(lop, hom_nay=None):
+    """Vì sao KHÔNG xóa lớp / đổi giáo viên được; None = được. Chỉ khi lớp `KE_HOACH`/`MO`, chưa tới
+    ngày bắt đầu và chưa có đăng ký nào (kể cả đã hủy — xóa lớp sẽ mất lịch sử đăng ký)."""
+    hom_nay = hom_nay or timezone.localdate()
+    if lop.trang_thai not in (TrangThaiLop.KE_HOACH, TrangThaiLop.MO):
+        return "Lớp đã bắt đầu học hoặc đã đóng."
+    if ngay_bat_dau_lop(lop) <= hom_nay:
+        return "Lớp đã tới ngày bắt đầu học."
+    if lop.dang_ky.exists():
+        return "Lớp đã có sinh viên đăng ký."
+    return None
 
 
 def kiem_tra_sua_lop(lop):

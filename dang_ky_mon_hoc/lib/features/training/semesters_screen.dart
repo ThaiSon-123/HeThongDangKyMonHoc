@@ -46,7 +46,7 @@ class _SemestersScreenState extends ConsumerState<SemestersScreen> {
       context,
       title: 'Thêm học kỳ',
       specs: _createSpecs,
-      note: 'Cửa sổ đăng ký phải nằm trong thời gian học kỳ. Giới hạn tín chỉ mặc định 12 / 24 / 14, chỉnh sau ở phần chi tiết.',
+      note: 'Cửa sổ đăng ký có thể mở trước ngày bắt đầu học kỳ nhưng phải đóng trước ngày kết thúc. Giới hạn tín chỉ mặc định 12 / 24 / 14, chỉnh sau ở phần chi tiết.',
       submit: (body) => api.create(_path, body),
     );
     if (saved && mounted) _ctl.reload();
@@ -88,7 +88,15 @@ class _SemestersScreenState extends ConsumerState<SemestersScreen> {
             path: _path,
             minWidth: 760,
             emptyText: 'Chưa có học kỳ nào.',
-            onRowTap: (r) => setState(() => _sel = r),
+            // Bấm một học kỳ: chi tiết mở ngay dưới dòng đó; bấm lại để thu gọn.
+            onRowTap: (r) => setState(() => _sel = _sel?.id == r.id ? null : r),
+            rowDetail: (r) => _sel?.id == r.id
+                ? _SemesterDetail(
+                    key: ValueKey(r.id),
+                    semester: _sel!,
+                    onChanged: _changed,
+                  )
+                : null,
             columns: const [
               ListColumn('Học kỳ', flex: 2),
               ListColumn('Cửa sổ đăng ký', flex: 3),
@@ -122,20 +130,6 @@ class _SemestersScreenState extends ConsumerState<SemestersScreen> {
               trangThaiChip(r.str('trang_thai')),
             ],
           ),
-          const SizedBox(height: 24),
-          if (_sel == null)
-            const PanelCard(
-              child: Text(
-                'Chọn một học kỳ ở bảng phía trên.',
-                style: TextStyle(color: AppColors.muted, fontSize: 14),
-              ),
-            )
-          else
-            _SemesterDetail(
-              key: ValueKey(_sel!.id),
-              semester: _sel!,
-              onChanged: _changed,
-            ),
         ],
       ),
     );

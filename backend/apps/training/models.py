@@ -57,6 +57,9 @@ class Curriculum(models.Model):
     nganh = models.ForeignKey(Major, on_delete=models.PROTECT, related_name="ctdts")
     khoa_tuyen_sinh = models.CharField(max_length=20)
     tong_tin_chi_yeu_cau = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+    # Lộ trình: tên học kỳ thật theo thứ tự kỳ gợi ý ("Học kỳ 1 - Năm học 2023 - 2024", …) — mỗi CTĐT
+    # có thể có hoặc không có học kỳ hè. Rỗng = tự suy từ khóa tuyển sinh (2 học kỳ/năm).
+    lo_trinh = models.JSONField(default=list, blank=True)
     trang_thai = models.CharField(
         max_length=20, choices=TrangThaiDung.choices, default=TrangThaiDung.HOAT_DONG
     )

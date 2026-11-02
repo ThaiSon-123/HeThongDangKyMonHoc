@@ -109,7 +109,7 @@ class _PdtGradeSheetsScreenState extends ConsumerState<PdtGradeSheetsScreen> {
             Text(r.str('giao_vien_ten'), overflow: TextOverflow.ellipsis),
             Text('${r.num0('so_sv')}'),
             Text(
-              'Nháp ${r.num0('nhap_tam')} · Chính thức ${r.num0('chinh_thuc')} · Đã khóa ${r.num0('khoa')} · '
+              'Nháp ${r.num0('nhap_tam')} · Đã khóa ${r.num0('chinh_thuc')} · Chính thức ${r.num0('khoa')} · '
               'Chưa nhập ${_chuaNhap(r)}',
               style: const TextStyle(fontSize: 12),
             ),

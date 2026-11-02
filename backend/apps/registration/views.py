@@ -35,7 +35,7 @@ from apps.training.models import (
     Semester,
     TrangThaiHocKy,
 )
-from apps.training.services import chon_hoc_ky, hoc_ky_dang_ky
+from apps.training.services import chon_hoc_ky, hoc_ky_dang_ky, ten_hoc_ky_goi_y
 from apps.tuition.services import chan_neu_qua_han, loi_qua_han
 from core.export import XLSX, xlsx_response
 from core.mixins import write_audit
@@ -316,6 +316,7 @@ class MyCurriculumView(APIView):
                 "khoi_kien_thuc": c.khoi_kien_thuc,
                 "loai_mon": c.loai_mon,
                 "hoc_ky_goi_y": c.hoc_ky_goi_y,
+                "ten_hk_goi_y": ten_hoc_ky_goi_y(ctdt, c.hoc_ky_goi_y),
                 "da_dat": c.mon_hoc_id in da_dat,
                 "tien_quyet": sorted(tien_quyet.get(c.mon_hoc_id, [])),
             }

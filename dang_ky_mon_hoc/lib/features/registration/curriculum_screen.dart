@@ -39,6 +39,7 @@ class MonCtdt {
     required this.khoi,
     required this.loai,
     required this.ky,
+    this.tenKy = '',
     required this.tienQuyet,
     required this.trangThai,
     this.diem,
@@ -50,6 +51,9 @@ class MonCtdt {
   final String khoi;
   final String loai;
   final int ky;
+
+  /// Tên học kỳ thật theo lộ trình CTĐT (`ten_hk_goi_y`); rỗng = suy từ khóa tuyển sinh ([nhanKy]).
+  final String tenKy;
   final List<String> tienQuyet;
   final TrangThaiMon trangThai;
 
@@ -67,6 +71,8 @@ List<MonCtdt> gopMonCtdt(Json ctdt, Json grades, List<Json> dangKy) {
   final diem = <String, Json>{};
   for (final d in (grades['diem'] as List? ?? const [])) {
     final j = Json.from(d as Map);
+    // môn đang học / chưa có điểm chính thức: không phải lần học có kết quả
+    if (j.str('diem_chu').isEmpty) continue;
     final cu = diem[j.str('ma_mon')];
     if (cu == null || j.num0('hoc_ky') >= cu.num0('hoc_ky')) {
       diem[j.str('ma_mon')] = j;
@@ -104,6 +110,7 @@ List<MonCtdt> gopMonCtdt(Json ctdt, Json grades, List<Json> dangKy) {
           khoi: j.str('khoi_kien_thuc'),
           loai: j.str('loai_mon'),
           ky: j.num0('hoc_ky_goi_y'),
+          tenKy: j.str('ten_hk_goi_y'),
           tienQuyet: [
             for (final t in (j['tien_quyet'] as List? ?? const [])) '$t',
           ],
@@ -424,7 +431,12 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text(nhanKy(k, khoa), style: sectionTitleStyle),
+                    Text(
+                      tatCa.first.tenKy.isEmpty
+                          ? nhanKy(k, khoa)
+                          : tatCa.first.tenKy,
+                      style: sectionTitleStyle,
+                    ),
                     if (k == kyHienTai)
                       StatusChip.of('Học kỳ hiện tại', StatusChip.indigo),
                   ],

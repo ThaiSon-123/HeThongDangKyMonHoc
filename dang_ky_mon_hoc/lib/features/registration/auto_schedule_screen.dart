@@ -75,7 +75,6 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
   Json _meta = {}; // meta của lần tải gần nhất (ngày học kỳ…)
   late Future<_Data> _data = _fetch();
   int _buoc = 0; // 0 chọn môn · 1 tổ hợp · 2 kết quả
-  bool _daChonSan = false;
 
   // Bước 1
   int _mode = 0; // 0 = tất cả môn đang mở, 1 = theo CTĐT
@@ -146,7 +145,6 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
     setState(() {
       _data = next;
       _buoc = 0;
-      _daChonSan = false;
       _chon.clear();
       _gv.clear();
       _toHop = [];
@@ -175,16 +173,6 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           giaoVienMongMuon: _gv[e.key],
         ),
     ];
-  }
-
-  void _chonSan(_Data d, List<MonChon> mon) {
-    if (_daChonSan) return;
-    _daChonSan = true;
-    // Môn bắt buộc theo học kỳ gợi ý được chọn sẵn (trừ môn đã đạt).
-    _chon.addAll([
-      for (final m in mon)
-        if (m.batBuoc && d.daDat[m.id] != true) m.id,
-    ]);
   }
 
   void _goiYTohop(_Data d) {
@@ -275,7 +263,6 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       final d = snap.data;
       if (d == null) return const ListSkeleton();
       final mon = _monChon(d);
-      _chonSan(d, mon);
       return SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -322,7 +309,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                 ),
               ),
               Text(
-                '${d.tenHk} · môn bắt buộc theo học kỳ gợi ý được chọn sẵn',
+                '${d.tenHk} · tích chọn các môn bạn muốn học',
                 style: const TextStyle(fontSize: 13, color: AppColors.muted),
               ),
               const SizedBox(height: 16),
@@ -898,6 +885,17 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
         ),
         const SizedBox(width: 8),
         Expanded(child: Text(l.text, style: const TextStyle(fontSize: 13))),
+        if (l.diem != null) ...[
+          const SizedBox(width: 8),
+          Text(
+            l.diem!,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: l.dat ? AppColors.success : AppColors.muted,
+            ),
+          ),
+        ],
       ],
     ),
   );
