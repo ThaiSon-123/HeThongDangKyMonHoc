@@ -125,9 +125,16 @@ class PrerequisiteViewSet(_CoXoaViewSet):
     http_method_names = ["get", "post", "delete", "head", "options"]  # cặp cố định: thêm / xóa
     queryset = Prerequisite.objects.select_related("mon_hoc", "mon_tien_quyet")
     serializer_class = PrerequisiteSerializer
-    filterset_fields = ["mon_hoc", "mon_tien_quyet"]
-    search_fields = ["mon_hoc__ma_mon", "mon_tien_quyet__ma_mon"]
-    ordering_fields = ["id"]
+    # `mon_hoc__khoa`: khoa phụ trách môn; `mon_hoc__mon_ctdt__ctdt`: môn thuộc CTĐT
+    filterset_fields = ["mon_hoc", "mon_tien_quyet", "mon_hoc__khoa", "mon_hoc__mon_ctdt__ctdt"]
+    search_fields = [
+        "mon_hoc__ma_mon",
+        "mon_hoc__ten_mon",
+        "mon_tien_quyet__ma_mon",
+        "mon_tien_quyet__ten_mon",
+    ]
+    ordering_fields = ["id", "mon_hoc__ma_mon"]
+    ordering = ["mon_hoc__ma_mon", "mon_tien_quyet__ma_mon"]
 
 
 class SemesterViewSet(_PdtViewSet):

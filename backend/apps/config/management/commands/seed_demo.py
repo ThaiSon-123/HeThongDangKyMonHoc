@@ -505,9 +505,6 @@ class Command(BaseCommand):
             ("so_ngay_xin_sua_diem_danh", "7", "Số ngày sau buổi học SV còn được xin sửa điểm danh"),
             ("so_ngay_cho_phep_nhap_diem", "14", "Hạn nhập điểm sau khi lớp kết thúc (ngày)"),
             ("backup_retention_days", "14", "Số ngày giữ file backup"),
-            ("ck_ngan_hang", "Vietcombank", "Ngân hàng nhận chuyển khoản học phí"),
-            ("ck_so_tai_khoan", "0123456789", "Số tài khoản nhận học phí"),
-            ("ck_chu_tai_khoan", "TRUONG DAI HOC DEMO", "Chủ tài khoản nhận học phí"),
         ]
         for khoa, gia_tri, mo_ta in configs:
             SystemConfig.objects.update_or_create(

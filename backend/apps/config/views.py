@@ -1,4 +1,4 @@
-"""API Admin: ma trận quyền (ADM-04), cấu hình hệ thống (ADM-05), sao lưu (ADM-08)."""
+"""API Admin: ma trận quyền (ADM-04), cấu hình sao lưu, sao lưu (ADM-08); PĐT: quy chế đào tạo."""
 
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
@@ -12,7 +12,7 @@ from apps.config.matrix import CAC_VAI_TRO, ma_tran
 from apps.config.models import SystemConfig
 from core.exceptions import Codes, business_error
 from core.mixins import write_audit
-from core.permissions import IsAdmin
+from core.permissions import IsAdmin, IsPhongDaoTao
 
 
 class ConfigItemSerializer(serializers.Serializer):
@@ -66,19 +66,23 @@ class PermissionsView(APIView):
         )
 
 
-def _cau_hinh():
-    return {"items": services.doc_cau_hinh(), "sua_lan_cuoi": services.sua_lan_cuoi()}
-
-
 class ConfigView(APIView):
-    """`GET/PATCH /api/admin/config/`: 6 khóa `SystemConfig`. PATCH nhận `{khoa: giá_trị}` (một
-    phần); có một khóa sai thì không lưu khóa nào. Mỗi khóa thật sự đổi ghi một dòng audit log."""
+    """`GET/PATCH /api/admin/config/` (Admin: nhóm Sao lưu) và `/api/pdt/config/` (PĐT: quy chế đào tạo —
+    Điểm danh, Nhập điểm). PATCH nhận `{khoa: giá_trị}` (một phần); khóa ngoài nhóm hoặc sai thì không
+    lưu khóa nào. Mỗi khóa thật sự đổi ghi một dòng audit log."""
 
     permission_classes = [IsAdmin]
+    nhom = services.NHOM_ADMIN
+
+    def _cau_hinh(self):
+        return {
+            "items": services.doc_cau_hinh(self.nhom),
+            "sua_lan_cuoi": services.sua_lan_cuoi(self.nhom),
+        }
 
     @extend_schema(responses=ConfigSerializer)
     def get(self, request):
-        return Response(_cau_hinh())
+        return Response(self._cau_hinh())
 
     @extend_schema(
         request=inline_serializer("ConfigPatch", {"khoa": serializers.CharField(required=False)}),
@@ -87,12 +91,17 @@ class ConfigView(APIView):
     def patch(self, request):
         if not isinstance(request.data, dict) or not request.data:
             raise ValidationError({"detail": ["Cần gửi ít nhất một khóa cấu hình."]})
-        loi, thay_doi = services.cap_nhat_cau_hinh(request.data)
+        loi, thay_doi = services.cap_nhat_cau_hinh(request.data, self.nhom)
         if loi:
             raise ValidationError(loi)
         for khoa, cu, moi in thay_doi:
             write_audit(request, HanhDong.UPDATE, "SystemConfig", khoa, {"tu": cu, "den": moi})
-        return Response(_cau_hinh())
+        return Response(self._cau_hinh())
+
+
+class PdtConfigView(ConfigView):
+    permission_classes = [IsPhongDaoTao]
+    nhom = services.NHOM_PDT
 
 
 class BackupsView(APIView):

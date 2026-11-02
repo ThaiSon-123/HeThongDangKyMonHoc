@@ -59,9 +59,9 @@ Map<String, dynamic> quyen(
   'KE_TOAN': cells[4],
 };
 
+/// Cấu hình của PĐT (`/pdt/config/`): nhóm Điểm danh và Nhập điểm.
 Map<String, dynamic> cauHinh({
   String maxVang = '20',
-  String nganHang = '',
   Map<String, dynamic>? sua,
 }) => {
   'items': [
@@ -81,23 +81,6 @@ Map<String, dynamic> cauHinh({
       'gia_tri': '14',
       'cap_nhat_luc': null,
     },
-    {
-      'khoa': 'backup_retention_days',
-      'nhom': 'Sao lưu',
-      'mo_ta': '',
-      'mac_dinh': '30',
-      'gia_tri': '30',
-      'cap_nhat_luc': null,
-    },
-    for (final k in ['ck_ngan_hang', 'ck_so_tai_khoan', 'ck_chu_tai_khoan'])
-      {
-        'khoa': k,
-        'nhom': 'Nhận chuyển khoản học phí',
-        'mo_ta': '',
-        'mac_dinh': '',
-        'gia_tri': k == 'ck_ngan_hang' ? nganHang : '',
-        'cap_nhat_luc': null,
-      },
   ],
   'sua_lan_cuoi': sua,
 };
@@ -186,50 +169,43 @@ void main() {
     });
   });
 
-  group('Cấu hình hệ thống', () {
-    testWidgets('4 nhóm, 6 ô; lưu từng nhóm chỉ gửi khóa của nhóm đó', (
+  group('Quy chế đào tạo (PĐT)', () {
+    testWidgets('2 nhóm, 2 ô; lưu từng nhóm chỉ gửi khóa của nhóm đó', (
       t,
     ) async {
       var daLuu = false;
-      final api = adminApi({
-        'GET /admin/config/': (_) => reply(
+      final api = pdtApi({
+        'GET /pdt/config/': (_) => reply(
           200,
           daLuu
               ? cauHinh(
                   maxVang: '25',
-                  sua: {'boi': 'admin', 'luc': '2027-01-06T09:05:00+07:00'},
+                  sua: {'boi': 'pdt01', 'luc': '2027-01-06T09:05:00+07:00'},
                 )
               : cauHinh(),
         ),
-        'PATCH /admin/config/': (_) {
+        'PATCH /pdt/config/': (_) {
           daLuu = true;
           return reply(200, cauHinh(maxVang: '25'));
         },
       });
-      await openAdmin(t, api, '/admin/config');
-      for (final s in [
-        'Điểm danh',
-        'Nhập điểm',
-        'Sao lưu',
-        'Nhận chuyển khoản học phí',
-      ]) {
-        expect(find.text(s), findsWidgets);
-      }
+      await openPdt(t, api, '/pdt/config');
+      expect(find.text('Điểm danh'), findsWidgets);
+      expect(find.text('Nhập điểm'), findsWidgets);
+      expect(find.text('Sao lưu'), findsNothing);
+      expect(find.text('Nhận chuyển khoản học phí'), findsNothing);
       expect(find.text('Tỷ lệ vắng tối đa (%)'), findsOneWidget);
       expect(find.text('Từ 0 đến 100. Mặc định 20.'), findsOneWidget);
-      expect(
-        find.text('Đặt lại mặc định'),
-        findsNWidgets(3),
-      ); // nhóm QR không có
-      expect(find.byType(TextField), findsNWidgets(6));
+      expect(find.text('Đặt lại mặc định'), findsNWidgets(2));
+      expect(find.byType(TextField), findsNWidgets(2));
       expect(find.textContaining('Sửa lần cuối'), findsNothing);
 
       await t.enterText(find.byType(TextField).first, '25');
       await tapText(t, 'Lưu nhóm này', index: 0);
-      expect(api.bodies['PATCH /admin/config/'], {'max_absent_pct': '25'});
+      expect(api.bodies['PATCH /pdt/config/'], {'max_absent_pct': '25'});
       expect(find.textContaining('Đã lưu cấu hình'), findsOneWidget);
       expect(
-        find.textContaining('Sửa lần cuối bởi admin · 06/01/2027 09:05'),
+        find.textContaining('Sửa lần cuối bởi pdt01 · 06/01/2027 09:05'),
         findsOneWidget,
       );
     });
@@ -237,10 +213,10 @@ void main() {
     testWidgets('Đặt lại mặc định điền lại giá trị mặc định, chưa lưu', (
       t,
     ) async {
-      final api = adminApi({
-        'GET /admin/config/': (_) => reply(200, cauHinh(maxVang: '35')),
+      final api = pdtApi({
+        'GET /pdt/config/': (_) => reply(200, cauHinh(maxVang: '35')),
       });
-      await openAdmin(t, api, '/admin/config');
+      await openPdt(t, api, '/pdt/config');
       expect(find.text('35'), findsOneWidget);
       await tapText(t, 'Đặt lại mặc định', index: 0);
       expect(find.text('35'), findsNothing);
@@ -249,19 +225,22 @@ void main() {
     });
 
     testWidgets('lỗi kiểm tra của server hiện ngay dưới ô nhập', (t) async {
-      final api = adminApi({
-        'GET /admin/config/': (_) => reply(200, cauHinh()),
-        'PATCH /admin/config/': (_) => reply(400, {
-          'ck_so_tai_khoan': ['Chỉ gồm chữ số.'],
+      final api = pdtApi({
+        'GET /pdt/config/': (_) => reply(200, cauHinh()),
+        'PATCH /pdt/config/': (_) => reply(400, {
+          'max_absent_pct': ['Phải là số nguyên từ 0 đến 100.'],
         }),
       });
-      await openAdmin(t, api, '/admin/config');
-      final oSoTk = find.byType(TextField).at(4);
-      await t.ensureVisible(oSoTk);
-      await t.enterText(oSoTk, '12a');
-      await tapText(t, 'Lưu nhóm này', index: 3);
-      expect(find.text('Chỉ gồm chữ số.'), findsWidgets);
+      await openPdt(t, api, '/pdt/config');
+      await t.enterText(find.byType(TextField).first, '101');
+      await tapText(t, 'Lưu nhóm này', index: 0);
+      expect(find.text('Phải là số nguyên từ 0 đến 100.'), findsOneWidget);
       expect(find.textContaining('Đã lưu cấu hình'), findsNothing);
+    });
+
+    testWidgets('Admin không còn trang Cấu hình', (t) async {
+      await openAdmin(t, adminApi({}), '/admin');
+      expect(find.text('Cấu hình'), findsNothing);
     });
   });
 
@@ -302,7 +281,10 @@ void main() {
         ); // thẻ + dòng đầu bảng
         expect(find.text('02:00 hằng ngày'), findsOneWidget);
         expect(find.text('Giữ các bản sao lưu trong 14 ngày'), findsOneWidget);
-        expect(find.text('hethongdangkymonhoc_20270111_020000.dump'), findsOneWidget);
+        expect(
+          find.text('hethongdangkymonhoc_20270111_020000.dump'),
+          findsOneWidget,
+        );
         expect(find.text('409 MB'), findsOneWidget);
         expect(find.text('2 bản ghi'), findsOneWidget);
         expect(find.textContaining('chưa có bản sao lưu mới'), findsNothing);
@@ -338,6 +320,28 @@ void main() {
         find.textContaining('Đã 103 giờ chưa có bản sao lưu mới'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('Đổi số ngày giữ → PATCH /admin/config/ rồi tải lại', (
+      t,
+    ) async {
+      var soNgay = 14;
+      final api = adminApi({
+        'GET /admin/backups/': (_) =>
+            reply(200, {...ds(), 'so_ngay_giu': soNgay}),
+        'PATCH /admin/config/': (o) {
+          soNgay = (o.data as Map)['backup_retention_days'] as int;
+          return reply(200, {'items': [], 'sua_lan_cuoi': null});
+        },
+      });
+      await openAdmin(t, api, '/admin/backups');
+      expect(find.text('Giữ các bản sao lưu trong 14 ngày'), findsOneWidget);
+
+      await tapText(t, 'Đổi số ngày giữ');
+      await enterField(t, 'Số ngày giữ', '45');
+      await tapText(t, 'Lưu');
+      expect(api.bodies['PATCH /admin/config/'], {'backup_retention_days': 45});
+      expect(find.text('Giữ các bản sao lưu trong 45 ngày'), findsOneWidget);
     });
 
     testWidgets('chưa có bản sao lưu nào → cảnh báo và bảng trống', (t) async {

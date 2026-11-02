@@ -20,7 +20,8 @@ from core.permissions import ReadByAdminWriteByPdt
 
 
 class MeView(APIView):
-    """GET/PATCH /api/profiles/me/ — mọi vai trò; chỉ sửa email, sdt (không sửa trường học vụ)."""
+    """GET/PATCH /api/profiles/me/ — mọi vai trò; chỉ sửa email, sdt (không sửa trường học vụ).
+    Sinh viên chỉ sửa được sdt: email SV (dùng nhận mã quên mật khẩu) do Phòng đào tạo quản lý."""
 
     @extend_schema(responses=MeSerializer)
     def get(self, request):
@@ -29,8 +30,11 @@ class MeView(APIView):
     @extend_schema(request=ContactSerializer, responses=MeSerializer)
     def patch(self, request):
         cam = set(request.data) - services.CONTACT_FIELDS
-        if cam:
-            raise ValidationError({f: ["Không được sửa trường này."] for f in sorted(cam)})
+        loi = {f: ["Không được sửa trường này."] for f in sorted(cam)}
+        if request.user.role == Role.SINH_VIEN and "email" in request.data:
+            loi["email"] = ["Sinh viên không tự đổi email. Liên hệ Phòng đào tạo để cập nhật."]
+        if loi:
+            raise ValidationError(loi)
         s = ContactSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         return Response(services.update_contact(request.user, s.validated_data))

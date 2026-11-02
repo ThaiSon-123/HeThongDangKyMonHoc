@@ -16,12 +16,13 @@ from apps.profiles.models import StudentProfile
 from apps.registration.models import Registration, TrangThaiDangKy
 from apps.training.models import (
     ClassSection,
+    Course,
     Prerequisite,
     Schedule,
     TrangThaiHocKy,
     TrangThaiLop,
 )
-from apps.tuition.services import tinh_hoc_phi, tong_tin_chi_dang_ky
+from apps.tuition.services import chan_neu_qua_han, tinh_hoc_phi, tong_tin_chi_dang_ky
 from core.exceptions import BusinessError, Codes, business_error
 
 GPA_CANH_BAO = 2  # BR-07: GPA < 2.0 → diện cảnh báo học vụ
@@ -203,6 +204,7 @@ def dang_ky(user, lop_id, request_id=None):
     if da_co and da_co.trang_thai == TrangThaiDangKy.DA_DANG_KY:
         raise business_error(Codes.DA_DANG_KY, "Bạn đã đăng ký lớp này.")
 
+    chan_neu_qua_han(user, "đăng ký môn học")  # nợ học phí quá hạn → không đăng ký
     kiem_tra_mo_dang_ky(lop)  # BR-01
     kiem_tra_con_cho(lop)  # BR-02
     kiem_tra_trung_lich(user, lop)  # BR-03
@@ -245,15 +247,15 @@ def dang_ky(user, lop_id, request_id=None):
     return reg, warnings, True
 
 
-def lop_co_the_dang_ky(user, ho_so, hoc_ky, search="", loc_trung_lich=True):
-    """`GET /courses/available/` (SV-04): lớp `MO` của học kỳ, môn thuộc CTĐT của SV, còn chỗ,
-    chưa đăng ký và (khi `loc_trung_lich`) không trùng lịch với các lớp đã đăng ký. TKB tự động (SV-06)
-    gọi với `loc_trung_lich=False` để tự ghép lịch ở client."""
+def lop_co_the_dang_ky(user, ho_so, hoc_ky, search="", loc_trung_lich=True, tat_ca=False):
+    """`GET /courses/available/` (SV-04): lớp `MO` của học kỳ, môn thuộc CTĐT của SV, chưa đăng ký.
+    `tat_ca=True` (màn Đăng ký): giữ cả lớp đầy / trùng lịch — nơi gọi gắn lý do bằng `ly_do_khong_dang_ky`.
+    Ngược lại: chỉ lớp còn chỗ và (khi `loc_trung_lich`) không trùng lịch; TKB tự động (SV-06) gọi với
+    `loc_trung_lich=False` để tự ghép lịch ở client."""
     qs = (
         ClassSection.objects.filter(
             hoc_ky=hoc_ky,
             trang_thai=TrangThaiLop.MO,
-            si_so_hien_tai__lt=F("si_so_toi_da"),
             mon_hoc__mon_ctdt__ctdt_id=ho_so.ctdt_id,
         )
         .exclude(dang_ky__sinh_vien=user, dang_ky__trang_thai=TrangThaiDangKy.DA_DANG_KY)
@@ -268,10 +270,55 @@ def lop_co_the_dang_ky(user, ho_so, hoc_ky, search="", loc_trung_lich=True):
             | Q(mon_hoc__ma_mon__icontains=t)
             | Q(mon_hoc__ten_mon__icontains=t)
         )
+    if tat_ca:
+        return list(qs)
+    qs = qs.filter(si_so_hien_tai__lt=F("si_so_toi_da"))
     if not loc_trung_lich:
         return list(qs)
     lich_da_co = lich_da_dang_ky(user, hoc_ky)
     return [lop for lop in qs if lop_trung_lich(lop, lich_da_co) is None]
+
+
+def ly_do_khong_dang_ky(user, lops):
+    """`{lop_id: (mã lỗi, câu lý do)}` cho các lớp SV KHÔNG đăng ký được — cùng luật và cùng câu với
+    `dang_ky` (BR-02/03/04), tính một lần cho cả lô. Thứ tự ưu tiên: đã đạt → đã đăng ký lớp khác của
+    môn → thiếu tiên quyết → lớp đầy → trùng lịch."""
+    if not lops:
+        return {}
+    da_dat = mon_da_dat_ids(user)
+    tien_quyet = {}
+    for mon_id, ma in Prerequisite.objects.filter(
+        mon_hoc_id__in={lop.mon_hoc_id for lop in lops}
+    ).values_list("mon_hoc_id", "mon_tien_quyet__ma_mon"):
+        tien_quyet.setdefault(mon_id, []).append(ma)
+    tq_dat = set(Course.objects.filter(id__in=da_dat).values_list("ma_mon", flat=True))
+    hoc_ky = lops[0].hoc_ky
+    da_dk_mon = dict(
+        Registration.objects.filter(
+            sinh_vien=user, trang_thai=TrangThaiDangKy.DA_DANG_KY, lop_hoc_phan__hoc_ky=hoc_ky
+        ).values_list("lop_hoc_phan__mon_hoc_id", "lop_hoc_phan__ma_lop")
+    )
+    lich_da_co = lich_da_dang_ky(user, hoc_ky)
+    out = {}
+    for lop in lops:
+        thieu = [ma for ma in tien_quyet.get(lop.mon_hoc_id, []) if ma not in tq_dat]
+        if lop.mon_hoc_id in da_dat:
+            out[lop.id] = (Codes.DA_DAT_MON, "Môn học này đã đạt, không đăng ký lại.")
+        elif lop.mon_hoc_id in da_dk_mon:
+            out[lop.id] = (
+                Codes.DA_DANG_KY_MON,
+                f"Đã đăng ký lớp {da_dk_mon[lop.mon_hoc_id]} của môn này trong học kỳ.",
+            )
+        elif thieu:
+            out[lop.id] = (
+                Codes.THIEU_TIEN_QUYET,
+                "Chưa đạt môn tiên quyết: " + ", ".join(thieu) + ".",
+            )
+        elif lop.si_so_hien_tai >= lop.si_so_toi_da:
+            out[lop.id] = (Codes.LOP_DAY, "Lớp đã đủ sĩ số.")
+        elif ma := lop_trung_lich(lop, lich_da_co):
+            out[lop.id] = (Codes.TRUNG_LICH, f"Trùng lịch với lớp {ma}.")
+    return out
 
 
 # ---------------------------------------------------------------- hủy

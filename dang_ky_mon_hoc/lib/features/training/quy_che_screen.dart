@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_failure.dart';
-import '../../../core/format.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_toast.dart';
-import '../../../shared/widgets/labeled_field.dart';
-import '../../training/resource_list.dart' show ListErrorCard, ListSkeleton;
-import '../../training/training_api.dart';
-import '../../training/training_widgets.dart';
-import '../accounts/account_dialogs.dart' show failureText;
+import '../../core/api/api_failure.dart';
+import '../../core/format.dart';
+import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/app_button.dart';
+import '../../shared/widgets/app_toast.dart';
+import '../../shared/widgets/labeled_field.dart';
+import '../admin/accounts/account_dialogs.dart' show failureText;
+import 'resource_list.dart' show ListErrorCard, ListSkeleton;
+import 'training_api.dart';
+import 'training_widgets.dart';
 
 /// Nhãn và gợi ý hiển thị cho từng khóa (backend chỉ trả khóa, nhóm, giá trị, mặc định).
 const _truong = <String, (String, String?)>{
@@ -23,38 +23,31 @@ const _truong = <String, (String, String?)>{
     'Số ngày được nhập điểm sau khi kết thúc',
     'Số nguyên từ 0.',
   ),
-  'backup_retention_days': ('Số ngày giữ bản sao lưu', 'Số nguyên từ 1.'),
-  'ck_ngan_hang': ('Ngân hàng', null),
-  'ck_so_tai_khoan': ('Số tài khoản', 'Chỉ gồm chữ số.'),
-  'ck_chu_tai_khoan': ('Chủ tài khoản', 'Chữ in hoa, không dấu.'),
 };
 
 const _nhomIcon = <String, IconData>{
   'Điểm danh': Icons.fact_check_outlined,
   'Nhập điểm': Icons.edit_note_outlined,
-  'Sao lưu': Icons.cloud_upload_outlined,
-  'Nhận chuyển khoản học phí': Icons.qr_code_2_outlined,
 };
 
 const _nhomMoTa = <String, String>{
   'Điểm danh':
       'Cảnh báo nguy cơ cấm thi theo tỷ lệ vắng và thời hạn xin sửa điểm danh.',
   'Nhập điểm': 'Thời gian giáo viên được nhập điểm sau khi lớp kết thúc.',
-  'Sao lưu': 'Thời gian giữ các bản sao lưu tự động.',
-  'Nhận chuyển khoản học phí':
-      'Thông tin hiển thị cho sinh viên khi thanh toán bằng mã QR.',
 };
 
-/// Cấu hình hệ thống (ADM-05) — mockup `AD-Web-CauHinh`: đúng 6 khóa chia 4 nhóm, lưu từng nhóm.
-class ConfigScreen extends ConsumerStatefulWidget {
-  const ConfigScreen({super.key});
+const _path = '/pdt/config/';
+
+/// Quy chế đào tạo (PĐT): các mốc chung về điểm danh và nhập điểm, lưu từng nhóm.
+/// (Số ngày giữ bản sao lưu là việc kỹ thuật — Admin sửa ở màn Sao lưu.)
+class QuyCheScreen extends ConsumerStatefulWidget {
+  const QuyCheScreen({super.key});
 
   @override
-  ConsumerState<ConfigScreen> createState() => _ConfigScreenState();
+  ConsumerState<QuyCheScreen> createState() => _QuyCheScreenState();
 }
 
-class _ConfigScreenState extends ConsumerState<ConfigScreen> {
-  static const _path = '/admin/config/';
+class _QuyCheScreenState extends ConsumerState<QuyCheScreen> {
   late Future<Json> _future = _fetch();
 
   Future<Json> _fetch() => ref.read(trainingApiProvider).get(_path);
@@ -195,7 +188,6 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
   Map<String, String> _errors = {};
   bool _saving = false;
 
-  /// Nhóm nhận chuyển khoản không có giá trị mặc định → không có nút "Đặt lại mặc định".
   bool get _coMacDinh =>
       widget.items.every((i) => i.str('mac_dinh').isNotEmpty);
 
@@ -220,7 +212,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
       _errors = {};
     });
     try {
-      await ref.read(trainingApiProvider).patch('/admin/config/', {
+      await ref.read(trainingApiProvider).patch(_path, {
         for (final e in _ctl.entries) e.key: e.value.text.trim(),
       });
       if (!mounted) return;
@@ -289,7 +281,6 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
               if (i.str('mac_dinh').isNotEmpty)
                 'Mặc định ${i.str('mac_dinh')}.',
             ].join(' '),
-            hint: i.str('khoa') == 'ck_ngan_hang' ? 'VD: Vietcombank' : null,
             error: _errors[i.str('khoa')],
           ),
           const SizedBox(height: 12),

@@ -117,7 +117,7 @@ AUTH_PASSWORD_VALIDATORS = [
     # Chính sách của plan: ≥ 8 ký tự (validator trên) + có cả chữ lẫn số.
     {"NAME": "apps.auth.validators.LetterAndDigitValidator"},
 ]
-# Token đặt lại mật khẩu sống 30 phút (plan mục 8.1); dùng 1 lần vì hash gồm mật khẩu hiện tại.
+# Mã xác thực đặt lại mật khẩu (gửi qua email) sống 30 phút (plan mục 8.1); dùng 1 lần.
 PASSWORD_RESET_TIMEOUT = 30 * 60
 
 # --- I18N / TZ ---

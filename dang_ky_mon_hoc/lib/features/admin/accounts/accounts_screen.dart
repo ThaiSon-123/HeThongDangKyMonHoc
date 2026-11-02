@@ -13,13 +13,15 @@ import '../../../shared/widgets/app_toast.dart';
 import '../../../shared/widgets/labeled_dropdown.dart';
 import '../../../shared/widgets/labeled_field.dart';
 import '../../../shared/widgets/status_chip.dart';
+import '../../reports/report_widgets.dart' show exportXlsx;
 import 'account_dialogs.dart';
 import 'account_drawer.dart';
 import 'accounts_repository.dart';
 import 'admin_user.dart';
+import 'import_accounts.dart';
 
 /// Quản lý tài khoản (ADM-02) — mockup `AD-Web-TaiKhoan`: bộ lọc, bảng, bật/tắt khóa,
-/// sửa, đặt lại mật khẩu, tạo mới, ngăn chi tiết.
+/// sửa, đặt lại mật khẩu, tạo mới (từng tài khoản hoặc hàng loạt từ Excel theo mẫu), ngăn chi tiết.
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
 
@@ -55,6 +57,13 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     if (username == null || !mounted) return;
     _refresh();
     showAppToast(context, 'Đã tạo tài khoản $username.');
+  }
+
+  Future<void> _nhapExcel() async {
+    final n = await nhapTaiKhoanExcel(context, ref);
+    if (n == null || !mounted) return;
+    _refresh();
+    showAppToast(context, 'Đã tạo $n tài khoản từ Excel.');
   }
 
   Future<void> _edit(AdminUser u) async {
@@ -122,6 +131,14 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
             filter: filter,
             onSearch: _onSearch,
             onCreate: _create,
+            onImport: _nhapExcel,
+            onTemplate: () => exportXlsx(
+              context,
+              ref,
+              path: '/users/import-template/',
+              query: const {},
+              fileName: 'mau_tao_tai_khoan.xlsx',
+            ),
           ),
           const SizedBox(height: 24),
           accounts.when(
@@ -150,12 +167,16 @@ class _FilterBar extends ConsumerWidget {
     required this.filter,
     required this.onSearch,
     required this.onCreate,
+    required this.onImport,
+    required this.onTemplate,
   });
 
   final TextEditingController controller;
   final AccountsFilter filter;
   final ValueChanged<String> onSearch;
   final VoidCallback onCreate;
+  final VoidCallback onImport;
+  final VoidCallback onTemplate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -231,6 +252,24 @@ class _FilterBar extends ConsumerWidget {
               label: '+ Tạo tài khoản',
               height: 44,
               onPressed: onCreate,
+            ),
+          ),
+          SizedBox(
+            width: 170,
+            child: AppButton(
+              label: 'Nhập từ Excel',
+              height: 44,
+              outlined: true,
+              onPressed: onImport,
+            ),
+          ),
+          SizedBox(
+            width: 150,
+            child: AppButton(
+              label: 'Tải file mẫu',
+              height: 44,
+              outlined: true,
+              onPressed: onTemplate,
             ),
           ),
         ],

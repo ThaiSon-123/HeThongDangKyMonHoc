@@ -104,6 +104,16 @@ def test_pay_toan_bo(vnp, login_as):
     assert res.json()["txn_ref"] == gd.txn_ref.hex and res.json()["so_tien"] == "1000.00"
     assert res.json()["payment_url"].startswith(vnp.VNPAY_URL)
     assert "vnp_Amount=100000&" in res.json()["payment_url"]
+    ve = dict(parse_qsl(urlsplit(res.json()["payment_url"]).query))["vnp_ReturnUrl"]
+    assert ve == vnp.VNPAY_RETURN_URL  # mặc định nguon=WEB
+
+
+def test_pay_tu_app_dung_return_url_rieng(vnp, login_as):
+    hk, sv = SemesterFactory(), StudentProfileFactory()
+    hoc_phi(sv, hk, 1000)
+    res = tao(login_as(sv.user), hk, muc="TOAN_BO", nguon="APP")
+    ve = dict(parse_qsl(urlsplit(res.json()["payment_url"]).query))["vnp_ReturnUrl"]
+    assert ve == vnp.VNPAY_RETURN_URL + "app/"
 
 
 def test_pay_dot_tiep_chia_dot(vnp, login_as):
@@ -320,6 +330,16 @@ def test_return_redirect_sai_chu_ky(vnp):
     _, _, gd = gd_cho()
     res = APIClient().get(RETURN, {**callback(gd), "vnp_Amount": "1"})
     assert res["Location"] == f"{vnp.APP_RESULT_URL}?status=sai_chu_ky&txn="
+
+
+def test_return_app_ghi_ket_qua_va_tra_trang_html_khong_chuyen_huong(vnp):
+    _, _, gd = gd_cho()
+    res = APIClient().get(RETURN + "app/", callback(gd))
+    assert res.status_code == 200 and "Thanh toán thành công" in res.content.decode()
+    gd.refresh_from_db()
+    assert gd.trang_thai == "THANH_CONG" and Payment.objects.count() == 1
+    sai = APIClient().get(RETURN + "app/", {**callback(gd), "vnp_Amount": "1"})
+    assert "Kết quả không hợp lệ" in sai.content.decode()
 
 
 def test_callback_khong_can_dang_nhap(vnp):

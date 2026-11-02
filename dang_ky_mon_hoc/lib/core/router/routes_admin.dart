@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../features/dashboard/admin_dashboard.dart';
 import '../../features/admin/accounts/accounts_screen.dart';
 import '../../features/admin/system/backups_screen.dart';
-import '../../features/admin/system/config_screen.dart';
 import '../../features/admin/system/permissions_screen.dart';
 import '../../features/notifications/audit_log_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
@@ -31,12 +30,6 @@ const adminRoutes = RoleRoutes(
       'Ma trận quyền',
       subtitle: 'Quyền của từng vai trò trong hệ thống (chỉ xem)',
       builder: PermissionsScreen.new,
-    ),
-    RouteDef(
-      '/admin/config',
-      'Cấu hình hệ thống',
-      subtitle: 'Các thiết lập chung của hệ thống',
-      builder: ConfigScreen.new,
     ),
     RouteDef(
       '/admin/backups',
@@ -68,7 +61,6 @@ const adminRoutes = RoleRoutes(
       NavItem('Ma trận quyền', '/admin/permissions', Icons.shield_outlined),
     ]),
     NavGroup('HỆ THỐNG', [
-      NavItem('Cấu hình', '/admin/config', Icons.settings_outlined),
       NavItem('Sao lưu', '/admin/backups', Icons.backup_outlined),
       NavItem('Nhật ký', '/admin/logs', Icons.history),
     ]),

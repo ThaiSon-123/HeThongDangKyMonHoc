@@ -1,6 +1,10 @@
+import 'package:dio/dio.dart' show FormData;
 import 'package:dang_ky_mon_hoc/core/auth/auth_user.dart';
+import 'package:dang_ky_mon_hoc/core/download/save_file_provider.dart';
 import 'package:dang_ky_mon_hoc/core/router/router_web.dart';
+import 'package:dang_ky_mon_hoc/features/admin/accounts/import_accounts.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -85,13 +89,18 @@ FakeAdapter adminApi({Map<String, Handler> extra = const {}}) => FakeAdapter({
   ...extra,
 });
 
-Future<void> openAccounts(WidgetTester t, FakeAdapter api) async {
+Future<void> openAccounts(
+  WidgetTester t,
+  FakeAdapter api, {
+  List<Override> overrides = const [],
+}) async {
   await pumpApp(
     t,
     router: webRouterProvider,
     adapter: api,
     tokens: signedIn,
     size: _big,
+    overrides: overrides,
   );
   GoRouter.of(t.element(find.byType(Scaffold).first)).go('/admin/accounts');
   await t.pumpAndSettle();
@@ -470,4 +479,106 @@ void main() {
       );
     },
   );
+
+  group('Tạo tài khoản bằng Excel', () {
+    final chonTep = excelPickerProvider.overrideWithValue(
+      () async => (ten: 'tk.xlsx', bytes: [1, 2, 3]),
+    );
+
+    Map<String, dynamic> xemTruoc({int? daTao}) => {
+      'rows': [
+        {
+          'dong': 2,
+          'username': 'sv001',
+          'full_name': 'Nguyễn Văn A',
+          'email': 'a@example.com',
+          'role': 'SINH_VIEN',
+          'role_label': 'Sinh viên',
+          'loi': [],
+        },
+        {
+          'dong': 3,
+          'username': 'da_co',
+          'full_name': '',
+          'email': '',
+          'role': 'KE_TOAN',
+          'role_label': 'Kế toán',
+          'loi': ['Tên đăng nhập đã tồn tại.'],
+        },
+      ],
+      'hop_le': 1,
+      'loi': 1,
+      'da_tao': ?daTao,
+    };
+
+    testWidgets('Tải file mẫu lưu file mau_tao_tai_khoan.xlsx', (t) async {
+      final saved = <String>[];
+      await openAccounts(
+        t,
+        adminApi(
+          extra: {'GET /users/import-template/': (_) => reply(200, 'XLSX')},
+        ),
+        overrides: [
+          saveFileProvider.overrideWithValue(
+            (name, bytes, {mime}) async => saved.add(name),
+          ),
+        ],
+      );
+      await tapText(t, 'Tải file mẫu');
+      expect(saved, ['mau_tao_tai_khoan.xlsx']);
+    });
+
+    testWidgets('file sai mẫu → hộp thoại báo lỗi, không có danh sách', (
+      t,
+    ) async {
+      await openAccounts(
+        t,
+        adminApi(
+          extra: {
+            'POST /users/import/': (_) => reply(400, {
+              'file': ['File không đúng mẫu (thiếu cột Vai trò).'],
+            }),
+          },
+        ),
+        overrides: [chonTep],
+      );
+      await tapText(t, 'Nhập từ Excel');
+      expect(find.text('File không đúng mẫu'), findsOneWidget);
+      expect(
+        find.text('File không đúng mẫu (thiếu cột Vai trò).'),
+        findsOneWidget,
+      );
+      expect(find.text('Tài khoản sẽ tạo từ Excel'), findsNothing);
+    });
+
+    testWidgets('đúng mẫu → danh sách xem trước; xác nhận tạo dòng hợp lệ', (
+      t,
+    ) async {
+      final lan = <String>[];
+      final api = adminApi(
+        extra: {
+          'POST /users/import/': (o) {
+            final xacNhan = (o.data as FormData).fields
+                .firstWhere((f) => f.key == 'xac_nhan')
+                .value;
+            lan.add(xacNhan);
+            return reply(200, xemTruoc(daTao: xacNhan == '1' ? 1 : null));
+          },
+        },
+      );
+      await openAccounts(t, api, overrides: [chonTep]);
+
+      await tapText(t, 'Nhập từ Excel');
+      expect(find.text('Tài khoản sẽ tạo từ Excel'), findsOneWidget);
+      expect(find.textContaining('2 dòng: 1 hợp lệ, 1 lỗi'), findsOneWidget);
+      expect(find.text('sv001'), findsOneWidget);
+      expect(find.text('Hợp lệ'), findsOneWidget);
+      expect(find.text('Tên đăng nhập đã tồn tại.'), findsOneWidget);
+      expect(lan, ['0']); // mới xem trước, chưa tạo
+
+      await tapText(t, 'Tạo 1 tài khoản');
+      expect(lan, ['0', '1']);
+      expect(find.text('Đã tạo 1 tài khoản từ Excel.'), findsOneWidget);
+    });
+  });
 }

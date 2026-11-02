@@ -49,15 +49,16 @@ class AuthRepository {
       data: {'email': email},
     );
     final data = res.data;
-    return data is Map ? data['token'] as String? : null;
+    return data is Map ? data['code'] as String? : null;
   });
 
-  Future<void> resetPassword(String token, String newPassword) => _guard(
-    () => _dio.post(
-      '/auth/reset-password/',
-      data: {'token': token, 'new_password': newPassword},
-    ),
-  );
+  Future<void> resetPassword(String email, String code, String newPassword) =>
+      _guard(
+        () => _dio.post(
+          '/auth/reset-password/',
+          data: {'email': email, 'code': code, 'new_password': newPassword},
+        ),
+      );
 }
 
 final authRepositoryProvider = Provider<AuthRepository>(

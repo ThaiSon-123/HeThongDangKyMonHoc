@@ -87,6 +87,9 @@ class ClassBriefSerializer(serializers.ModelSerializer):
     khoi_kien_thuc = serializers.SerializerMethodField()
     loai_mon = serializers.SerializerMethodField()
     hoc_ky_goi_y = serializers.SerializerMethodField()
+    # Màn Đăng ký: vì sao SV không đăng ký được lớp này (context `ly_do`); null = đăng ký được.
+    ma_ly_do = serializers.SerializerMethodField()
+    ly_do = serializers.SerializerMethodField()
 
     class Meta:
         model = ClassSection
@@ -109,8 +112,18 @@ class ClassBriefSerializer(serializers.ModelSerializer):
             "khoi_kien_thuc",
             "loai_mon",
             "hoc_ky_goi_y",
+            "ma_ly_do",
+            "ly_do",
         ]
         read_only_fields = fields
+
+    def get_ma_ly_do(self, obj) -> str | None:
+        r = self.context.get("ly_do", {}).get(obj.id)
+        return r[0] if r else None
+
+    def get_ly_do(self, obj) -> str | None:
+        r = self.context.get("ly_do", {}).get(obj.id)
+        return r[1] if r else None
 
     def _cc(self, obj):
         return self.context.get("cau_hinh_mon", {}).get(obj.mon_hoc_id)

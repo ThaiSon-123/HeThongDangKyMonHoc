@@ -121,14 +121,18 @@ def test_gioi_han_ghi_chung_chi_dem_thao_tac_ghi_theo_nguoi_dung(login_as, monke
     b = login_as(UserFactory(role=Role.ADMIN))
     for _ in range(3):
         assert (
-            a.patch("/api/admin/config/", {"max_absent_pct": 20}, format="json").status_code == 200
+            a.patch("/api/admin/config/", {"backup_retention_days": 30}, format="json").status_code
+            == 200
         )
-    res = a.patch("/api/admin/config/", {"max_absent_pct": 20}, format="json")
+    res = a.patch("/api/admin/config/", {"backup_retention_days": 30}, format="json")
     assert res.status_code == 429 and res.data["error"]["code"] == "QUA_NHIEU_YEU_CAU"
     # Đọc không bị đếm; người dùng khác có hạn mức riêng.
     for _ in range(5):
         assert a.get("/api/admin/config/").status_code == 200
-    assert b.patch("/api/admin/config/", {"max_absent_pct": 20}, format="json").status_code == 200
+    assert (
+        b.patch("/api/admin/config/", {"backup_retention_days": 30}, format="json").status_code
+        == 200
+    )
 
 
 # ---- CORS: trình duyệt phải được phép gửi Idempotency-Key ----------------------------

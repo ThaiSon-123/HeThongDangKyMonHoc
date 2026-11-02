@@ -12,7 +12,7 @@ Future<void> openForgot(WidgetTester t) async {
 
 Future<void> sendEmail(WidgetTester t, String email) async {
   await t.enterText(find.byType(TextField).first, email);
-  await t.tap(find.widgetWithText(FilledButton, 'Gửi yêu cầu'));
+  await t.tap(find.widgetWithText(FilledButton, 'Gửi mã xác thực'));
   await t.pumpAndSettle();
 }
 
@@ -20,7 +20,7 @@ void main() {
   testWidgets('3 bước: email → mã + mật khẩu mới → hoàn tất', (t) async {
     final adapter = FakeAdapter({
       'POST /auth/forgot-password/': (_) =>
-          reply(200, {'detail': 'ok', 'token': 'MQ.abc-123'}),
+          reply(200, {'detail': 'ok', 'code': '123456'}),
       'POST /auth/reset-password/': (_) => reply(204, {}),
     });
     await pumpApp(t, router: webRouterProvider, adapter: adapter);
@@ -29,11 +29,14 @@ void main() {
     expect(find.text('Quên mật khẩu'), findsWidgets);
     await sendEmail(t, 'nam@truong.edu.vn');
 
-    // Bước 2: thông điệp trung tính + mã dev được điền sẵn.
-    expect(find.textContaining('Nếu email tồn tại'), findsOneWidget);
+    // Bước 2: báo đã gửi tới email + mã dev được điền sẵn.
+    expect(
+      find.textContaining('đã được gửi tới nam@truong.edu.vn'),
+      findsOneWidget,
+    );
     expect(
       t.widget<TextField>(find.byType(TextField).first).controller!.text,
-      'MQ.abc-123',
+      '123456',
     );
     await t.enterText(find.byType(TextField).at(1), 'MatKhauMoi99');
     await t.enterText(find.byType(TextField).at(2), 'MatKhauMoi99');
@@ -42,7 +45,8 @@ void main() {
 
     expect(find.text('Đã đặt lại mật khẩu'), findsOneWidget);
     expect(adapter.bodies['POST /auth/reset-password/'], {
-      'token': 'MQ.abc-123',
+      'email': 'nam@truong.edu.vn',
+      'code': '123456',
       'new_password': 'MatKhauMoi99',
     });
 
@@ -52,7 +56,7 @@ void main() {
   });
 
   testWidgets(
-    'prod (không có token trong response): ô mã để trống cho người dùng dán',
+    'prod (không có mã trong response): ô mã để trống cho người dùng nhập',
     (t) async {
       final adapter = FakeAdapter({
         'POST /auth/forgot-password/': (_) => reply(200, {'detail': 'ok'}),
@@ -60,15 +64,50 @@ void main() {
       await pumpApp(t, router: webRouterProvider, adapter: adapter);
       await openForgot(t);
 
-      await sendEmail(t, 'khong-ton-tai@truong.edu.vn');
+      await sendEmail(t, 'nam@truong.edu.vn');
 
-      expect(find.textContaining('Nếu email tồn tại'), findsOneWidget);
+      expect(find.textContaining('đã được gửi tới'), findsOneWidget);
       expect(
         t.widget<TextField>(find.byType(TextField).first).controller!.text,
         '',
       );
     },
   );
+
+  testWidgets('bước 2: "Gửi lại mã" gọi lại API và báo đã gửi', (t) async {
+    final adapter = FakeAdapter({
+      'POST /auth/forgot-password/': (_) => reply(200, {'detail': 'ok'}),
+    });
+    await pumpApp(t, router: webRouterProvider, adapter: adapter);
+    await openForgot(t);
+    await sendEmail(t, 'nam@truong.edu.vn');
+
+    await t.tap(find.text('Gửi lại mã'));
+    await t.pumpAndSettle();
+
+    expect(find.textContaining('Đã gửi lại mã xác thực mới'), findsOneWidget);
+    expect(
+      adapter.log.where((l) => l.startsWith('POST /auth/forgot-password/')),
+      hasLength(2),
+    );
+  });
+
+  testWidgets('email không có trong hệ thống: lỗi dưới ô, ở lại bước 1', (
+    t,
+  ) async {
+    final adapter = FakeAdapter({
+      'POST /auth/forgot-password/': (_) => reply(400, {
+        'email': ['Email này không có trong hệ thống.'],
+      }),
+    });
+    await pumpApp(t, router: webRouterProvider, adapter: adapter);
+    await openForgot(t);
+
+    await sendEmail(t, 'khong-ton-tai@truong.edu.vn');
+
+    expect(find.text('Email này không có trong hệ thống.'), findsOneWidget);
+    expect(find.text('Gửi mã xác thực'), findsOneWidget);
+  });
 
   testWidgets('email sai định dạng: báo ngay, không gọi API', (t) async {
     final adapter = FakeAdapter();
@@ -90,8 +129,8 @@ void main() {
 
     await sendEmail(t, 'nam@truong.edu.vn');
 
-    expect(find.textContaining('thao tác quá nhanh'), findsOneWidget);
-    expect(find.text('Gửi yêu cầu'), findsOneWidget);
+    expect(find.textContaining('quá 3 lần trong 15 phút'), findsOneWidget);
+    expect(find.text('Gửi mã xác thực'), findsOneWidget);
   });
 
   testWidgets('mật khẩu yếu / không khớp: lỗi dưới từng ô', (t) async {
@@ -102,7 +141,7 @@ void main() {
     await openForgot(t);
     await sendEmail(t, 'nam@truong.edu.vn');
 
-    await t.enterText(find.byType(TextField).at(0), 'MQ.xyz');
+    await t.enterText(find.byType(TextField).at(0), '12345');
     await t.enterText(find.byType(TextField).at(1), 'yeu');
     await t.enterText(find.byType(TextField).at(2), 'khac');
     await t.tap(find.widgetWithText(FilledButton, 'Đặt lại mật khẩu'));
@@ -113,27 +152,31 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Mật khẩu nhập lại không khớp.'), findsOneWidget);
+    expect(find.text('Nhập đủ 6 chữ số của mã xác thực.'), findsOneWidget);
     expect(adapter.bodies.containsKey('POST /auth/reset-password/'), isFalse);
   });
 
-  testWidgets('server từ chối mã: lỗi hiện dưới ô "Mã đặt lại"', (t) async {
+  testWidgets('server từ chối mã: lỗi hiện dưới ô "Mã xác thực"', (t) async {
     final adapter = FakeAdapter({
       'POST /auth/forgot-password/': (_) => reply(200, {'detail': 'ok'}),
       'POST /auth/reset-password/': (_) => reply(400, {
-        'token': ['Token không hợp lệ hoặc đã hết hạn.'],
+        'code': ['Mã xác thực không đúng hoặc đã hết hạn.'],
       }),
     });
     await pumpApp(t, router: webRouterProvider, adapter: adapter);
     await openForgot(t);
     await sendEmail(t, 'nam@truong.edu.vn');
 
-    await t.enterText(find.byType(TextField).at(0), 'het-han');
+    await t.enterText(find.byType(TextField).at(0), '000000');
     await t.enterText(find.byType(TextField).at(1), 'MatKhauMoi99');
     await t.enterText(find.byType(TextField).at(2), 'MatKhauMoi99');
     await t.tap(find.widgetWithText(FilledButton, 'Đặt lại mật khẩu'));
     await t.pumpAndSettle();
 
-    expect(find.text('Token không hợp lệ hoặc đã hết hạn.'), findsOneWidget);
+    expect(
+      find.text('Mã xác thực không đúng hoặc đã hết hạn.'),
+      findsOneWidget,
+    );
     expect(find.text('Đã đặt lại mật khẩu'), findsNothing);
   });
 

@@ -32,6 +32,14 @@ docker compose up -d --build  # dựng web, db, redis, worker, beat, nginx
 docker compose exec web python manage.py seed_demo   # nạp dữ liệu demo (chạy lại an toàn)
 ```
 
+Một sinh viên dữ liệu đầy đủ để demo (lịch sử học tập loại Giỏi, điểm danh, học phí kỳ hiện tại chưa đóng), chạy sau các lệnh `seed_*`:
+`docker compose exec web python manage.py seed_sinh_vien_mau --ma-sv 2324801030030 --ho-ten "Võ Thái Sơn" --mon-truot LING189`
+(trượt LING189 để có môn học lại và môn "chưa đủ tiên quyết" khi đăng ký).
+
+Mở học kỳ mới cho sinh viên đăng ký trước (lớp học phần theo CTĐT + bảng giá + cửa sổ đăng ký từ hôm nay):
+`docker compose exec web python manage.py mo_hoc_ky_moi --ten "Học kỳ 2 - Năm học 2026 - 2027" --them-mon LING189,LING022,LING344,KTPM023,LING190`
+(`--them-mon`: mở thêm lớp học lại / học vượt; chạy SAU seed_sinh_vien_mau).
+
 Kiểm tra: `http://localhost:8010/api/health/` trả `{"status":"ok"}`; Swagger ở `http://localhost:8010/api/docs/`.
 
 | Việc | Lệnh (trong `backend/`) |

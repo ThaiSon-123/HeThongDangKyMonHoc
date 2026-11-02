@@ -69,15 +69,30 @@ def test_vai_tro_khong_co_ho_so_van_xem_duoc_thong_tin_tai_khoan(login_as, role)
     assert d["role"] == role and d["full_name"] == "Lê Văn A" and d["email"] == u.email
 
 
-def test_sua_email_sdt_dong_bo_ca_user_va_ho_so(login_as):
-    sp = StudentProfileFactory()
+def test_giang_vien_sua_email_sdt_dong_bo_ca_user_va_ho_so(login_as):
+    tp = TeacherProfileFactory()
 
-    res = login_as(sp.user).patch(URL, {"email": "moi@example.com", "sdt": "0901234567"})
+    res = login_as(tp.user).patch(URL, {"email": "moi@example.com", "sdt": "0901234567"})
 
     assert res.status_code == 200
+    tp.refresh_from_db()
+    tp.user.refresh_from_db()
+    assert (tp.email, tp.sdt, tp.user.email) == ("moi@example.com", "0901234567", "moi@example.com")
+
+
+def test_sinh_vien_khong_tu_doi_email_nhung_sua_duoc_sdt(login_as):
+    sp = StudentProfileFactory()
+    email_cu = sp.user.email
+    c = login_as(sp.user)
+
+    res = c.patch(URL, {"email": "moi@example.com", "sdt": "0901234567"})
+    ok = c.patch(URL, {"sdt": "0901234567"})
+
+    assert res.status_code == 400 and set(res.data) == {"email"}
+    assert ok.status_code == 200
     sp.refresh_from_db()
     sp.user.refresh_from_db()
-    assert (sp.email, sp.sdt, sp.user.email) == ("moi@example.com", "0901234567", "moi@example.com")
+    assert (sp.user.email, sp.sdt) == (email_cu, "0901234567")
 
 
 def test_khong_duoc_sua_truong_hoc_vu(login_as):
@@ -88,14 +103,14 @@ def test_khong_duoc_sua_truong_hoc_vu(login_as):
     )
 
     assert res.status_code == 400
-    assert set(res.data) == {"ma_sv", "gpa"}
+    assert set(res.data) == {"ma_sv", "gpa", "email"}
     sp.refresh_from_db()
     assert sp.ma_sv == "SV00001" and sp.gpa is None
 
 
 @pytest.mark.parametrize("body", [{"email": "khong-phai-email"}, {"sdt": "abc"}, {"sdt": "1" * 20}])
 def test_email_sdt_sai_dinh_dang(login_as, body):
-    res = login_as(StudentProfileFactory().user).patch(URL, body)
+    res = login_as(TeacherProfileFactory().user).patch(URL, body)
 
     assert res.status_code == 400
 

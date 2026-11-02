@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/api/api_failure.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../core/auth/auth_repository.dart';
 import '../../core/auth/auth_user.dart';
@@ -9,6 +11,7 @@ import '../../core/download/print_html.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/layout.dart';
+import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/labeled_dropdown.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
@@ -105,6 +108,13 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
   Widget build(BuildContext context) => FutureBuilder<Json>(
     future: _data,
     builder: (context, snap) {
+      final loi = snap.error;
+      if (loi is ApiFailure && loi.code == 'HOC_PHI_QUA_HAN') {
+        return NhacHocPhi(
+          title: 'Chưa thể xem thời khóa biểu',
+          message: loi.message ?? '',
+        );
+      }
       if (snap.hasError) return ListErrorCard(onRetry: _reload);
       final d = snap.data;
       if (d == null) return const ListSkeleton();
@@ -606,6 +616,90 @@ class _Empty extends StatelessWidget {
           style: const TextStyle(fontSize: 14, color: AppColors.muted),
         ),
       ],
+    ),
+  );
+}
+
+/// SV còn nợ học phí quá hạn: backend chặn (`403 HOC_PHI_QUA_HAN`) xem TKB / TKB tự động → nhắc đóng học phí.
+class NhacHocPhi extends StatelessWidget {
+  const NhacHocPhi({super.key, required this.title, required this.message});
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppColors.cardShadow,
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.errorBannerBg,
+                ),
+                child: const Icon(
+                  Icons.lock_clock_outlined,
+                  size: 40,
+                  color: AppColors.danger,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.muted,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 10,
+                children: [
+                  SizedBox(
+                    width: 200,
+                    child: AppButton(
+                      label: 'Đóng học phí ngay',
+                      onPressed: () => context.go('/student/tuition/pay'),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 200,
+                    child: AppButton(
+                      label: 'Xem học phí',
+                      outlined: true,
+                      onPressed: () => context.go('/student/tuition'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     ),
   );
 }

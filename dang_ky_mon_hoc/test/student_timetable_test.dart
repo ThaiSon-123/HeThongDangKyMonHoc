@@ -59,6 +59,29 @@ Future<void> open(
 
 void main() {
   testWidgets(
+    'nợ học phí quá hạn: không có lưới TKB, hiện thẻ nhắc đóng học phí',
+    (t) async {
+      await openStudent(
+        t,
+        svApi({
+          'GET /timetable/my/': (_) => apiError(
+            403,
+            'HOC_PHI_QUA_HAN',
+            'Bạn còn nợ học phí 1.500.000 ₫ đã quá hạn.',
+          ),
+        }),
+        '/student/schedule',
+        overrides: [clockProvider.overrideWithValue(() => _homNay)],
+      );
+
+      expect(find.text('Chưa thể xem thời khóa biểu'), findsOneWidget);
+      expect(find.textContaining('1.500.000 ₫'), findsOneWidget);
+      expect(find.text('Đóng học phí ngay'), findsOneWidget);
+      expect(find.text('Thử lại'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'lưới tuần có ngày thật; khối lớp hiện tên, mã lớp · phòng, giáo viên',
     (t) async {
       await open(

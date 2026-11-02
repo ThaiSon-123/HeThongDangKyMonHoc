@@ -60,7 +60,7 @@ hoàn tiền nhiều trạng thái · PDF · thông báo theo ngành/học kỳ.
 **Backend (đã xong, 91 test qua trên PostgreSQL và SQLite):**
 - [x] `User` 5 role, `is_locked`; login / refresh (rotate + blacklist) / logout — BR-22
 - [x] `LockedAwareJWTAuthentication` chặn cả login lẫn refresh khi khóa
-- [x] `forgot-password` (phản hồi **giống nhau** dù email có/không tồn tại; token 30 phút, 1 lần) · `reset-password` · `change-password` (blacklist refresh cũ)
+- [x] `forgot-password` (phản hồi **giống nhau** dù email có/không tồn tại; mã xác thực 6 số qua email, 30 phút, 1 lần, sai 5 lần hủy mã) · `reset-password` · `change-password` (blacklist refresh cũ)
 - [x] Password policy ≥ 8 ký tự, có chữ + số
 - [x] Rate limit login 10/phút/IP (không khóa theo tài khoản) · quên mật khẩu 3/15 phút/email
 - [x] `GET/PATCH /api/profiles/me/` (chỉ sửa `email`, `sdt`; xếp loại học lực BR-25f)

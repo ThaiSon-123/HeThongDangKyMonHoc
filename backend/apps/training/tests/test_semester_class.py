@@ -57,18 +57,12 @@ HK_BODY = {
 
 
 def test_tao_hoc_ky_mac_dinh_tin_chi_12_24_14(pdt):
-    res = pdt.post(SEM, HK_BODY)
-    # cửa sổ nằm TRƯỚC ngày bắt đầu học kỳ → vi phạm "cửa sổ ⊂ thời gian học kỳ"
-    assert res.status_code == 400 and "cua_so_dk_bat_dau" in res.data
+    # cửa sổ đóng SAU ngày kết thúc học kỳ → 400
+    res = pdt.post(SEM, {**HK_BODY, "cua_so_dk_ket_thuc": "2027-01-20T08:00:00+07:00"})
+    assert res.status_code == 400 and "cua_so_dk_ket_thuc" in res.data
 
-    res = pdt.post(
-        SEM,
-        {
-            **HK_BODY,
-            "cua_so_dk_bat_dau": "2026-09-01T08:00:00+07:00",
-            "cua_so_dk_ket_thuc": "2026-09-14T08:00:00+07:00",
-        },
-    )
+    # cửa sổ mở TRƯỚC ngày bắt đầu học kỳ (đăng ký trước cho kỳ sau) → hợp lệ
+    res = pdt.post(SEM, HK_BODY)
     assert res.status_code == 201
     assert (res.data["tin_chi_toi_thieu"], res.data["tin_chi_toi_da"]) == (12, 24)
     assert res.data["tin_chi_toi_da_canh_bao"] == 14

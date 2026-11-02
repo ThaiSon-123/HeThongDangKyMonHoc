@@ -144,7 +144,6 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
             const SizedBox(height: 16),
             const LoiTat([
               ('Tài khoản', '/admin/accounts'),
-              ('Cấu hình', '/admin/config'),
               ('Sao lưu', '/admin/backups'),
             ]),
             const SizedBox(height: 16),

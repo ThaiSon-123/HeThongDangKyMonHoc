@@ -1,3 +1,4 @@
+import 'package:dang_ky_mon_hoc/shared/widgets/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -46,6 +47,7 @@ Map<String, dynamic> available(
   List<Map<String, dynamic>> rows, {
   bool trongCuaSo = true,
   int da = 3,
+  String? noQuaHan,
 }) => {
   'count': rows.length,
   'next': null,
@@ -62,6 +64,7 @@ Map<String, dynamic> available(
     'tin_chi_toi_da_canh_bao': 14,
     'tin_chi_da_dang_ky': da,
     'bi_canh_bao_hoc_vu': false,
+    'hoc_phi_qua_han': noQuaHan,
   },
 };
 
@@ -193,6 +196,89 @@ void main() {
     },
   );
 
+  testWidgets(
+    'lớp không đăng ký được vẫn hiện kèm lý do: đã đạt, thiếu tiên quyết, lớp đầy; học lại',
+    (t) async {
+      Map<String, dynamic> chan(Map<String, dynamic> l, String ma, String ly) =>
+          {...l, 'ma_ly_do': ma, 'ly_do': ly};
+      final api = api0(
+        classes: [
+          chan(
+            lop(1, 'M1-01', 1, 'Lập trình cơ bản'),
+            'DA_DAT_MON',
+            'Môn học này đã đạt, không đăng ký lại.',
+          ),
+          chan(
+            lop(2, 'M2-01', 2, 'Cấu trúc dữ liệu'),
+            'THIEU_TIEN_QUYET',
+            'Chưa đạt môn tiên quyết: M5.',
+          ),
+          chan(
+            lop(3, 'M3-01', 3, 'Giải tích 2'),
+            'LOP_DAY',
+            'Lớp đã đủ sĩ số.',
+          ),
+          lop(4, 'M3-02', 3, 'Giải tích 2'),
+          lop(5, 'M9-01', 9, 'Mạng máy tính'),
+        ],
+        history: [
+          {...lichSu(7, 'M9-01', 'Mạng máy tính'), 'hoc_ky': 3},
+        ],
+      );
+      await openStudent(t, api, '/student/register');
+
+      expect(find.text('Đã đạt'), findsOneWidget);
+      expect(find.text('Chưa đủ tiên quyết'), findsOneWidget);
+      expect(find.text('Chưa đạt môn tiên quyết: M5.'), findsOneWidget);
+      expect(find.text('Học lại'), findsOneWidget); // M9 học kỳ trước, chưa đạt
+
+      await tapText(t, 'Giải tích 2');
+      expect(find.text('Lớp đầy'), findsOneWidget);
+      final nut = find.widgetWithText(AppButton, 'Đăng ký');
+      expect(t.widget<AppButton>(nut.at(0)).onPressed, isNull); // M3-01 đầy
+      expect(t.widget<AppButton>(nut.at(1)).onPressed, isNotNull); // M3-02
+
+      await tapText(t, 'Chỉ lớp đăng ký được');
+      expect(find.text('2 môn · 2 lớp học phần đang mở'), findsOneWidget);
+      expect(find.text('Cấu trúc dữ liệu'), findsNothing);
+    },
+  );
+
+  testWidgets('nợ học phí quá hạn: banner nhắc, nút Đăng ký bị khóa', (
+    t,
+  ) async {
+    final api = svApi({
+      'GET /courses/available/': (_) => reply(
+        200,
+        available([
+          lop(1, 'M1-01', 1, 'Lập trình cơ bản'),
+        ], noQuaHan: 'Bạn còn nợ học phí 1.500.000 ₫ đã quá hạn.'),
+      ),
+      'GET /registrations/history/': (_) => reply(200, pageOf([])),
+      'GET /curriculums/my/': (_) => reply(200, ctdt()),
+    });
+    await openStudent(t, api, '/student/register');
+
+    expect(
+      find.textContaining(
+        'Chưa đóng học phí quá hạn — không thể đăng ký môn.',
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('1.500.000 ₫', findRichText: true),
+      findsOneWidget,
+    );
+    await tapText(t, 'Lập trình cơ bản');
+    expect(
+      t
+          .widget<AppButton>(find.widgetWithText(AppButton, 'Đăng ký').first)
+          .onPressed,
+      isNull,
+    );
+  });
+
   testWidgets('server từ chối (trùng lịch) → toast đúng thông điệp', (t) async {
     final api = api0(
       extra: {
@@ -261,7 +347,7 @@ void main() {
     });
   });
 
-  group('tìm học phần và lọc học kỳ trong CTĐT', () {
+  group('tìm học phần (không còn lọc theo học kỳ)', () {
     FakeAdapter apiBon() => api0(
       classes: [
         lop(1, 'M1-01', 1, 'Lập trình cơ bản'),
@@ -270,15 +356,6 @@ void main() {
         lop(4, 'M3-01', 3, 'Giải tích 2', ky: 3),
       ],
     );
-
-    Future<void> chonKy(WidgetTester t, String ky) async {
-      final o = find.byType(DropdownButton<int>);
-      await t.ensureVisible(o);
-      await t.tap(o);
-      await t.pumpAndSettle();
-      await t.tap(find.text(ky).last);
-      await t.pumpAndSettle();
-    }
 
     testWidgets('tìm theo tên môn không phân biệt hoa thường và dấu', (
       t,
@@ -308,32 +385,9 @@ void main() {
       expect(find.text('3 môn · 4 lớp học phần đang mở'), findsOneWidget);
     });
 
-    testWidgets('lọc theo học kỳ trong CTĐT, kết hợp với tìm kiếm', (t) async {
-      await openStudent(t, apiBon(), '/student/register');
-      await chonKy(t, 'Học kỳ 3');
-      expect(find.text('2 môn · 2 lớp học phần đang mở'), findsOneWidget);
-      expect(find.text('Lập trình cơ bản'), findsNothing);
-
-      await enterField(t, 'Tìm học phần', 'giai tich');
-      expect(find.text('1 môn · 1 lớp học phần đang mở'), findsOneWidget);
-      expect(find.text('Giải tích 2'), findsOneWidget);
-
-      await enterField(t, 'Tìm học phần', '');
-      await chonKy(t, 'Tất cả học kỳ');
-      expect(find.text('3 môn · 4 lớp học phần đang mở'), findsOneWidget);
-    });
-
-    testWidgets('chỉ liệt kê các học kỳ CTĐT có môn đang mở', (t) async {
-      await openStudent(t, apiBon(), '/student/register');
-      final o = find.byType(DropdownButton<int>);
-      await t.tap(o);
-      await t.pumpAndSettle();
-      expect(find.text('Học kỳ 1'), findsWidgets);
-      expect(find.text('Học kỳ 3'), findsWidgets);
-      expect(find.text('Học kỳ 2'), findsNothing);
-    });
-
-    testWidgets('App (390 px): ô tìm và ô chọn học kỳ không tràn', (t) async {
+    testWidgets('App (390 px): chỉ có ô tìm, không còn ô chọn học kỳ', (
+      t,
+    ) async {
       await openStudent(
         t,
         apiBon(),
@@ -341,7 +395,8 @@ void main() {
         size: const Size(390, 900),
       );
       expect(find.text('Tìm học phần'), findsOneWidget);
-      expect(find.text('Học kỳ trong CTĐT'), findsOneWidget);
+      expect(find.text('Học kỳ trong CTĐT'), findsNothing);
+      expect(find.byType(DropdownButton<int>), findsNothing);
     });
   });
 

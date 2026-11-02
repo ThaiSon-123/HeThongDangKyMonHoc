@@ -218,7 +218,7 @@ Bản App **không import** `routes_admin/pdt/accountant` (plan 10.2). Guard: ch
 | Vai trò | Route | CN | Web | App |
 | :--- | :--- | :--- | :---: | :---: |
 | Public | `/login`, `/forgot-password` | SV/GV/PDT/KT/ADM-01 | ✓ | ✓ |
-| Admin | `/admin` · `/admin/accounts` · `/admin/permissions` · `/admin/config` · `/admin/logs` · `/admin/backups` · `/admin/notifications` | ADM-02..08 | ✓ | — |
+| Admin | `/admin` · `/admin/accounts` · `/admin/permissions` · `/admin/logs` · `/admin/backups` · `/admin/notifications` (quy chế đào tạo chuyển sang `/pdt/config`) | ADM-02..08 | ✓ | — |
 | PĐT | `/pdt` · `/pdt/majors` · `/pdt/curriculums` · `/pdt/courses` · `/pdt/semesters` · `/pdt/classes` · `/pdt/registrations` · `/pdt/grade-sheets` · `/pdt/reports` · `/pdt/notifications` | PDT-02..14 | ✓ | — |
 | | **(bổ sung)** `/pdt/profiles` · `/pdt/faculties` · `/pdt/logs` | PDT-01 · PDT-02 · ADM-06 | ✓ | — |
 | SV | `/student` · `/student/profile` · `/student/register` · `/student/auto-schedule` · `/student/schedule` · `/student/grades` · `/student/attendance` · `/student/tuition` · `/student/notifications` | SV-02..13 | ✓ | ✓ |
@@ -263,7 +263,7 @@ Login screen. Web: two columns — left indigo gradient panel with logo, "Đăng
 
 ### 4.2. `/forgot-password` — Quên & đặt lại mật khẩu
 - **Bước 1 — Nhập email:** `POST /api/auth/forgot-password/` (3 lần/15 phút/email). **Luôn hiện cùng một thông điệp** "Nếu email tồn tại, chúng tôi đã gửi hướng dẫn" — UI không được tiết lộ email có tồn tại hay không.
-- **Bước 2 — Nhập token + mật khẩu mới + xác nhận:** `POST /api/auth/reset-password/`. Token sống 30 phút, dùng 1 lần; hết hạn/sai → lỗi field. Ở dev, response có token → tự điền sẵn (ẩn ở prod: `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE=False`).
+- **Bước 2 — Nhập mã xác thực 6 số (gửi qua email) + mật khẩu mới + xác nhận:** `POST /api/auth/reset-password/` `{email, code, new_password}`. Mã sống 30 phút, dùng 1 lần, sai 5 lần thì hủy; có nút "Gửi lại mã" / "Đổi email". Ở dev, response có `code` → tự điền sẵn (ẩn ở prod: `PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE=False`).
 - Chính sách mật khẩu hiển thị dưới ô nhập: ≥ 8 ký tự, có chữ và số. Thành công → toast → `/login`.
 
 ### 4.3. Đổi mật khẩu (trong Hồ sơ / AccountMenu)

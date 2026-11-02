@@ -50,6 +50,7 @@ class Codes:
     CHUA_CAU_HINH_GIA = "CHUA_CAU_HINH_GIA"
     SO_TIEN_KHONG_HOP_LE = "SO_TIEN_KHONG_HOP_LE"
     QUA_NHIEU_YEU_CAU = "QUA_NHIEU_YEU_CAU"
+    HOC_PHI_QUA_HAN = "HOC_PHI_QUA_HAN"
 
 
 # HTTP mặc định cho từng mã
@@ -71,6 +72,7 @@ _CODE_STATUS = {
     Codes.CHUA_CAU_HINH_GIA: 400,
     Codes.SO_TIEN_KHONG_HOP_LE: 400,
     Codes.QUA_NHIEU_YEU_CAU: 429,
+    Codes.HOC_PHI_QUA_HAN: 403,
 }
 
 

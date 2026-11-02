@@ -35,7 +35,8 @@ from apps.training.models import (
     Semester,
     TrangThaiHocKy,
 )
-from apps.training.services import chon_hoc_ky
+from apps.training.services import chon_hoc_ky, hoc_ky_dang_ky
+from apps.tuition.services import chan_neu_qua_han, loi_qua_han
 from core.export import XLSX, xlsx_response
 from core.mixins import write_audit
 from core.pagination import StandardPagination
@@ -211,10 +212,14 @@ class RegistrationViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 
 class AvailableCoursesView(APIView):
-    """`GET /api/courses/available/` (SV-04): đã lọc cả trùng lịch."""
+    """`GET /api/courses/available/` (SV-04): mọi lớp `MO` của CTĐT chưa đăng ký, mỗi lớp kèm `ma_ly_do` /
+    `ly_do` nếu không đăng ký được (đã đạt, thiếu tiên quyết, lớp đầy, trùng lịch...). Mặc định học kỳ
+    `MO` mới nhất."""
 
     permission_classes = [IsSinhVien]
     loc_trung_lich = True
+    kem_ly_do = True  # trả cả lớp không đăng ký được, kèm `ma_ly_do` / `ly_do`
+    chan_qua_han = None  # việc bị chặn khi SV nợ học phí quá hạn (None = không chặn cả màn)
 
     @extend_schema(
         parameters=[
@@ -227,10 +232,20 @@ class AvailableCoursesView(APIView):
     )
     def get(self, request):
         user = request.user
+        if self.chan_qua_han:
+            chan_neu_qua_han(user, self.chan_qua_han)
         ho_so = services.ho_so_sinh_vien(user)
-        hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
+        hoc_ky_id = request.query_params.get("hoc_ky")
+        hoc_ky = chon_hoc_ky(hoc_ky_id) if hoc_ky_id else hoc_ky_dang_ky()
+        if hoc_ky is None:
+            raise ValidationError({"hoc_ky": ["Chưa có học kỳ nào mở đăng ký."]})
         lop = services.lop_co_the_dang_ky(
-            user, ho_so, hoc_ky, request.query_params.get("search", ""), self.loc_trung_lich
+            user,
+            ho_so,
+            hoc_ky,
+            request.query_params.get("search", ""),
+            self.loc_trung_lich,
+            tat_ca=self.kem_ly_do,
         )
         paginator = StandardPagination()
         page = paginator.paginate_queryset(lop, request, view=self)
@@ -240,7 +255,8 @@ class AvailableCoursesView(APIView):
                 for c in CurriculumCourse.objects.filter(
                     ctdt_id=ho_so.ctdt_id, mon_hoc__in=[x.mon_hoc_id for x in page]
                 )
-            }
+            },
+            "ly_do": services.ly_do_khong_dang_ky(user, page) if self.kem_ly_do else {},
         }
         res = paginator.get_paginated_response(
             ClassBriefSerializer(page, many=True, context=ctx).data
@@ -258,15 +274,20 @@ class AvailableCoursesView(APIView):
             "tin_chi_toi_da_canh_bao": hoc_ky.tin_chi_toi_da_canh_bao,
             "tin_chi_da_dang_ky": services.tong_tin_chi_dang_ky(user, hoc_ky),
             "bi_canh_bao_hoc_vu": services.tran_tin_chi(ho_so, hoc_ky) < hoc_ky.tin_chi_toi_da,
+            # nợ học phí quá hạn → không được đăng ký (câu nhắc; null = được đăng ký)
+            "hoc_phi_qua_han": loi_qua_han(user, "đăng ký môn học"),
         }
         return res
 
 
 class AutoScheduleCoursesView(AvailableCoursesView):
     """`GET /api/auto-schedule/available-courses/` (SV-06): toàn bộ lớp mở của CTĐT, còn chỗ, chưa đăng ký
-    — **không lọc trùng lịch** (client tự ghép TKB; đăng ký thật vẫn kiểm BR-01..07 ở server)."""
+    — **không lọc trùng lịch** (client tự ghép TKB; đăng ký thật vẫn kiểm BR-01..07 ở server).
+    SV nợ học phí quá hạn → `403 HOC_PHI_QUA_HAN` (không dùng được TKB tự động)."""
 
     loc_trung_lich = False
+    kem_ly_do = False
+    chan_qua_han = "dùng thời khóa biểu tự động"
 
 
 class MyCurriculumView(APIView):
@@ -315,7 +336,9 @@ class MyCurriculumView(APIView):
 
 
 class MyTimetableView(APIView):
-    """`GET /api/timetable/my/` (SV-08, GV-05): lịch học (SV: lớp đã đăng ký; GV: lớp phụ trách)."""
+    """`GET /api/timetable/my/` (SV-08, GV-05): lịch học (SV: lớp đã đăng ký; GV: lớp phụ trách).
+    SV còn nợ học phí đã quá hạn → `403 HOC_PHI_QUA_HAN` với mọi kỳ đã bắt đầu (kỳ chưa bắt đầu — đang
+    đăng ký — vẫn xem được để TKB tự động ghép lịch)."""
 
     permission_classes = [IsSinhVienOrGiaoVien]
 
@@ -324,6 +347,8 @@ class MyTimetableView(APIView):
         hoc_ky = chon_hoc_ky(request.query_params.get("hoc_ky"))
         qs = ClassSection.objects.filter(hoc_ky=hoc_ky)
         if request.user.role == Role.SINH_VIEN:
+            if hoc_ky.ngay_bat_dau <= timezone.localdate():
+                chan_neu_qua_han(request.user, "xem thời khóa biểu")
             qs = qs.filter(
                 dang_ky__sinh_vien=request.user, dang_ky__trang_thai=TrangThaiDangKy.DA_DANG_KY
             )

@@ -120,6 +120,27 @@ Future<void> open(WidgetTester t, FakeAdapter a, {Size size = bigScreen}) =>
 
 void main() {
   testWidgets(
+    'nợ học phí quá hạn: không dùng được TKB tự động, hiện thẻ nhắc',
+    (t) async {
+      await open(
+        t,
+        svApi({
+          'GET /auto-schedule/available-courses/': (_) => apiError(
+            403,
+            'HOC_PHI_QUA_HAN',
+            'Bạn còn nợ học phí 1.500.000 ₫ đã quá hạn.',
+          ),
+        }),
+      );
+
+      expect(find.text('Chưa thể dùng thời khóa biểu tự động'), findsOneWidget);
+      expect(find.textContaining('1.500.000 ₫'), findsOneWidget);
+      expect(find.text('Đóng học phí ngay'), findsOneWidget);
+      expect(find.text('Gợi ý tổ hợp'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'bước 1: môn bắt buộc chọn sẵn, môn đã đăng ký không hiện, môn đã đạt bị khóa',
     (t) async {
       await open(t, api());
@@ -310,21 +331,12 @@ void main() {
     });
   });
 
-  group('bước 1: tìm học phần và lọc học kỳ trong CTĐT', () {
+  group('bước 1: tìm học phần', () {
     final lopKy = [
       lop(11, 'A-01', 1, 'Trí tuệ nhân tạo', [lich(2, 1, 3)], ky: 7),
       lop(21, 'B-01', 2, 'Học máy', [lich(3, 1, 3)]),
       lop(31, 'C-01', 3, 'An toàn thông tin', [lich(4, 1, 3)], loai: 'tu_chon'),
     ];
-
-    Future<void> chonKy(WidgetTester t, String ky) async {
-      final o = find.byType(DropdownButton<int>);
-      await t.ensureVisible(o);
-      await t.tap(o);
-      await t.pumpAndSettle();
-      await t.tap(find.text(ky).last);
-      await t.pumpAndSettle();
-    }
 
     testWidgets('tìm theo tên không dấu; môn đã chọn vẫn được giữ khi bị ẩn', (
       t,
@@ -348,16 +360,17 @@ void main() {
       expect(find.text('Trí tuệ nhân tạo'), findsOneWidget);
     });
 
-    testWidgets('lọc theo học kỳ trong CTĐT chỉ hiện môn của kỳ đó', (t) async {
-      await open(t, api(lops: lopKy));
-      await chonKy(t, 'Học kỳ 7');
-      expect(find.text('Trí tuệ nhân tạo'), findsOneWidget);
-      expect(find.text('Học máy'), findsNothing);
-      expect(find.text('Đã chọn 2 môn · 6 tín chỉ'), findsOneWidget);
-
-      await chonKy(t, 'Tất cả học kỳ');
-      expect(find.text('Học máy'), findsOneWidget);
-    });
+    testWidgets(
+      'không còn ô chọn học kỳ trong CTĐT; lịch đã đăng ký lấy đúng kỳ',
+      (t) async {
+        final a = api(lops: lopKy);
+        await open(t, a);
+        expect(a.queries['GET /timetable/my/']!['hoc_ky'], 7);
+        expect(find.text('Học kỳ trong CTĐT'), findsNothing);
+        expect(find.text('Trí tuệ nhân tạo'), findsOneWidget);
+        expect(find.text('Học máy'), findsOneWidget);
+      },
+    );
 
     testWidgets('chọn bằng bộ lọc rồi gợi ý vẫn xếp đúng các môn đã chọn', (
       t,

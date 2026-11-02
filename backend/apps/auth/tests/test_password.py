@@ -1,10 +1,8 @@
-"""Đổi / quên / đặt lại mật khẩu: chính sách, blacklist, không lộ email, rate limit, TTL token."""
-
-from datetime import datetime, timedelta
+"""Đổi / quên / đặt lại mật khẩu: chính sách, blacklist, không lộ email, rate limit, mã xác thực 6 số."""
 
 import pytest
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.core import mail
+from django.core.cache import cache
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.factories import MAT_KHAU, UserFactory
@@ -55,35 +53,39 @@ def test_doi_mat_khau_can_dang_nhap(client):
 
 
 # ---------------------------------------------------------------- quên mật khẩu
-def test_quen_mat_khau_email_co_va_khong_ton_tai_tra_cung_phan_hoi(client):
+def test_quen_mat_khau_email_khong_ton_tai_bao_loi(client):
     UserFactory(email="co@example.com")
 
     co = client.post("/api/auth/forgot-password/", {"email": "co@example.com"})
     khong = client.post("/api/auth/forgot-password/", {"email": "khongco@example.com"})
 
-    assert co.status_code == khong.status_code == 200
-    assert co.data == khong.data  # prod không được lộ email có tồn tại hay không
+    assert co.status_code == 200 and "code" not in co.data  # prod không trả mã
+    assert khong.status_code == 400 and "email" in khong.data
     assert len(mail.outbox) == 1 and mail.outbox[0].to == ["co@example.com"]
 
 
-def test_quen_mat_khau_dev_tra_token_trong_response(client, settings):
+def test_quen_mat_khau_dev_tra_ma_trong_response_va_mail_co_ma_6_so(client, settings):
     settings.PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE = True
     UserFactory(email="co@example.com")
 
     res = client.post("/api/auth/forgot-password/", {"email": "co@example.com"})
 
-    assert res.data["token"] and res.data["token"] in mail.outbox[0].body
+    code = res.data["code"]
+    assert len(code) == 6 and code.isdigit()
+    assert code in mail.outbox[0].body and code in mail.outbox[0].alternatives[0][0]
 
 
-def test_quen_mat_khau_tai_khoan_khoa_khong_gui_mail_nhung_phan_hoi_van_giong_nhau(client):
+def test_quen_mat_khau_tai_khoan_khoa_bao_loi_khong_gui_mail(client):
     UserFactory(email="khoa@example.com", is_locked=True)
 
     res = client.post("/api/auth/forgot-password/", {"email": "khoa@example.com"})
 
-    assert res.status_code == 200 and mail.outbox == []
+    assert res.status_code == 400 and "bị khóa" in res.data["email"][0] and mail.outbox == []
 
 
 def test_quen_mat_khau_toi_da_3_lan_moi_15_phut_theo_email(client):
+    UserFactory(email="a@example.com")
+    UserFactory(email="b@example.com")
     for _ in range(3):
         assert (
             client.post("/api/auth/forgot-password/", {"email": "a@example.com"}).status_code == 200
@@ -97,57 +99,92 @@ def test_quen_mat_khau_toi_da_3_lan_moi_15_phut_theo_email(client):
 
 
 # ---------------------------------------------------------------- đặt lại mật khẩu
-def _xin_token(client, settings, email="co@example.com"):
+EMAIL = "co@example.com"
+
+
+def _xin_ma(client, settings, email=EMAIL):
     settings.PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE = True
-    return client.post("/api/auth/forgot-password/", {"email": email}).data["token"]
+    return client.post("/api/auth/forgot-password/", {"email": email}).data["code"]
 
 
-def test_dat_lai_mat_khau_thanh_cong_va_token_chi_dung_mot_lan(client, settings):
-    u = UserFactory(username="sv1", email="co@example.com")
+def _dat_lai(client, code, mat_khau=MOI, email=EMAIL):
+    return client.post(
+        "/api/auth/reset-password/", {"email": email, "code": code, "new_password": mat_khau}
+    )
+
+
+def _ma_sai(code):
+    return f"{(int(code) + 1) % 10**6:06d}"
+
+
+def test_dat_lai_mat_khau_thanh_cong_va_ma_chi_dung_mot_lan(client, settings):
+    u = UserFactory(username="sv1", email=EMAIL)
     refresh = str(RefreshToken.for_user(u))
-    token = _xin_token(client, settings)
+    code = _xin_ma(client, settings)
 
-    ok = client.post("/api/auth/reset-password/", {"token": token, "new_password": MOI})
-    lai = client.post("/api/auth/reset-password/", {"token": token, "new_password": "KhacNua123"})
+    ok = _dat_lai(client, code)
+    lai = _dat_lai(client, code, "KhacNua123")
 
     assert ok.status_code == 204
-    assert lai.status_code == 400 and "token" in lai.data
+    assert lai.status_code == 400 and "code" in lai.data
     assert client.post("/api/auth/login/", {"username": "sv1", "password": MOI}).status_code == 200
     assert client.post("/api/auth/refresh/", {"refresh": refresh}).status_code == 401
 
 
-def test_dat_lai_mat_khau_token_het_han_sau_30_phut(client, settings, monkeypatch):
-    UserFactory(email="co@example.com")
-    token = _xin_token(client, settings)
-    sau_31_phut = datetime.now() + timedelta(minutes=31)
-    monkeypatch.setattr(PasswordResetTokenGenerator, "_now", lambda self: sau_31_phut)
+def test_dat_lai_mat_khau_email_khong_phan_biet_hoa_thuong(client, settings):
+    UserFactory(username="sv1", email=EMAIL)
+    code = _xin_ma(client, settings)
 
-    res = client.post("/api/auth/reset-password/", {"token": token, "new_password": MOI})
-
-    assert res.status_code == 400 and "token" in res.data
+    assert _dat_lai(client, code, email="Co@Example.com").status_code == 204
 
 
-def test_dat_lai_mat_khau_token_rac(client):
-    for token in ("rac", "abc.def", ""):
-        res = client.post("/api/auth/reset-password/", {"token": token, "new_password": MOI})
-        assert res.status_code == 400 and "token" in res.data
+def test_dat_lai_mat_khau_ma_het_han(client, settings):
+    UserFactory(email=EMAIL)
+    code = _xin_ma(client, settings)
+    cache.clear()  # cache hết TTL 30 phút
+
+    res = _dat_lai(client, code)
+
+    assert res.status_code == 400 and "code" in res.data
+
+
+def test_dat_lai_mat_khau_sai_5_lan_thi_ma_bi_huy(client, settings):
+    UserFactory(email=EMAIL)
+    code = _xin_ma(client, settings)
+
+    for _ in range(5):
+        assert _dat_lai(client, _ma_sai(code)).status_code == 400
+
+    assert _dat_lai(client, code).status_code == 400  # đúng mã nhưng đã bị hủy
+
+
+def test_dat_lai_mat_khau_ma_cua_email_khac_khong_dung_duoc(client, settings):
+    UserFactory(email=EMAIL)
+    UserFactory(email="khac@example.com")
+    code = _xin_ma(client, settings)
+
+    assert _dat_lai(client, code, email="khac@example.com").status_code == 400
+
+
+def test_dat_lai_mat_khau_ma_rac(client):
+    for code in ("rac", "12345", "1234567", ""):
+        res = _dat_lai(client, code)
+        assert res.status_code == 400 and "code" in res.data
 
 
 def test_dat_lai_mat_khau_mat_khau_yeu_bi_tu_choi(client, settings):
-    UserFactory(email="co@example.com")
-    token = _xin_token(client, settings)
+    UserFactory(email=EMAIL)
+    code = _xin_ma(client, settings)
 
-    res = client.post("/api/auth/reset-password/", {"token": token, "new_password": "yeu"})
+    res = _dat_lai(client, code, "yeu")
 
     assert res.status_code == 400 and "new_password" in res.data
 
 
-def test_dat_lai_mat_khau_tai_khoan_bi_khoa_sau_khi_xin_token_bi_tu_choi(client, settings):
-    u = UserFactory(email="co@example.com")
-    token = _xin_token(client, settings)
+def test_dat_lai_mat_khau_tai_khoan_bi_khoa_sau_khi_xin_ma_bi_tu_choi(client, settings):
+    u = UserFactory(email=EMAIL)
+    code = _xin_ma(client, settings)
     u.is_locked = True
     u.save()
 
-    res = client.post("/api/auth/reset-password/", {"token": token, "new_password": MOI})
-
-    assert res.status_code == 400
+    assert _dat_lai(client, code).status_code == 400

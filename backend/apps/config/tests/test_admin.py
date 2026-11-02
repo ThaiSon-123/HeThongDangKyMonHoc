@@ -36,7 +36,7 @@ def test_ma_tran_du_5_vai_tro_moi_dong_va_chi_doc(admin):
     res = admin.get("/api/admin/permissions/")
     assert res.status_code == 200
     assert res.data["vai_tro"] == [v.value for v in CAC_VAI_TRO]
-    assert len(res.data["results"]) == len(MA_TRAN) == 22
+    assert len(res.data["results"]) == len(MA_TRAN) == 23
     for dong in res.data["results"]:
         assert all(set(dong[v.value]) == {"co", "gioi_han"} for v in CAC_VAI_TRO)
     nhom = [d["nhom"] for d in res.data["results"]]
@@ -67,52 +67,66 @@ def test_ma_tran_khop_hanh_vi_that(login_as):
             "Báo cáo tài chính / xuất", vt
         )
         assert (c.get("/api/admin/config/").status_code == 200) == cho_phep(
-            "Xem ma trận quyền, cấu hình hệ thống, backup", vt
+            "Xem ma trận quyền, sao lưu (backup) và số ngày giữ bản sao lưu", vt
+        )
+        assert (c.get("/api/pdt/config/").status_code == 200) == cho_phep(
+            "Quy chế đào tạo: tỷ lệ vắng tối đa, hạn xin sửa điểm danh, hạn nhập điểm", vt
         )
 
 
 # ------------------------------------------------------------------ cấu hình
 
 
-def test_doc_cau_hinh_du_7_khoa_voi_mac_dinh(admin):
-    res = admin.get("/api/admin/config/")
+@pytest.fixture
+def pdt(login_as):
+    return login_as(UserFactory(role=Role.PHONG_DAO_TAO))
+
+
+def test_doc_cau_hinh_chia_theo_vai_tro(admin, pdt):
+    res = pdt.get("/api/pdt/config/")
     assert res.status_code == 200
     items = {i["khoa"]: i for i in res.data["items"]}
     assert list(items) == [
         "max_absent_pct",
         "so_ngay_xin_sua_diem_danh",
         "so_ngay_cho_phep_nhap_diem",
-        "backup_retention_days",
-        "ck_ngan_hang",
-        "ck_so_tai_khoan",
-        "ck_chu_tai_khoan",
     ]
-    assert items["max_absent_pct"]["gia_tri"] == "20" and items["ck_ngan_hang"]["gia_tri"] == ""
+    assert items["max_absent_pct"]["gia_tri"] == "20"
     assert items["max_absent_pct"]["cap_nhat_luc"] is None
     assert items["so_ngay_cho_phep_nhap_diem"]["nhom"] == "Nhập điểm"
     assert res.data["sua_lan_cuoi"] is None
+    # Admin chỉ còn nhóm Sao lưu; không có khóa chuyển khoản nào nữa
+    adm = admin.get("/api/admin/config/").data["items"]
+    assert [i["khoa"] for i in adm] == ["backup_retention_days"]
 
 
-def test_patch_cau_hinh_luu_dung_va_ghi_audit(admin):
-    res = admin.patch(
-        "/api/admin/config/",
-        {
-            "max_absent_pct": 25,
-            "ck_chu_tai_khoan": "TRUONG  DAI HOC",
-            "so_ngay_cho_phep_nhap_diem": "14",
-        },
+def test_moi_vai_tro_chi_sua_duoc_nhom_cua_minh(admin, pdt):
+    assert (
+        admin.patch("/api/admin/config/", {"max_absent_pct": 25}, format="json").status_code == 400
+    )
+    assert (
+        pdt.patch("/api/pdt/config/", {"backup_retention_days": 10}, format="json").status_code
+        == 400
+    )
+    assert pdt.get("/api/admin/config/").status_code == 403
+    assert admin.get("/api/pdt/config/").status_code == 403
+
+
+def test_patch_cau_hinh_luu_dung_va_ghi_audit(pdt):
+    res = pdt.patch(
+        "/api/pdt/config/",
+        {"max_absent_pct": 25, "so_ngay_xin_sua_diem_danh": 10, "so_ngay_cho_phep_nhap_diem": "14"},
         format="json",
     )
     assert res.status_code == 200
     items = {i["khoa"]: i for i in res.data["items"]}
     assert items["max_absent_pct"]["gia_tri"] == "25"
-    assert items["ck_chu_tai_khoan"]["gia_tri"] == "TRUONG DAI HOC"  # gộp khoảng trắng
     assert items["max_absent_pct"]["cap_nhat_luc"] is not None
     assert res.data["sua_lan_cuoi"]["boi"] == AuditLog.objects.first().user.username
     assert SystemConfig.get_int("max_absent_pct", 0) == 25  # nơi khác đọc được ngay (BR-20)
-    # Chỉ khóa thật sự đổi mới ghi log (so_ngay… giữ nguyên 14).
+    # Chỉ khóa thật sự đổi mới ghi log (so_ngay_cho_phep_nhap_diem giữ nguyên 14).
     logs = AuditLog.objects.filter(doi_tuong="SystemConfig")
-    assert {log.doi_tuong_id for log in logs} == {"max_absent_pct", "ck_chu_tai_khoan"}
+    assert {log.doi_tuong_id for log in logs} == {"max_absent_pct", "so_ngay_xin_sua_diem_danh"}
     log = logs.get(doi_tuong_id="max_absent_pct")
     assert log.chi_tiet == {"tu": "20", "den": "25"} and log.hanh_dong == "UPDATE"
     assert log.scope == "other"
@@ -126,15 +140,20 @@ def test_patch_cau_hinh_luu_dung_va_ghi_audit(admin):
         ("max_absent_pct", "abc"),
         ("so_ngay_cho_phep_nhap_diem", -5),
         ("backup_retention_days", 0),
-        ("ck_ngan_hang", "   "),
-        ("ck_so_tai_khoan", "12a45"),
-        ("ck_chu_tai_khoan", "Nguyễn Văn A"),
-        ("ck_chu_tai_khoan", "nguyen van a"),
+        ("ck_ngan_hang", "Vietcombank"),  # đã bỏ thanh toán chuyển khoản
         ("khong_co_khoa_nay", 1),
     ],
 )
-def test_patch_cau_hinh_gia_tri_sai_bi_tu_choi(admin, khoa, gia_tri):
-    res = admin.patch("/api/admin/config/", {khoa: gia_tri}, format="json")
+def test_patch_cau_hinh_gia_tri_sai_bi_tu_choi(admin, pdt, khoa, gia_tri):
+    api, url = (
+        (admin, "/api/admin/config/")
+        if khoa == "backup_retention_days"
+        else (
+            pdt,
+            "/api/pdt/config/",
+        )
+    )
+    res = api.patch(url, {khoa: gia_tri}, format="json")
     assert res.status_code == 400
     assert khoa in res.data
 
@@ -295,7 +314,10 @@ def test_post_backup_chay_nen_ghi_audit_va_chan_chay_trung(admin, thu_muc):
 
 def test_khong_co_api_restore_hay_tai_xuong(admin, thu_muc):
     tao_file(thu_muc, "hethongdangkymonhoc_20990101_000000.dump", 1)
-    for url in ("/api/admin/backups/hethongdangkymonhoc_20990101_000000.dump/", "/api/admin/backups/restore/"):
+    for url in (
+        "/api/admin/backups/hethongdangkymonhoc_20990101_000000.dump/",
+        "/api/admin/backups/restore/",
+    ):
         assert admin.get(url).status_code == 404
     assert admin.delete("/api/admin/backups/").status_code == 405
 

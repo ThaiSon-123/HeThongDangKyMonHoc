@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_toast.dart';
 import '../../registration/timetable_screen.dart' show clockProvider;
 import '../../training/resource_list.dart' show ListErrorCard, ListSkeleton;
+import '../../training/entity_form.dart';
 import '../../training/training_api.dart';
 import '../../dashboard/dashboard_widgets.dart' show HangThe;
 import '../../training/training_widgets.dart';
@@ -99,6 +100,30 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
     }
   }
 
+  /// Số ngày giữ bản sao lưu (khóa `backup_retention_days` — cấu hình duy nhất của Admin).
+  Future<void> _doiSoNgayGiu(int hienTai) async {
+    final saved = await showEntityForm(
+      context,
+      title: 'Số ngày giữ bản sao lưu',
+      note: 'Bản sao lưu cũ hơn số ngày này sẽ tự bị xóa.',
+      specs: const [
+        TextSpec(
+          'backup_retention_days',
+          'Số ngày giữ',
+          number: true,
+          helper: 'Số nguyên từ 1. Mặc định 30.',
+        ),
+      ],
+      initial: {'backup_retention_days': hienTai},
+      submit: (body) =>
+          ref.read(trainingApiProvider).patch('/admin/config/', body),
+    );
+    if (saved && mounted) {
+      showAppToast(context, 'Đã lưu số ngày giữ bản sao lưu.');
+      _reload();
+    }
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<Json>(
     future: _future,
@@ -136,6 +161,13 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
                   big: '02:00 hằng ngày',
                   note:
                       'Giữ các bản sao lưu trong ${d.num0('so_ngay_giu')} ngày',
+                  action: Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () => _doiSoNgayGiu(d.num0('so_ngay_giu')),
+                      child: const Text('Đổi số ngày giữ'),
+                    ),
+                  ),
                 ),
                 _InfoCard(
                   title: 'Tạo thủ công',
