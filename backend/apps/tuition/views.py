@@ -570,7 +570,11 @@ class MyPayView(APIView):
             s.validated_data["muc"],
             s.validated_data.get("so_tien"),
             client_ip(request),
-            tu_app=s.validated_data["nguon"] == "APP",
+            # App: trả về đúng địa chỉ app đang gọi API (vd 10.0.2.2:8010 trên emulator) — trình duyệt
+            # cùng máy chắc chắn tới được, không phụ thuộc LAN IP trong .env (DHCP đổi là hỏng).
+            return_url=request.build_absolute_uri("/api/tuition/vnpay/return/app/")
+            if s.validated_data["nguon"] == "APP"
+            else None,
         )
         write_audit(
             request,

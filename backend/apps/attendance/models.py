@@ -23,6 +23,8 @@ class AttendanceSession(models.Model):
     trang_thai = models.CharField(
         max_length=20, choices=TrangThaiSession.choices, default=TrangThaiSession.MO
     )
+    # GV mở phiên tự điểm danh (selfie + GPS) tới thời điểm này; null = chưa từng mở.
+    mo_diem_danh_den = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Buổi điểm danh"
@@ -62,6 +64,10 @@ class Attendance(models.Model):
     di_tre = models.BooleanField(default=False)
     ghi_chu = models.CharField(max_length=255, blank=True)
     cap_nhat_luc = models.DateTimeField(auto_now=True)
+    # SV tự điểm danh (selfie + GPS): lúc nào, độ giống khuôn mặt, cách điểm trường bao xa.
+    tu_diem_danh_luc = models.DateTimeField(null=True, blank=True)
+    do_giong = models.FloatField(null=True, blank=True)
+    khoang_cach_m = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Điểm danh"
@@ -142,3 +148,37 @@ class AttendanceRequest(models.Model):
 
     def __str__(self):
         return f"{self.attendance_id} — {self.trang_thai}"
+
+
+class FaceProfile(models.Model):
+    """Ảnh khuôn mặt gốc của SV để tự điểm danh — SV tự chụp, PĐT duyệt mới dùng được."""
+
+    sinh_vien = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="khuon_mat"
+    )
+    anh = models.FileField(
+        upload_to="khuon_mat/",
+        validators=[FileExtensionValidator(["jpg", "jpeg", "png"]), validate_minh_chung],
+    )
+    dac_trung = models.JSONField()  # vector đặc trưng SFace (128 số) của ảnh `anh`
+    trang_thai = models.CharField(
+        max_length=20, choices=TrangThaiDon.choices, default=TrangThaiDon.CHO_DUYET
+    )
+    ngay_gui = models.DateTimeField(auto_now=True)
+    nguoi_duyet = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="duyet_khuon_mat",
+    )
+    ngay_duyet = models.DateTimeField(null=True, blank=True)
+    ghi_chu = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = "Khuôn mặt điểm danh"
+        verbose_name_plural = "Khuôn mặt điểm danh"
+        ordering = ["-ngay_gui"]
+
+    def __str__(self):
+        return f"{self.sinh_vien_id} {self.trang_thai}"

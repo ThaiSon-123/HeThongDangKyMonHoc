@@ -7,8 +7,10 @@ x-backend: &backend
     DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.dev}
     BACKUP_DIR: /backups
   # worker ghi file sao lưu, web đọc danh sách → dùng chung một volume.
+  # media (minh chứng, ảnh khuôn mặt) phải nằm trên volume, không thì mất mỗi lần build lại web.
   volumes:
     - backups:/backups
+    - media:/app/media
   depends_on:
     db:
       condition: service_healthy

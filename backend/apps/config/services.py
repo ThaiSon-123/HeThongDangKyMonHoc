@@ -25,6 +25,20 @@ def _so_nguyen(thap, cao=None):
     return kiem_tra
 
 
+def _so_thuc(thap, cao):
+    def kiem_tra(v):
+        s = str(v).strip().replace(",", ".")
+        try:
+            x = float(s)
+        except ValueError:
+            x = None
+        if x is None or not thap <= x <= cao:
+            raise ValueError(f"Phải là số từ {thap} đến {cao}.")
+        return s
+
+    return kiem_tra
+
+
 # (khóa, nhóm, mô tả, mặc định, hàm kiểm tra). Ai sửa nhóm nào: xem NHOM_PDT / NHOM_ADMIN.
 CAU_HINH = [
     (
@@ -40,6 +54,36 @@ CAU_HINH = [
         "Số ngày sau buổi học còn được sửa điểm danh: giáo viên lưu/sửa, sinh viên xin sửa (BR-20e); 0 = chỉ trong ngày học",
         "7",
         _so_nguyen(0, 365),
+    ),
+    # Tự điểm danh (selfie + GPS): SV phải ở trong bán kính quanh điểm trường, trong lúc GV mở phiên.
+    # Mặc định ≈ ĐH Thủ Dầu Một — PĐT chỉnh theo tọa độ thật (Google Maps → bấm giữ để lấy tọa độ).
+    (
+        "vi_do_truong",
+        "Điểm danh",
+        "Vĩ độ điểm trường dùng cho tự điểm danh GPS",
+        "10.9805",
+        _so_thuc(-90, 90),
+    ),
+    (
+        "kinh_do_truong",
+        "Điểm danh",
+        "Kinh độ điểm trường dùng cho tự điểm danh GPS",
+        "106.6745",
+        _so_thuc(-180, 180),
+    ),
+    (
+        "ban_kinh_diem_danh_m",
+        "Điểm danh",
+        "Bán kính (mét) quanh điểm trường được tự điểm danh",
+        "200",
+        _so_nguyen(10, 50000),
+    ),
+    (
+        "so_phut_mo_diem_danh",
+        "Điểm danh",
+        "Số phút một phiên tự điểm danh mở sau khi giáo viên bấm mở",
+        "15",
+        _so_nguyen(1, 240),
     ),
     (
         "so_ngay_cho_phep_nhap_diem",

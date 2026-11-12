@@ -189,7 +189,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
     );
     setState(() {
       _dauVao = v;
-      _toHop = goiY(v);
+      _toHop = goiY(v, toiDa: 60); // 60 tổ hợp điểm cao nhất
       _toHopChon = null;
       _trang = 0;
       _buoc = 1;

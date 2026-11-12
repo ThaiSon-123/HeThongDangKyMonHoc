@@ -113,7 +113,7 @@ def test_pay_tu_app_dung_return_url_rieng(vnp, login_as):
     hoc_phi(sv, hk, 1000)
     res = tao(login_as(sv.user), hk, muc="TOAN_BO", nguon="APP")
     ve = dict(parse_qsl(urlsplit(res.json()["payment_url"]).query))["vnp_ReturnUrl"]
-    assert ve == vnp.VNPAY_RETURN_URL + "app/"
+    assert ve == "http://testserver/api/tuition/vnpay/return/app/"  # theo host app đang gọi API
 
 
 def test_pay_dot_tiep_chia_dot(vnp, login_as):

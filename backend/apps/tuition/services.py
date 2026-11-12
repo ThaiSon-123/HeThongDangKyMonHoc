@@ -5,9 +5,7 @@ import uuid
 from collections.abc import Mapping, Sequence
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
-from urllib.parse import urljoin
 
-from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db import IntegrityError, transaction
 from django.db.models import Q, Sum
@@ -305,11 +303,11 @@ def ghi_thanh_toan(kt, tuition_id, loai, so_tien, phuong_thuc, request_id=None):
     return p, True
 
 
-def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip, tu_app=False):
+def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip, return_url=None):
     """Tạo `OnlineTransaction` `CHO` và URL VNPay. `muc`: `TOAN_BO` (toàn bộ `con_no`), `DOT_TIEP` (đợt
     chưa đóng đầu tiên nếu đang `CHIA_DOT`, ngược lại toàn bộ), `TUY_Y` (`0 < so_tien ≤ con_no`).
-    `tu_app`: thanh toán từ app điện thoại → VNPay trả về `.../return/app/` (trang kết quả tĩnh,
-    không chuyển sang bản Web). Trả `(giao_dich, payment_url)`."""
+    `return_url`: nơi VNPay trả về (app điện thoại dùng `.../return/app/`); None = `VNPAY_RETURN_URL`.
+    Trả `(giao_dich, payment_url)`."""
     if not vnpay.da_cau_hinh():
         raise ValidationError({"vnpay": ["Chưa cấu hình cổng thanh toán VNPay."]})
     if not toi_ngay_dong(hoc_ky.id):
@@ -338,7 +336,6 @@ def tao_giao_dich_vnpay(sv_user, hoc_ky, muc, so_tien, ip, tu_app=False):
         so_tien = con_no
     giao_dich = OnlineTransaction.objects.create(tuition=t, so_tien=so_tien)
     order_info = f"HOCPHI {sv_user.sinh_vien.ma_sv} HK{hoc_ky.id}"
-    return_url = urljoin(settings.VNPAY_RETURN_URL, "app/") if tu_app else None
     url = vnpay.tao_url(giao_dich.txn_ref.hex, so_tien, order_info, ip, timezone.now(), return_url)
     return giao_dich, url
 

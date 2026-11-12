@@ -38,7 +38,7 @@ const studentRoutes = RoleRoutes(
     RouteDef(
       '/student/auto-schedule',
       'Tạo TKB tự động',
-      subtitle: 'Chọn môn, giáo viên mong muốn và ưu tiên cá nhân — hệ thống gợi ý tối đa 3 thời khóa biểu không trùng lịch',
+      subtitle: 'Chọn môn, giáo viên mong muốn và ưu tiên cá nhân — hệ thống gợi ý tối đa 60 thời khóa biểu không trùng lịch',
       builder: AutoScheduleScreen.new,
     ),
     RouteDef(
