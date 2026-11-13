@@ -26,3 +26,4 @@ DJANGO_SETTINGS_MODULE = "config.settings.test"
 pythonpath = "."
 python_files = ["tests.py", "test_*.py"]
 addopts = "-q"
+markers = ["models: cần file mô hình ONNX thật và ảnh mẫu (tự bỏ qua khi thiếu)"]

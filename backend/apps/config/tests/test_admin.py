@@ -89,6 +89,8 @@ def test_doc_cau_hinh_chia_theo_vai_tro(admin, pdt):
     assert list(items) == [
         "max_absent_pct",
         "so_ngay_xin_sua_diem_danh",
+        "ban_kinh_diem_danh_m",
+        "so_phut_mo_diem_danh",
         "so_ngay_cho_phep_nhap_diem",
     ]
     assert items["max_absent_pct"]["gia_tri"] == "20"

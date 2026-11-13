@@ -42,3 +42,7 @@ node_modules/
 # --- Bản sao lưu dữ liệu (chứa dữ liệu người dùng, KHÔNG đưa lên git) ---
 *.dump
 backend/backups/
+
+# --- Model khuôn mặt (tải theo backend/face_models/README.md) ---
+backend/face_models/*.onnx
+backend/apps/attendance/tests/fixtures/faces/

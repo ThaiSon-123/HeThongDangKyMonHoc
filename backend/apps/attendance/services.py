@@ -216,10 +216,22 @@ def luu_diem_danh(session_id, gv, records, hom_nay=None):
                 trang_thai=trang_thai,
                 di_tre=di_tre,
                 ghi_chu=r.get("ghi_chu", ""),
+                nguoi_quyet=gv,
             )
         else:
             a.trang_thai, a.di_tre, a.ghi_chu = trang_thai, di_tre, r.get("ghi_chu", "")
-            a.save(update_fields=["trang_thai", "di_tre", "ghi_chu", "cap_nhat_luc"])
+            # GV đã quyết tay → tự điểm danh không ghi đè nữa; hết "đáng ngờ".
+            a.nguoi_quyet, a.dang_ngo = gv, False
+            a.save(
+                update_fields=[
+                    "trang_thai",
+                    "di_tre",
+                    "ghi_chu",
+                    "nguoi_quyet",
+                    "dang_ngo",
+                    "cap_nhat_luc",
+                ]
+            )
     if session.trang_thai != TrangThaiSession.DA_DIEM_DANH:
         session.trang_thai = TrangThaiSession.DA_DIEM_DANH
         session.save(update_fields=["trang_thai"])

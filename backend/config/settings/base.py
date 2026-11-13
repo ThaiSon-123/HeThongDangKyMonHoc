@@ -132,6 +132,42 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "media/"
 MEDIA_ROOT = Path(env("MEDIA_DIR", str(BASE_DIR / "media")))
 
+# --- Tự điểm danh khuôn mặt + GPS (docs/ke-hoach-diem-danh-khuon-mat-gps.md) ---
+FACE_MODEL_DIR = Path(env("FACE_MODEL_DIR", str(BASE_DIR / "face_models")))
+# Ảnh đăng ký / ảnh bằng chứng: luôn mã hóa AES-GCM bằng DATA_KEY (32 byte base64, KHÔNG nằm trong DB).
+FACE_STORAGE_DIR = MEDIA_ROOT / "diem_danh"
+DATA_KEY = env("DATA_KEY")
+# Ngưỡng tạm theo thí nghiệm (KH §3.2); sửa ở đây rồi khởi động lại server, không cần build lại app.
+# Đổi `embed_file` thì phải đổi `model_name`: mẫu khuôn mặt của mô hình cũ thành vô hiệu (SV đăng ký lại).
+FACE = {
+    "model_name": "arcface_r50_onnx_v1",
+    "embed_file": "w600k_r50.onnx",
+    "threads": 2,
+    "accept_threshold": 0.5,
+    "suspect_threshold": 0.4,
+    "antispoof_threshold": 0.8,
+    "yaw_sign": 1,  # đổi thành -1 nếu đo trên điện thoại thật thấy trái/phải bị ngược
+    "yaw_threshold": 0.25,
+    "min_brightness": 60,
+    "min_sharpness": 50,
+    "min_face_px": 100,
+}
+GPS = {
+    "max_acc_gv_m": 20,
+    "max_acc_sv_m": 30,
+    "min_mau_gv": 5,
+    "min_mau_sv": 3,
+    "max_span_s": 20,
+    "max_speed_mps": 30,
+}
+TU_DIEM_DANH = {
+    "so_luot_toi_da": 5,
+    "challenge_ttl_s": 60,
+    "room_token_window_s": 30,
+    "so_ngay_giu_bang_chung": 30,
+    "consent_version": "v1",
+}
+
 # --- CORS ---
 # django-cors-headers không hỗ trợ wildcard port ("localhost:*") → dev dùng regex (dev.py), prod liệt kê origin.
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "")

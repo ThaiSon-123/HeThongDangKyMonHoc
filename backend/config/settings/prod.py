@@ -9,6 +9,8 @@ if DEBUG:  # noqa: F405
     raise RuntimeError("DEBUG phải False ở prod.")
 if _SECRET_KEY.startswith("dev-insecure-key"):
     raise RuntimeError("Thiếu SECRET_KEY ở prod.")
+if not DATA_KEY:  # noqa: F405
+    raise RuntimeError("Thiếu DATA_KEY ở prod (khóa mã hóa dữ liệu khuôn mặt).")
 
 # Sau nginx (1 proxy): IP thật nằm ở phần tử cuối của X-Forwarded-For. Không publish cổng `web`
 # ra ngoài ở prod — nếu không client gọi thẳng vào gunicorn vẫn giả được header.

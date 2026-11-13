@@ -17,7 +17,8 @@ DOC = (
 
 
 def chay_prod(**env):
-    moi_truong = {k: v for k, v in os.environ.items() if k not in ("DEBUG", "SECRET_KEY")}
+    bo = ("DEBUG", "SECRET_KEY", "DATA_KEY")
+    moi_truong = {k: v for k, v in os.environ.items() if k not in bo}
     moi_truong |= {"DJANGO_SETTINGS_MODULE": "config.settings.prod", **env}
     return subprocess.run(
         [sys.executable, "-c", DOC], cwd=BACKEND, env=moi_truong, capture_output=True, text=True
@@ -29,6 +30,7 @@ def test_prod_an_toan_mac_dinh():
         DEBUG="False",
         SECRET_KEY="khoa-bi-mat-cua-prod",
         CORS_ALLOWED_ORIGINS="https://dkmh.truong.edu.vn",
+        DATA_KEY="AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
     )
     assert kq.returncode == 0, kq.stderr
     cau_hinh = json.loads(kq.stdout)
@@ -46,3 +48,8 @@ def test_prod_tu_choi_khoi_dong_khi_debug_bat_hoac_thieu_secret_key():
     assert debug.returncode != 0 and "RuntimeError" in debug.stderr and "DEBUG" in debug.stderr
     thieu = chay_prod(DEBUG="False")
     assert thieu.returncode != 0 and "SECRET_KEY" in thieu.stderr
+
+
+def test_prod_tu_choi_khoi_dong_khi_thieu_data_key():
+    kq = chay_prod(DEBUG="False", SECRET_KEY="khoa-bi-mat-cua-prod")
+    assert kq.returncode != 0 and "DATA_KEY" in kq.stderr

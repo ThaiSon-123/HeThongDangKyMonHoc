@@ -63,7 +63,7 @@ Cả 3 mô hình đều chạy trên **CPU** ở dạng **ONNX**, lấy từ pro
 | 2 | **ArcFace ResNet-50** (`w600k_r50.onnx`) | Trích **embedding 512 chiều** đặc trưng khuôn mặt | Mặt căn chỉnh 112×112 RGB → vector 512 số (chuẩn hóa L2) | 175 MB | InsightFace `buffalo_l` v0.7, **chỉ dùng phi thương mại** (đồ án được phép) |
 | 3 | **MiniFASNetV2** (`MiniFASNetV2.onnx`) | **Chống giả mạo**: phân biệt người thật / ảnh in / màn hình | Vùng cắt 2,7× khung mặt, 80×80 BGR → xác suất "người thật" | 1,7 MB | Silent-Face-Anti-Spoofing (Minivision), Apache-2.0 |
 
-**Bản nhẹ để dự phòng:** MobileFaceNet `w600k_mbf.onnx` (13 MB). Nếu đổi sang bản này phải đo lại ngưỡng, và sinh viên phải đăng ký lại khuôn mặt.
+**Bản nhẹ để dự phòng:** MobileFaceNet `w600k_mbf.onnx` (13 MB). Nếu đổi sang bản này phải đo lại ngưỡng, và sinh viên phải đăng ký lại khuôn mặt. Mỗi mẫu lưu tên mô hình; mẫu của mô hình cũ bị từ chối ở bước thử thách với lý do "cần đăng ký lại khuôn mặt" (không tính lượt), và app hiện trạng thái này ở màn Khuôn mặt của tôi.
 
 ### 3.1 Số liệu đo thử
 Lấy từ `D:\DiemDanhKhuonMat_GPS\experiments\spike.md`.
@@ -136,7 +136,7 @@ Server chấp nhận window hiện tại và window ngay trước.
 
 - Không lưu từng mã: server tự tính lại để so.
 - Giảng viên mở web, chiếu QR toàn màn hình, mã tự đổi mỗi 30 giây; sinh viên quét bằng app trước khi chụp mặt.
-- Nhiều lượt cùng IP gửi mã đúng trong 10 giây thì gắn cờ "chuyển tiếp mã".
+- Không gắn cờ theo IP: cả lớp dùng wifi trường thì chung một IP, còn người nhận mã chuyển tiếp ở ngoài thường dùng 4G (IP khác). Chuyển tiếp mã do GPS và khuôn mặt chặn.
 
 ## 7. Luồng nghiệp vụ
 
@@ -173,8 +173,7 @@ Server chấp nhận window hiện tại và window ngay trước.
 **Biến "có mặt" thành "đáng ngờ"** khi có một trong các dấu hiệu:
 - vị trí giả;
 - bước nhảy vị trí;
-- **cùng máy đã điểm danh cho sinh viên khác** trong phiên;
-- nhiều mã QR gửi từ cùng IP.
+- **cùng máy đã điểm danh cho sinh viên khác** trong phiên.
 
 **Quy tắc ghi kết quả:**
 - Kết quả chỉ **nâng hạng**: vắng < đáng ngờ < có mặt.
@@ -183,9 +182,11 @@ Server chấp nhận window hiện tại và window ngay trước.
 
 ### 7.4 Giảng viên theo dõi và đóng phiên
 - Danh sách tự làm mới mỗi 4 giây: có mặt, đáng ngờ, chưa điểm danh, kèm cờ.
+- **Điểm danh thủ công**: sinh viên chưa đăng ký khuôn mặt, quên mang điện thoại, máy hỏng hoặc hết lượt thì báo giảng viên; giảng viên đánh có mặt ngay trong phiên. Danh sách đánh dấu sẵn ai chưa có mẫu khuôn mặt được duyệt.
 - Lượt đáng ngờ có **ảnh bằng chứng** (1 khung, mã hóa, giữ 30 ngày), điểm mặt, d, r. Giảng viên **duyệt có mặt** hoặc **từ chối**.
 - Đặt trạng thái hàng loạt cho trường hợp mất mạng hoặc GPS phòng hỏng.
 - Đóng phiên bằng tay, hoặc phiên tự hết hạn. Sau khi đóng vẫn chỉnh tay được như hiện nay.
+- **Mở lại phiên** (bấm nhầm đóng, hoặc còn sinh viên chưa kịp): chỉ trong ngày của buổi. Mở lại giữ nguyên tâm, bán kính, kết quả và số lượt đã dùng; chỉ đặt thời hạn mới.
 
 ## 8. Ánh xạ vào hệ thống hiện có
 
@@ -228,9 +229,11 @@ Server chấp nhận window hiện tại và window ngay trước.
 | SV | `POST /api/attendance/sessions/{id}/checkin/` | Gửi khung hình + mẫu GPS + mã phòng |
 | GV | `POST /api/attendance/sessions/{id}/mo-phien/` | Mở phiên (kèm mẫu GPS) |
 | GV | `POST /api/attendance/sessions/{id}/dong-phien/` | Đóng phiên |
+| GV | `POST /api/attendance/sessions/{id}/mo-lai/` | Mở lại phiên đã đóng / hết hạn (trong ngày) |
 | GV | `POST /api/attendance/sessions/{id}/tinh-lai-tam/` | Tính lại tâm |
 | GV | `GET /api/attendance/sessions/{id}/room-token/` | Mã QR hiện tại |
 | GV | `GET`, `PATCH /api/attendance/sessions/{id}/tu-diem-danh/` | Danh sách thời gian thực / đặt trạng thái hàng loạt |
+| GV | `POST /api/attendance/attempts/{id}/quyet/` | Duyệt có mặt / từ chối lượt đáng ngờ (ghi nhật ký) |
 | GV | `GET /api/attendance/attempts/{id}/evidence/` | Ảnh bằng chứng lượt đáng ngờ |
 | PĐT, GV | `GET /api/attendance/faces/pending/` | Danh sách chờ duyệt |
 | PĐT, GV | `GET /api/attendance/faces/{id}/photos/` | Xem ảnh đăng ký (ghi nhật ký) |
@@ -285,6 +288,7 @@ Các biện pháp khác:
 ## 15. Giới hạn cần nói rõ
 
 - Máy đã **root** có công cụ chuyên dụng vẫn giả được GPS; iOS không có cờ vị trí giả.
+- Sinh viên có cả **web**: trên web không phát hiện được vị trí giả (Chrome DevTools đổi tọa độ trong vài giây) và `device_id` xóa được. Mã phòng chặn người ở nhà tự làm một mình, nhưng không chặn được khi có bạn trong lớp nhắn mã ra ngay lúc đó. Chính sách cho lượt điểm danh từ web **chưa chốt**; giai đoạn đầu dùng bản web để test.
 - GPS trong nhà lệch 5–20 m, **không phân biệt được phòng hay tầng**: cần mã QR nếu muốn chắc đúng phòng.
 - Chuyển tiếp mã QR cho bạn ở ngoài trong vòng 30 giây chỉ **giảm** được rủi ro; người đó vẫn phải qua khuôn mặt và GPS.
 - Ngưỡng hiện là **giá trị tạm** từ thí nghiệm nhỏ; cần đo thêm FAR/FRR trên dữ liệu thật trước khi dùng chính thức.

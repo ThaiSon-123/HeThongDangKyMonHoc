@@ -4,6 +4,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from apps.attendance import views as attendance
+from apps.attendance import views_tu_diem_danh as tdd
 from apps.audit.views import AuditLogListView
 from apps.auth.views import UserViewSet
 from apps.config import views as config
@@ -91,5 +92,24 @@ urlpatterns = [
     path("curriculums/my/", registration.MyCurriculumView.as_view()),
     path("timetable/my/", registration.MyTimetableView.as_view()),
     path("attendance/my/", attendance.MyAttendanceView.as_view()),
+    # Tự điểm danh khuôn mặt + GPS (docs/ke-hoach-diem-danh-khuon-mat-gps.md, mục 10)
+    path("attendance/consent/", tdd.ConsentView.as_view()),
+    path("attendance/face/me/", tdd.MyFaceView.as_view()),
+    path("attendance/faces/enroll/", tdd.EnrollView.as_view()),
+    path("attendance/faces/pending/", tdd.PendingFacesView.as_view()),
+    path("attendance/faces/<int:pk>/photos/", tdd.FacePhotoView.as_view()),
+    path("attendance/faces/<int:pk>/review/", tdd.FaceReviewView.as_view()),
+    path("attendance/open-sessions/", tdd.OpenSessionsView.as_view()),
+    path("attendance/sessions/<int:pk>/challenge/", tdd.ChallengeView.as_view()),
+    path("attendance/sessions/<int:pk>/checkin/", tdd.CheckinView.as_view()),
+    path("attendance/sessions/<int:pk>/mo-phien/", tdd.MoPhienView.as_view()),
+    path("attendance/sessions/<int:pk>/mo-lai/", tdd.MoLaiView.as_view()),
+    path("attendance/sessions/<int:pk>/dong-phien/", tdd.DongPhienView.as_view()),
+    path("attendance/sessions/<int:pk>/tinh-lai-tam/", tdd.TinhLaiTamView.as_view()),
+    path("attendance/sessions/<int:pk>/room-token/", tdd.RoomTokenView.as_view()),
+    path("attendance/sessions/<int:pk>/tu-diem-danh/", tdd.TuDiemDanhView.as_view()),
+    path("attendance/sessions/<int:pk>/luot/", tdd.LuotCuaSvView.as_view()),
+    path("attendance/attempts/<int:pk>/quyet/", tdd.QuyetLuotView.as_view()),
+    path("attendance/attempts/<int:pk>/evidence/", tdd.EvidenceView.as_view()),
     *router.urls,
 ]

@@ -12,3 +12,6 @@ CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]  # test nhanh
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE = False  # test nào cần thì bật riêng
+
+# Khóa giả cố định cho test mã hóa khuôn mặt (không dùng ở đâu khác).
+DATA_KEY = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
