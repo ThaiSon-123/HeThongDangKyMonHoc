@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/attendance/student_attendance_screen.dart';
 import '../../features/attendance/face/my_face_screen.dart';
+import '../../features/attendance/tu_diem_danh/sv_tu_diem_danh_screen.dart';
 import '../../features/dashboard/student_dashboard.dart';
 import '../../features/grades/student_grades_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
@@ -67,6 +68,12 @@ const studentRoutes = RoleRoutes(
       builder: StudentAttendanceScreen.new,
     ),
     RouteDef(
+      '/student/checkin',
+      'Tự điểm danh',
+      subtitle: 'Điểm danh bằng khuôn mặt và vị trí khi giảng viên mở phiên',
+      builder: SvTuDiemDanhScreen.new,
+    ),
+    RouteDef(
       '/student/face',
       'Khuôn mặt điểm danh',
       subtitle: 'Đăng ký khuôn mặt để tự điểm danh bằng điện thoại',
@@ -128,7 +135,7 @@ const studentRoutes = RoleRoutes(
       ),
       NavItem('Điểm', '/student/grades', Icons.star_outline),
       NavItem('Điểm danh', '/student/attendance', Icons.task_alt_outlined),
-      NavItem('Khuôn mặt', '/student/face', Icons.face_outlined),
+      NavItem('Tự điểm danh', '/student/checkin', Icons.how_to_reg_outlined),
       NavItem(
         'Học phí',
         '/student/tuition',

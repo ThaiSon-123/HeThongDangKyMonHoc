@@ -26,11 +26,29 @@ final faceCaptureProvider = Provider<FaceCapture>(
           ),
 );
 
-/// Camera trước + khung oval. Chụp lần lượt từng tư thế, xem lại rồi mới dùng.
+/// Chụp chuỗi khung lúc điểm danh: mỗi phần tử là (lời nhắc, số khung), chụp tự động liên tiếp.
+typedef FaceBurst = Future<List<Uint8List>?> Function(
+  BuildContext context,
+  List<(String, int)> chuoi,
+);
+
+final faceBurstProvider = Provider<FaceBurst>(
+  (ref) =>
+      (context, chuoi) =>
+          Navigator.of(context, rootNavigator: true).push<List<Uint8List>>(
+            MaterialPageRoute(
+              builder: (_) => FaceCaptureScreen(buoc: const [], chuoi: chuoi),
+            ),
+          ),
+);
+
+/// Camera trước + khung oval. Mặc định: chụp lần lượt từng tư thế, xem lại rồi mới dùng.
+/// Có [chuoi]: bấm Bắt đầu là chụp tự động cả chuỗi rồi trả về ngay (không xem lại).
 class FaceCaptureScreen extends StatefulWidget {
-  const FaceCaptureScreen({super.key, required this.buoc});
+  const FaceCaptureScreen({super.key, required this.buoc, this.chuoi});
 
   final List<String> buoc;
+  final List<(String, int)>? chuoi;
 
   @override
   State<FaceCaptureScreen> createState() => _FaceCaptureScreenState();
@@ -40,7 +58,26 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   CameraController? _cam;
   String? _loi;
   bool _dangChup = false;
+  String? _loiNhac; // lời nhắc đang hiện ở chế độ chuỗi
   final _anh = <Uint8List>[];
+
+  Future<void> _chupChuoi() async {
+    final cam = _cam;
+    if (cam == null || _dangChup) return;
+    setState(() => _dangChup = true);
+    try {
+      for (final (loiNhac, soKhung) in widget.chuoi!) {
+        setState(() => _loiNhac = loiNhac);
+        await Future<void>.delayed(const Duration(milliseconds: 900));
+        for (var i = 0; i < soKhung; i++) {
+          _anh.add(await (await cam.takePicture()).readAsBytes());
+        }
+      }
+      if (mounted) Navigator.of(context).pop(List.of(_anh));
+    } on CameraException catch (e) {
+      setState(() => _loi = 'Chụp lỗi (${e.description ?? e.code}).');
+    }
+  }
 
   @override
   void initState() {
@@ -100,14 +137,19 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final xong = _anh.length >= widget.buoc.length;
+    final chuoi = widget.chuoi != null;
+    final xong = !chuoi && _anh.length >= widget.buoc.length;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(
-          xong ? 'Xem lại ảnh' : 'Ảnh ${_anh.length + 1}/${widget.buoc.length}',
+          chuoi
+              ? 'Chụp khuôn mặt'
+              : xong
+              ? 'Xem lại ảnh'
+              : 'Ảnh ${_anh.length + 1}/${widget.buoc.length}',
         ),
       ),
       body: SafeArea(
@@ -137,7 +179,10 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                     child: Column(
                       children: [
                         Text(
-                          widget.buoc[_anh.length],
+                          chuoi
+                              ? _loiNhac ??
+                                    'Nhìn thẳng vào camera rồi bấm Bắt đầu'
+                              : widget.buoc[_anh.length],
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -152,9 +197,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                         ),
                         const SizedBox(height: 12),
                         AppButton(
-                          label: 'Chụp',
+                          label: chuoi ? 'Bắt đầu' : 'Chụp',
                           loading: _dangChup,
-                          onPressed: _chup,
+                          onPressed: chuoi ? _chupChuoi : _chup,
                         ),
                       ],
                     ),

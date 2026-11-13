@@ -20,7 +20,12 @@
 - Chi tiết SV trong phiên: `GET /api/attendance/sessions/{id}/luot/?sinh_vien=`. Thêm `DELETE /api/attendance/consent/` (rút lại đồng ý = thu hồi mẫu mặt).
 - Ảnh mã hóa nằm ở `MEDIA_ROOT/diem_danh/` (volume `media` có sẵn).
 
-**Còn lại:** Đợt 3–4 (Flutter), Đợt 5 (trang chiếu QR, task Celery dọn ảnh bằng chứng / `mau_gps`), Đợt 6 (Dockerfile chép model, nginx `client_max_body_size`, chạy thật).
+**Đã xong Đợt 3–4 (Flutter, 13/11/2026):** 299 test Flutter xanh.
+- SV: `/student/face` (đồng ý, đăng ký 3 tư thế, trạng thái, xóa, rút lại), `/student/checkin` (phiên đang mở → thử thách → mã phòng gõ tay → GPS 6 giây → chụp chuỗi 6 khung → kết quả).
+- GV: `/teacher/self-attendance` (mở phiên lấy GPS 10 giây, đếm ngược, làm mới 4 giây, lọc, chi tiết lượt + ảnh bằng chứng, duyệt đáng ngờ, điểm danh thủ công, hàng loạt, tính lại tâm, đóng / mở lại), `/teacher/faces`. PĐT: `/pdt/faces`.
+- Chạy thật trên web với backend Docker: GV mở phiên, SV thấy phiên và nhận đúng thông báo "chưa có mẫu mặt". Chưa thử chụp ảnh thật (trình duyệt tự động không cấp quyền camera).
+
+**Còn lại:** Đợt 5 (trang chiếu QR + quét QR bằng `mobile_scanner`, task Celery dọn ảnh bằng chứng / `mau_gps`), Đợt 6 (nginx `client_max_body_size`, build lại `worker`/`beat`, chạy thật trên điện thoại).
 
 ---
 

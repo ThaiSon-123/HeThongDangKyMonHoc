@@ -31,10 +31,8 @@ class _FaceReviewScreenState extends ConsumerState<FaceReviewScreen> {
   late Future<List<Json>> _data = _fetch();
   final _dangXuLy = <int>{};
 
-  Future<List<Json>> _fetch() async {
-    final res = await ref.read(apiClientProvider).dio.get<List>(_pendingPath);
-    return [for (final x in res.data ?? const []) Json.from(x as Map)];
-  }
+  Future<List<Json>> _fetch() =>
+      ref.read(trainingApiProvider).getList(_pendingPath);
 
   void _reload() => setState(() {
     _data = _fetch();

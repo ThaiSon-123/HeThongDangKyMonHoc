@@ -176,6 +176,15 @@ class TrainingApi {
     return _json(await _dio.post(path, data: form));
   });
 
+  /// `GET` trả mảng JSON không phân trang (vd `/attendance/open-sessions/`).
+  Future<List<Json>> getList(
+    String path, {
+    Map<String, Object?> query = const {},
+  }) => _guard(() async {
+    final res = await _dio.get<List>(path, queryParameters: query);
+    return [for (final x in res.data ?? const []) Json.from(x as Map)];
+  });
+
   /// `POST` / `DELETE` không id, trả JSON (vd `/attendance/consent/`).
   Future<Json> post(String path, [Json? body]) =>
       _guard(() async => _json(await _dio.post(path, data: body)));
