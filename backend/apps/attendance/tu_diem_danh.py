@@ -160,7 +160,7 @@ def dang_ky_mat(sv, anh):
     mau, loi = infer(build_template, anh, get_engine(), cfg)
     if mau is None:
         raise ValidationError(
-            {"anh": [{"index": x["index"], "ly_do": _MA_MAT[x["reason"]]} for x in loi]}
+            {"anh": [" ".join(f"Ảnh {x['index'] + 1}: {LY_DO[_MA_MAT[x['reason']]]}" for x in loi)]}
         )
     with transaction.atomic():
         for cu in FaceTemplate.objects.filter(sinh_vien=sv, trang_thai=TrangThaiMau.CHO_DUYET):

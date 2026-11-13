@@ -1,6 +1,8 @@
 """Tự điểm danh khuôn mặt + GPS (KH §7, checklist Đợt 2). Engine khuôn mặt giả, không cần model."""
 
+import secrets
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -32,7 +34,13 @@ TURN_LEFT = [0.0, -0.1, -0.3, -0.3]
 @pytest.fixture(autouse=True)
 def moi_truong(tmp_path, settings, monkeypatch):
     settings.FACE_STORAGE_DIR = tmp_path
-    monkeypatch.setattr(tdd.secrets, "choice", lambda xs: "turn_left")
+    # Chỉ thay `secrets` trong tu_diem_danh: Django cũng dùng secrets.choice để sinh salt mật khẩu.
+    fake = SimpleNamespace(
+        choice=lambda xs: "turn_left",
+        token_urlsafe=secrets.token_urlsafe,
+        token_bytes=secrets.token_bytes,
+    )
+    monkeypatch.setattr(tdd, "secrets", fake)
     eng = FakeEngine({})
     monkeypatch.setattr(tdd, "get_engine", lambda: eng)
     return eng
@@ -466,7 +474,9 @@ def test_dang_ky_anh_loi_tra_ly_do_tung_anh(login_as, engine, lop):
     anh = khung(engine, fa(), fa(sharpness=5), fa(spoof_score=0.2))
     r = c.post("/api/attendance/faces/enroll/", {"anh": anh})
     assert r.status_code == 400
-    assert [x["ly_do"] for x in r.data["anh"]] == ["ANH_MO", "ANH_GIA"]
+    assert r.data["anh"] == [
+        "Ảnh 2: Ảnh bị mờ, hãy giữ máy chắc tay. Ảnh 3: Không xác nhận được người thật."
+    ]
 
 
 def test_pdt_tu_choi_va_sv_xoa_mat(login_as, lop):
