@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "flutter-web",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-d",
+        "web-server",
+        "--web-port",
+        "5180",
+        "--web-hostname",
+        "localhost",
+        "--dart-define=API_BASE_URL=http://localhost:8010/api"
+      ],
+      "cwd": "dang_ky_mon_hoc",
+      "port": 5180
+    }
+  ]
+}
