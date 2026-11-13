@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/dashboard/teacher_dashboard.dart';
+import '../../features/attendance/face/face_review_screen.dart';
 import '../../features/attendance/teacher_attendance_screen.dart';
 import '../../features/grades/teacher_grades_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
@@ -44,6 +45,12 @@ const teacherRoutes = RoleRoutes(
       builder: TeacherAttendanceScreen.new,
     ),
     RouteDef(
+      '/teacher/faces',
+      'Duyệt khuôn mặt',
+      subtitle: 'Duyệt khuôn mặt tự điểm danh của sinh viên lớp mình',
+      builder: FaceReviewScreen.new,
+    ),
+    RouteDef(
       '/teacher/grades',
       'Nhập điểm',
       subtitle: 'Nhập điểm cả lớp, xem trước tổng kết, khóa điểm',
@@ -71,6 +78,7 @@ const teacherRoutes = RoleRoutes(
     ]),
     NavGroup('HỌC VỤ', [
       NavItem('Điểm danh', '/teacher/attendance', Icons.task_alt_outlined),
+      NavItem('Duyệt khuôn mặt', '/teacher/faces', Icons.face_outlined),
       NavItem('Nhập điểm', '/teacher/grades', Icons.edit_outlined),
     ]),
     NavGroup('KHÁC', [

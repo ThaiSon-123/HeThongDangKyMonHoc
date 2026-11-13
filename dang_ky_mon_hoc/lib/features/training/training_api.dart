@@ -154,6 +154,35 @@ class TrainingApi {
     return _json(await _dio.post(path, data: form));
   });
 
+  /// `POST multipart/form-data` nhiều tệp cùng tên field (ảnh khuôn mặt, khung hình điểm danh).
+  Future<Json> postFiles(
+    String path,
+    String fileField,
+    List<List<int>> files, {
+    Map<String, Object> fields = const {},
+  }) => _guard(() async {
+    final form = FormData();
+    for (final e in fields.entries) {
+      form.fields.add(MapEntry(e.key, '${e.value}'));
+    }
+    for (var i = 0; i < files.length; i++) {
+      form.files.add(
+        MapEntry(
+          fileField,
+          MultipartFile.fromBytes(files[i], filename: '$i.jpg'),
+        ),
+      );
+    }
+    return _json(await _dio.post(path, data: form));
+  });
+
+  /// `POST` / `DELETE` không id, trả JSON (vd `/attendance/consent/`).
+  Future<Json> post(String path, [Json? body]) =>
+      _guard(() async => _json(await _dio.post(path, data: body)));
+
+  Future<Json> deleteJson(String path) =>
+      _guard(() async => _json(await _dio.delete(path)));
+
   /// Action kiểu `POST /semesters/1/open/` (đổi trạng thái, gia hạn…).
   Future<Json> action(String path, Object id, String name, [Json? body]) =>
       _guard(() async => _json(await _dio.post('$path$id/$name/', data: body)));

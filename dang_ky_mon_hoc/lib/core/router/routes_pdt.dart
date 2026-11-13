@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/attendance/face/face_review_screen.dart';
 import '../../features/dashboard/pdt_dashboard.dart';
 import '../../features/notifications/audit_log_screen.dart';
 import '../../features/reports/pdt_reports_screen.dart';
@@ -57,6 +58,12 @@ const pdtRoutes = RoleRoutes(
       builder: PdtGradeSheetsScreen.new,
     ),
     RouteDef(
+      '/pdt/faces',
+      'Duyệt khuôn mặt',
+      subtitle: 'Duyệt khuôn mặt tự điểm danh của sinh viên toàn trường',
+      builder: FaceReviewScreen.new,
+    ),
+    RouteDef(
       '/pdt/config',
       'Cấu hình',
       subtitle: 'Quy chế điểm danh và nhập điểm áp dụng cho toàn trường',
@@ -100,6 +107,7 @@ const pdtRoutes = RoleRoutes(
       NavItem('Lớp học phần', '/pdt/classes', Icons.groups_outlined),
       NavItem('Đăng ký', '/pdt/registrations', Icons.assignment_outlined),
       NavItem('Duyệt điểm', '/pdt/grade-sheets', Icons.fact_check_outlined),
+      NavItem('Duyệt khuôn mặt', '/pdt/faces', Icons.face_outlined),
       NavItem('Cấu hình', '/pdt/config', Icons.settings_outlined),
     ]),
     NavGroup('KHÁC', [

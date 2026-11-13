@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- App gọi API qua mạng; thiếu quyền này thì bản release không kết nối được máy chủ. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Tự điểm danh: chụp khuôn mặt + GPS -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <application
         android:label="dang_ky_mon_hoc"
         android:name="${applicationName}"

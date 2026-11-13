@@ -90,6 +90,9 @@ void main() {
         tokens: signedIn,
       );
 
+      // Đăng xuất là mục cuối của menu cuộn được: menu dài thì phải cuộn tới.
+      await t.ensureVisible(find.text('Đăng xuất').first);
+      await t.pumpAndSettle();
       await t.tap(find.text('Đăng xuất').first);
       await t.pumpAndSettle();
 
