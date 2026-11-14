@@ -378,7 +378,7 @@ def _nang_hang(s, sv_id, ket_qua, luot):
     return a
 
 
-def quyet_tay(gv, session_id, sv_ids, trang_thai):
+def quyet_tay(gv, session_id, sv_ids, trang_thai, di_tre=False):
     """GV đặt trạng thái (1 SV = điểm danh thủ công, nhiều SV = hàng loạt). Dùng được cả khi phiên mở."""
     with transaction.atomic():
         s = _phien_gv(gv, session_id, khoa=True)
@@ -397,8 +397,8 @@ def quyet_tay(gv, session_id, sv_ids, trang_thai):
                 sinh_vien_id=sv_id,
             )
             a.trang_thai, a.dang_ngo, a.nguoi_quyet = trang_thai, False, gv
-            if trang_thai != TrangThaiDiemDanh.CO_MAT:
-                a.di_tre = False
+            # "Đi trễ" = có mặt + di_tre; trạng thái khác thì không có cờ trễ.
+            a.di_tre = bool(di_tre) and trang_thai == TrangThaiDiemDanh.CO_MAT
             a.save()
         if s.trang_thai != TrangThaiSession.DA_DIEM_DANH:
             s.trang_thai = TrangThaiSession.DA_DIEM_DANH
@@ -680,6 +680,7 @@ def danh_sach_phien(gv, session_id, now=None):
                 "ma_sv": hs.ma_sv,
                 "ho_ten": hs.ho_ten,
                 "trang_thai": a.trang_thai if a else TrangThaiDiemDanh.VANG_KHONG_PHEP,
+                "di_tre": bool(a and a.di_tre),
                 "dang_ngo": bool(a and a.dang_ngo),
                 "gv_da_quyet": bool(a and a.nguoi_quyet_id),
                 "co_mau_mat": r.sinh_vien_id in co_mau,

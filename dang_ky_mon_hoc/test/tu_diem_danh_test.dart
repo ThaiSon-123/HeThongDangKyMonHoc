@@ -72,6 +72,7 @@ Map<String, dynamic> row(
   'ma_sv': 'SV$id',
   'ho_ten': ten,
   'trang_thai': tt,
+  'di_tre': false,
   'dang_ngo': dangNgo,
   'gv_da_quyet': false,
   'co_mau_mat': coMau,
@@ -101,12 +102,44 @@ Map<String, dynamic> live({bool mo = true, bool daMo = true}) => {
   ],
 };
 
+/// `GET records/` của buổi (danh sách cả lớp, tỷ lệ vắng, quyền điểm danh) — dùng chung với điểm danh tay.
+Map<String, dynamic> recordsJson() => {
+  'session': {'id': 11, 'ngay_hoc': '2027-01-13'},
+  'lop_trang_thai': 'DANG_HOC',
+  'co_the_diem_danh': true,
+  'con_han_sua': true,
+  'so_ngay_xin_sua': 7,
+  'tong_so_buoi': 1,
+  'max_absent_pct': 20,
+  'records': [
+    for (final (id, ten, tt) in [
+      (21, 'Trần Hoàng Nam', 'CO_MAT'),
+      (22, 'Lê Thu Hà', 'VANG_KHONG_PHEP'),
+      (23, 'Phạm Văn An', 'VANG_KHONG_PHEP'),
+    ])
+      {
+        'sinh_vien': id,
+        'ma_sv': 'SV$id',
+        'ho_ten': ten,
+        'trang_thai': tt,
+        'di_tre': false,
+        'ghi_chu': '',
+        'da_luu': true,
+        'so_buoi_vang_kp': 0,
+        'ty_le_vang': 0.0,
+        'canh_bao_vang': false,
+      },
+  ],
+};
+
 FakeAdapter gv(Map<String, Handler> extra) => FakeAdapter({
   'GET /profiles/me/': (_) => reply(
     200,
     userJson('GIAO_VIEN', name: 'Trần Minh Quân', username: 'gv001'),
   ),
   'GET /class-sections/my/': (_) => reply(200, pageOf([lopGv()])),
+  'GET /attendance/requests/': (_) => reply(200, pageOf([])),
+  'GET /attendance/sessions/11/records/': (_) => reply(200, recordsJson()),
   'GET /attendance/sessions/': (_) => reply(200, {
     ...pageOf([
       {
@@ -123,20 +156,22 @@ FakeAdapter gv(Map<String, Handler> extra) => FakeAdapter({
   ...extra,
 });
 
+/// Màn "Điểm danh" của GV (đã gộp tự điểm danh): chọn lớp → bấm buổi hôm nay (13/01/2027).
 Future<void> moGv(WidgetTester t, FakeAdapter api) async {
-  await openPdt(t, api, '/teacher/self-attendance', overrides: _overrides);
-  await bam(t, '— Chọn lớp —');
+  await openPdt(t, api, '/teacher/attendance', overrides: _overrides);
+  await bam(t, '— Chọn lớp để bắt đầu —');
   await t.tap(find.text('CNTT101-01 · Nhập môn lập trình').last);
   await cho(t);
+  await bam(t, 'Thứ 4, 13/01/2027');
 }
 
 void main() {
-  group('GV — tự điểm danh', () {
+  group('GV — tự điểm danh (trong màn Điểm danh)', () {
     testWidgets('mở phiên: lấy GPS rồi gửi đủ tham số', (t) async {
       var daMo = false;
       final api = gv({
         'GET /attendance/sessions/11/tu-diem-danh/': (_) =>
-            reply(200, live(daMo: daMo)),
+            reply(200, live(mo: daMo, daMo: daMo)),
         'POST /attendance/sessions/11/mo-phien/': (_) {
           daMo = true;
           return reply(200, phienJson());
@@ -144,6 +179,8 @@ void main() {
       });
       await moGv(t, api);
       expect(find.text('Mở phiên tự điểm danh'), findsOneWidget);
+      // Chưa mở phiên: vẫn điểm danh tay và lưu cả lớp như cũ.
+      expect(find.text('Lưu điểm danh'), findsOneWidget);
 
       await bam(t, 'Lấy vị trí và mở phiên');
       final body = api.bodies['POST /attendance/sessions/11/mo-phien/'] as Map;
@@ -151,8 +188,24 @@ void main() {
       expect(body['thoi_han'], 10);
       expect(body['r0'], 20);
       expect(body['kiem_tra_phong'], false);
-      expect(find.text('Đang mở · còn 05:00'), findsOneWidget);
+      expect(find.text('Tự điểm danh đang mở · còn 05:00'), findsOneWidget);
     });
+
+    testWidgets(
+      'phiên đang mở: không có nút lưu cả lớp, báo mỗi thay đổi lưu ngay',
+      (t) async {
+        final api = gv({
+          'GET /attendance/sessions/11/tu-diem-danh/': (_) =>
+              reply(200, live()),
+        });
+        await moGv(t, api);
+        expect(find.text('Lưu điểm danh'), findsNothing);
+        expect(
+          find.textContaining('mỗi thay đổi được lưu ngay'),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('danh sách: đếm, cờ, SV chưa có mẫu mặt', (t) async {
       final api = gv({
@@ -188,7 +241,7 @@ void main() {
             reply(200, {'id': 7, 'co_mat': true}),
       });
       await moGv(t, api);
-      await bam(t, 'Lê Thu Hà · SV22');
+      await bam(t, 'Xem lượt'); // chỉ SV Lê Thu Hà có lượt
       expect(find.textContaining('cách 41 m / r 34 m'), findsOneWidget);
       await bam(t, 'Duyệt có mặt');
       expect(api.bodies['POST /attendance/attempts/7/quyet/'], {
@@ -196,22 +249,40 @@ void main() {
       });
     });
 
-    testWidgets('điểm danh thủ công SV chưa có mẫu mặt', (t) async {
-      final api = gv({
-        'GET /attendance/sessions/11/tu-diem-danh/': (_) => reply(200, live()),
-        'GET /attendance/sessions/11/luot/': (_) => reply(200, []),
-        'PATCH /attendance/sessions/11/tu-diem-danh/': (_) =>
-            reply(200, live()),
-      });
-      await moGv(t, api);
-      await bam(t, 'Phạm Văn An · SV23');
-      expect(find.textContaining('điểm danh thủ công'), findsOneWidget);
-      await bam(t, 'Có mặt');
-      expect(api.bodies['PATCH /attendance/sessions/11/tu-diem-danh/'], {
-        'sinh_vien': [23],
-        'trang_thai': 'CO_MAT',
-      });
-    });
+    testWidgets(
+      'phiên mở: bấm trạng thái lưu ngay cho riêng SV đó (kể cả Đi trễ)',
+      (t) async {
+        final api = gv({
+          'GET /attendance/sessions/11/tu-diem-danh/': (_) =>
+              reply(200, live()),
+          'PATCH /attendance/sessions/11/tu-diem-danh/': (_) =>
+              reply(200, live()),
+        });
+        await moGv(t, api);
+        // Phạm Văn An (SV23, chưa có mẫu mặt) là dòng thứ 3: GV điểm danh thủ công.
+        final diTre = find.widgetWithText(ChoiceChip, 'Đi trễ').at(2);
+        await t.ensureVisible(diTre);
+        await t.pump();
+        await t.tap(diTre);
+        await cho(t);
+        expect(api.bodies['PATCH /attendance/sessions/11/tu-diem-danh/'], {
+          'sinh_vien': [23],
+          'trang_thai': 'CO_MAT',
+          'di_tre': true,
+        });
+        // "Có mặt" thường: chip đầu tiên là bộ lọc, 3 chip tiếp theo là 3 dòng.
+        final coMat = find.widgetWithText(ChoiceChip, 'Có mặt').at(3);
+        await t.ensureVisible(coMat);
+        await t.pump();
+        await t.tap(coMat);
+        await cho(t);
+        expect(api.bodies['PATCH /attendance/sessions/11/tu-diem-danh/'], {
+          'sinh_vien': [23],
+          'trang_thai': 'CO_MAT',
+          'di_tre': false,
+        });
+      },
+    );
 
     testWidgets('phiên đã đóng → mở lại', (t) async {
       final api = gv({
@@ -220,7 +291,9 @@ void main() {
         'POST /attendance/sessions/11/mo-lai/': (_) => reply(200, phienJson()),
       });
       await moGv(t, api);
-      expect(find.text('Đã đóng'), findsOneWidget);
+      expect(find.text('Tự điểm danh đã đóng'), findsOneWidget);
+      // Phiên đã đóng: trở lại chọn rồi lưu cả lớp.
+      expect(find.text('Lưu điểm danh'), findsOneWidget);
       await bam(t, 'Mở lại');
       await bam(t, '15 phút');
       expect(api.bodies['POST /attendance/sessions/11/mo-lai/'], {
@@ -254,6 +327,80 @@ void main() {
 
     Future<void> moSvScreen(WidgetTester t, FakeAdapter api) =>
         openPdt(t, api, '/student/checkin', overrides: _overrides);
+
+    Map<String, dynamic> myJson() => {
+      'hoc_ky': 7,
+      'ten_hk': 'Học kỳ 2, 2026–2027',
+      'max_absent_pct': 20,
+      'so_ngay_xin_sua': 7,
+      'lop_hoc_phan': <Object>[],
+    };
+
+    testWidgets('màn Điểm danh: thẻ phiên đang mở → bấm vào luồng điểm danh', (
+      t,
+    ) async {
+      final api = svApi({
+        'GET /attendance/open-sessions/': (_) => reply(200, [moSv()]),
+        'GET /attendance/my/': (_) => reply(200, myJson()),
+        'GET /attendance/requests/': (_) => reply(200, pageOf([])),
+        'POST /attendance/sessions/11/challenge/': (_) =>
+            reply(201, thuThach()),
+      });
+      await openPdt(t, api, '/student/attendance', overrides: _overrides);
+      await cho(t);
+      expect(find.text('CNTT101-01 · Nhập môn lập trình'), findsOneWidget);
+      expect(find.text('Khuôn mặt điểm danh'), findsOneWidget);
+
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Bắt đầu');
+      expect(
+        api.log.any(
+          (l) => l.startsWith('POST /attendance/sessions/11/challenge/'),
+        ),
+        isTrue,
+      );
+    });
+
+    for (final (tt, extra, nhan) in [
+      ('CHUA_CO', <String, dynamic>{}, 'Chưa đăng ký'),
+      ('CHO_DUYET', <String, dynamic>{}, 'Chờ duyệt'),
+      ('TU_CHOI', <String, dynamic>{}, 'Bị từ chối'),
+      ('DUYET', <String, dynamic>{}, 'Đã duyệt'),
+      ('DUYET', <String, dynamic>{'can_dang_ky_lai': true}, 'Cần đăng ký lại'),
+    ]) {
+      testWidgets('màn Điểm danh: khuôn mặt $tt $extra → "$nhan"', (t) async {
+        final api = svApi({
+          'GET /attendance/open-sessions/': (_) => reply(200, []),
+          'GET /attendance/my/': (_) => reply(200, myJson()),
+          'GET /attendance/requests/': (_) => reply(200, pageOf([])),
+          'GET /attendance/face/me/': (_) => reply(200, {
+            'da_dong_y': true,
+            'trang_thai': tt,
+            'ly_do': '',
+            'can_dang_ky_lai': false,
+            'dang_cho_cap_nhat': false,
+            ...extra,
+          }),
+        });
+        await openPdt(t, api, '/student/attendance', overrides: _overrides);
+        await cho(t);
+        expect(find.text(nhan), findsOneWidget);
+      });
+    }
+
+    testWidgets('màn Điểm danh: không có phiên mở thì chỉ còn lối vào khuôn mặt', (
+      t,
+    ) async {
+      final api = svApi({
+        'GET /attendance/open-sessions/': (_) => reply(200, []),
+        'GET /attendance/my/': (_) => reply(200, myJson()),
+        'GET /attendance/requests/': (_) => reply(200, pageOf([])),
+      });
+      await openPdt(t, api, '/student/attendance', overrides: _overrides);
+      await cho(t);
+      expect(find.text('Khuôn mặt điểm danh'), findsOneWidget);
+      expect(find.text('CNTT101-01 · Nhập môn lập trình'), findsNothing);
+    });
 
     testWidgets('không có phiên mở', (t) async {
       final api = svApi({

@@ -12,6 +12,7 @@ import '../../../shared/widgets/alert_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/labeled_field.dart';
 import '../../../shared/widgets/section_card.dart';
+import '../../../shared/widgets/status_chip.dart';
 import '../../admin/accounts/account_dialogs.dart' show failureText;
 import '../../registration/timetable_screen.dart' show clockProvider;
 import '../../training/resource_list.dart' show ListErrorCard, ListSkeleton;
@@ -45,7 +46,7 @@ class _SvState extends ConsumerState<SvTuDiemDanhScreen> {
   @override
   Widget build(BuildContext context) {
     final p = _dangLam;
-    if (p != null) return _Luong(phien: p, onXong: _reload);
+    if (p != null) return SvLuong(phien: p, onXong: _reload);
     return FutureBuilder<List<Json>>(
       future: _ds,
       builder: (context, snap) {
@@ -75,7 +76,7 @@ class _SvState extends ConsumerState<SvTuDiemDanhScreen> {
                 message: 'Chưa có phiên điểm danh nào đang mở. Giảng viên mở phiên trong giờ học.',
               ),
             for (final s in ds) ...[
-              _PhienCard(s: s, onDiemDanh: () => setState(() => _dangLam = s)),
+              PhienCard(s: s, onDiemDanh: () => setState(() => _dangLam = s)),
               const SizedBox(height: 12),
             ],
           ],
@@ -85,8 +86,90 @@ class _SvState extends ConsumerState<SvTuDiemDanhScreen> {
   }
 }
 
-class _PhienCard extends ConsumerWidget {
-  const _PhienCard({required this.s, required this.onDiemDanh});
+/// Đầu màn "Điểm danh" của SV: các phiên tự điểm danh đang mở (bấm để vào luồng camera + GPS) và lối
+/// vào đăng ký khuôn mặt. Lỗi tải thì chỉ còn lối vào khuôn mặt, không làm hỏng cả màn.
+class TheTuDiemDanh extends ConsumerStatefulWidget {
+  const TheTuDiemDanh({super.key, required this.onDiemDanh});
+
+  final void Function(Json phien) onDiemDanh;
+
+  @override
+  ConsumerState<TheTuDiemDanh> createState() => _TheState();
+}
+
+class _TheState extends ConsumerState<TheTuDiemDanh> {
+  late final Future<(List<Json>, Json?)> _tai = _taiDuLieu();
+
+  /// Lỗi của từng phần (phiên đang mở, trạng thái khuôn mặt) chỉ làm phần đó biến mất.
+  Future<(List<Json>, Json?)> _taiDuLieu() async {
+    final api = ref.read(trainingApiProvider);
+    Future<T?> thu<T>(Future<T> Function() f) async {
+      try {
+        return await f();
+      } on ApiFailure {
+        return null;
+      }
+    }
+
+    final r = await Future.wait<Object?>([
+      thu(() => api.getList('/attendance/open-sessions/')),
+      thu(() => api.get('/attendance/face/me/')),
+    ]);
+    return ((r[0] as List<Json>?) ?? const <Json>[], r[1] as Json?);
+  }
+
+  /// Nhãn trạng thái khuôn mặt cạnh lối vào đăng ký.
+  Widget? _chipMat(Json? m) {
+    if (m == null) return null;
+    final tt = m.str('trang_thai');
+    if (tt == 'DUYET') {
+      return m['can_dang_ky_lai'] == true
+          ? StatusChip.of('Cần đăng ký lại', StatusChip.yellow)
+          : StatusChip.of('Đã duyệt', StatusChip.green);
+    }
+    return switch (tt) {
+      'CHO_DUYET' => StatusChip.of('Chờ duyệt', StatusChip.yellow),
+      'TU_CHOI' => StatusChip.of('Bị từ chối', StatusChip.red),
+      _ => StatusChip.of('Chưa đăng ký', StatusChip.gray),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<(List<Json>, Json?)>(
+    future: _tai,
+    builder: (context, snap) {
+      final ds = snap.data?.$1 ?? const <Json>[];
+      final chip = _chipMat(snap.data?.$2);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final s in ds) ...[
+            PhienCard(s: s, onDiemDanh: () => widget.onDiemDanh(s)),
+            const SizedBox(height: 12),
+          ],
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              children: [
+                TextButton.icon(
+                  onPressed: () => context.go('/student/face'),
+                  icon: const Icon(Icons.face_outlined),
+                  label: const Text('Khuôn mặt điểm danh'),
+                ),
+                ?chip,
+              ],
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+class PhienCard extends ConsumerWidget {
+  const PhienCard({super.key, required this.s, required this.onDiemDanh});
 
   final Json s;
   final VoidCallback onDiemDanh;
@@ -146,17 +229,17 @@ class _PhienCard extends ConsumerWidget {
 enum _Buoc { batDau, maPhong, gps, chup, gui, ketQua }
 
 /// Luồng một lượt điểm danh. Thử thách hết hạn sau 60 giây (server kiểm lại).
-class _Luong extends ConsumerStatefulWidget {
-  const _Luong({required this.phien, required this.onXong});
+class SvLuong extends ConsumerStatefulWidget {
+  const SvLuong({super.key, required this.phien, required this.onXong});
 
   final Json phien;
   final VoidCallback onXong;
 
   @override
-  ConsumerState<_Luong> createState() => _LuongState();
+  ConsumerState<SvLuong> createState() => _LuongState();
 }
 
-class _LuongState extends ConsumerState<_Luong> {
+class _LuongState extends ConsumerState<SvLuong> {
   _Buoc _buoc = _Buoc.batDau;
   Json? _thuThach;
   Json? _ketQua;

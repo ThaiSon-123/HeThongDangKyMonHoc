@@ -17,6 +17,7 @@ import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
 import 'attendance_format.dart';
 import 'proof_picker.dart';
+import 'tu_diem_danh/sv_tu_diem_danh_screen.dart';
 
 const _requestsPath = '/attendance/requests/';
 
@@ -48,6 +49,8 @@ class _StudentAttendanceScreenState
   int? _lopId;
   int _tab = 0;
   Json? _buoi;
+  Json? _dangLam; // phiên tự điểm danh đang làm (thay cả màn bằng luồng camera + GPS)
+  int _lanThe = 0; // đổi để thẻ "phiên đang mở" tải lại sau khi điểm danh xong
 
   Future<_Data> _fetch() async {
     final api = ref.read(trainingApiProvider);
@@ -64,7 +67,24 @@ class _StudentAttendanceScreenState
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<_Data>(
+  Widget build(BuildContext context) {
+    final phien = _dangLam;
+    if (phien != null) {
+      return SvLuong(
+        phien: phien,
+        onXong: () {
+          setState(() {
+            _dangLam = null;
+            _lanThe++;
+          });
+          _reload(); // kết quả vừa điểm danh hiện ngay ở thống kê / danh sách buổi
+        },
+      );
+    }
+    return _trang();
+  }
+
+  Widget _trang() => FutureBuilder<_Data>(
     future: _data,
     builder: (context, snap) {
       if (snap.hasError) {
@@ -91,6 +111,11 @@ class _StudentAttendanceScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            TheTuDiemDanh(
+              key: ValueKey(_lanThe),
+              onDiemDanh: (p) => setState(() => _dangLam = p),
+            ),
+            const SizedBox(height: 8),
             _Card(
               child: Wrap(
                 spacing: 16,

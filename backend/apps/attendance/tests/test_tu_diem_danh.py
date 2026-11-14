@@ -12,6 +12,7 @@ from apps.attendance import crypto
 from apps.attendance import tu_diem_danh as tdd
 from apps.attendance.models import (
     Attendance,
+    AttendanceRequest,
     AttendanceSession,
     Challenge,
     CheckinAttempt,
@@ -377,6 +378,70 @@ def test_diem_danh_thu_cong_cho_sv_chua_co_mat(login_as, gv, lop):
         format="json",
     )
     assert bad.status_code == 400
+
+
+def test_gv_dat_di_tre_khi_phien_mo(gv, phien_mo):
+    s, svs = phien_mo
+
+    def dat(tt, **kw):
+        r = gv.patch(
+            url(s, "tu-diem-danh"),
+            {"sinh_vien": [svs[0].id], "trang_thai": tt, **kw},
+            format="json",
+        )
+        assert r.status_code == 200
+        return next(x for x in r.data["rows"] if x["sinh_vien"] == svs[0].id)
+
+    row = dat("CO_MAT", di_tre=True)
+    assert (row["trang_thai"], row["di_tre"]) == ("CO_MAT", True)
+    assert dat("CO_MAT")["di_tre"] is False  # không gửi di_tre = có mặt đúng giờ
+    assert dat("VANG_CO_PHEP", di_tre=True)["di_tre"] is False  # chỉ có nghĩa khi có mặt
+
+
+def test_duyet_yeu_cau_khoa_ket_qua_khoi_ghi_de_cua_phien_mo(login_as, engine, gv, lop, phien_mo):
+    s, svs = phien_mo
+    assert diem_danh(login_as, engine, s, svs[0]).data["trang_thai"] == "CO_MAT"
+    att = Attendance.objects.get(attendance_session=s, sinh_vien=svs[0])
+    yc = AttendanceRequest.objects.create(
+        attendance=att,
+        sinh_vien=svs[0],
+        ly_do="Có giấy phép",
+        trang_thai_mong_muon="VANG_CO_PHEP",
+    )
+    ok = gv.patch(f"/api/attendance/requests/{yc.id}/", {"trang_thai": "DUYET"}, format="json")
+    assert ok.status_code == 200
+    att.refresh_from_db()
+    assert (att.trang_thai, att.nguoi_quyet_id) == ("VANG_CO_PHEP", lop[0].giao_vien.user_id)
+    # Phiên vẫn mở, SV điểm danh lại: kết quả GV vừa duyệt không bị ghi đè.
+    assert diem_danh(login_as, engine, s, svs[0], files=None).data["trang_thai"] == "VANG_CO_PHEP"
+
+
+def test_danh_sach_buoi_co_co_phien_va_so_dang_ngo(login_as, engine, gv, lop):
+    _, s, svs = lop
+
+    def buoi_cua_lop():
+        r = gv.get("/api/attendance/sessions/", {"lop_hoc_phan": s.lop_hoc_phan_id})
+        assert r.status_code == 200
+        return next(x for x in r.data["results"] if x["id"] == s.id)
+
+    b = buoi_cua_lop()
+    assert (b["da_mo_tu_diem_danh"], b["dang_mo_tu_diem_danh"], b["so_dang_ngo"]) == (
+        False,
+        False,
+        0,
+    )
+    assert mo(gv, s).status_code == 200
+    b = buoi_cua_lop()
+    assert (b["da_mo_tu_diem_danh"], b["dang_mo_tu_diem_danh"], b["so_dang_ngo"]) == (
+        True,
+        True,
+        0,
+    )
+    Attendance.objects.filter(attendance_session=s, sinh_vien=svs[0]).update(dang_ngo=True)
+    assert buoi_cua_lop()["so_dang_ngo"] == 1
+    gv.post(url(s, "dong-phien"))
+    b = buoi_cua_lop()
+    assert (b["da_mo_tu_diem_danh"], b["dang_mo_tu_diem_danh"]) == (True, False)
 
 
 def test_gv_duyet_luot_dang_ngo(login_as, engine, gv, phien_mo):

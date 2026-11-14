@@ -212,6 +212,44 @@ void main() {
     });
 
     testWidgets(
+      'phiên tự điểm danh đang mở: huy hiệu nhắc, bấm sang màn Điểm danh; đã có mặt thì không nhắc',
+      (t) async {
+        Map<String, dynamic> phien(int id, String lop, String tt) => {
+          'id': id,
+          'ma_lop': lop,
+          'ten_mon': 'Môn',
+          'trang_thai': tt,
+        };
+        final a = api(
+          extra: {
+            'GET /attendance/open-sessions/': (_) => reply(200, [
+              phien(11, 'CNTT101-01', 'VANG_KHONG_PHEP'),
+              phien(12, 'CNTT203-02', 'CO_MAT'),
+            ]),
+          },
+        );
+        await open(t, a, '/student');
+        expect(
+          find.textContaining('Đang có 1 phiên tự điểm danh'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('CNTT101-01 — bạn chưa điểm danh'), findsOneWidget);
+        expect(find.textContaining('CNTT203-02 — bạn'), findsNothing); // đã có mặt: không nhắc
+        await tapText(t, 'Điểm danh ngay');
+        expect(
+          GoRouter.of(t.element(find.byType(Scaffold).first)).state.uri.path,
+          '/student/attendance',
+        );
+      },
+    );
+
+    testWidgets('không có phiên mở: không có huy hiệu nhắc', (t) async {
+      await open(t, api(), '/student');
+      expect(find.textContaining('Đang có'), findsNothing);
+      expect(find.text('Điểm danh ngay'), findsNothing);
+    });
+
+    testWidgets(
       'cảnh báo vắng / nợ quá hạn / chờ hoàn tiền / ngày không có lớp',
       (t) async {
         final a = api(

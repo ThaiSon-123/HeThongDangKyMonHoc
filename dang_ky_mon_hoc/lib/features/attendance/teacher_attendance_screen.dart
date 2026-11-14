@@ -20,6 +20,7 @@ import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../training/training_api.dart';
 import '../training/training_widgets.dart' show runAction;
 import 'attendance_format.dart';
+import 'tu_diem_danh/gv_buoi_panel.dart';
 
 const _sessionsPath = '/attendance/sessions/';
 const _requestsPath = '/attendance/requests/';
@@ -48,6 +49,12 @@ class TeacherAttendanceScreen extends ConsumerStatefulWidget {
 class _TeacherAttendanceScreenState
     extends ConsumerState<TeacherAttendanceScreen> {
   late Future<List<Json>> _classes = _loadClasses();
+  // Số khuôn mặt chờ duyệt (GV: SV lớp mình) hiện ở nút "Duyệt khuôn mặt"; lỗi thì không hiện số.
+  late final Future<int> _soChoDuyet = ref
+      .read(trainingApiProvider)
+      .getList('/attendance/faces/pending/')
+      .then((l) => l.length)
+      .catchError((_) => 0);
   String? _hocKy; // tên học kỳ đang lọc (null = học kỳ mới nhất)
   Json? _lop;
   Future<_LopData>? _data;
@@ -208,6 +215,22 @@ class _TeacherAttendanceScreenState
             ),
           ),
         ),
+        // Trên điện thoại không có menu bên → đây là lối vào duyệt khuôn mặt tự điểm danh.
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: FutureBuilder<int>(
+            future: _soChoDuyet,
+            builder: (context, snap) => OutlinedButton.icon(
+              onPressed: () => context.go('/teacher/faces'),
+              icon: const Icon(Icons.face_outlined, size: 18),
+              label: Text(
+                (snap.data ?? 0) > 0
+                    ? 'Duyệt khuôn mặt (${snap.data})'
+                    : 'Duyệt khuôn mặt',
+              ),
+            ),
+          ),
+        ),
         if (_lop != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
@@ -310,7 +333,7 @@ class _TeacherAttendanceScreenState
         for (final s in shown) ...[
           _sessionTile(s),
           // Bảng điểm danh mở ngay dưới buổi vừa bấm (bấm lại để đóng).
-          if (_session?.id == s.id) _roster(),
+          if (_session?.id == s.id) _roster(d),
         ],
         if (!_showAll && sorted.length > shown.length)
           TextButton(
@@ -319,20 +342,23 @@ class _TeacherAttendanceScreenState
           ),
         // Buổi đang chọn nằm trong phần "buổi trước đó" còn ẩn: hiện ở cuối để không mất bảng.
         if (_session != null && !shown.any((s) => s.id == _session!.id))
-          _roster(),
+          _roster(d),
       ],
     );
   }
 
-  Widget _roster() => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: _Roster(
-      key: ValueKey(_session!.id),
-      session: _session!,
-      onSaved: () {
-        _reload();
-      },
-    ),
+  Widget _roster(_LopData d) => GvBuoiPanel(
+    key: ValueKey(_session!.id),
+    session: _session!,
+    donCho: {
+      for (final r in d.requests)
+        if (r.str('trang_thai') == 'CHO_DUYET' &&
+            r.str('ngay_hoc') == _session!.str('ngay_hoc') &&
+            r.str('buoi') == _session!.str('buoi'))
+          r.str('ma_sv'),
+    },
+    onXemDon: () => setState(() => _tab = 1),
+    onSaved: _reload,
   );
 
   Widget _sessionTile(Json s) {
@@ -372,11 +398,27 @@ class _TeacherAttendanceScreenState
                   ],
                 ),
               ),
-              done
-                  ? StatusChip.of('Đã điểm danh', StatusChip.green)
-                  : _due(s)
-                  ? StatusChip.of('Chưa điểm danh', StatusChip.yellow)
-                  : StatusChip.of('Sắp tới', StatusChip.gray),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                alignment: WrapAlignment.end,
+                children: [
+                  if (s['dang_mo_tu_diem_danh'] == true)
+                    StatusChip.of('Phiên đang mở', StatusChip.indigo)
+                  else if (s['da_mo_tu_diem_danh'] == true)
+                    StatusChip.of('Đã tự điểm danh', StatusChip.gray),
+                  if (s.num0('so_dang_ngo') > 0)
+                    StatusChip.of(
+                      '${s.num0('so_dang_ngo')} đáng ngờ',
+                      StatusChip.red,
+                    ),
+                  done
+                      ? StatusChip.of('Đã điểm danh', StatusChip.green)
+                      : _due(s)
+                      ? StatusChip.of('Chưa điểm danh', StatusChip.yellow)
+                      : StatusChip.of('Sắp tới', StatusChip.gray),
+                ],
+              ),
             ],
           ),
         ),
@@ -525,223 +567,6 @@ class _TeacherAttendanceScreenState
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------- điểm danh cả lớp
-class _Roster extends ConsumerStatefulWidget {
-  const _Roster({super.key, required this.session, required this.onSaved});
-
-  final Json session;
-  final VoidCallback onSaved;
-
-  @override
-  ConsumerState<_Roster> createState() => _RosterState();
-}
-
-class _RosterState extends ConsumerState<_Roster> {
-  late Future<Json> _future = _fetch();
-  final _chon = <int, DiemDanhChon>{};
-  final _ghiChu = <int, String>{};
-  bool _init = false;
-  bool _saving = false;
-
-  Future<Json> _fetch() => ref
-      .read(trainingApiProvider)
-      .get('$_sessionsPath${widget.session.id}/records/');
-
-  void _seed(Json d) {
-    if (_init) return;
-    _init = true;
-    for (final r in d['records'] as List) {
-      final row = Json.from(r as Map);
-      _chon[row.num0('sinh_vien')] = DiemDanhChon.of(
-        row.str('trang_thai'),
-        row['di_tre'] == true,
-      );
-      _ghiChu[row.num0('sinh_vien')] = row.str('ghi_chu');
-    }
-  }
-
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      await ref.read(trainingApiProvider).put(
-        '$_sessionsPath${widget.session.id}/records/',
-        {
-          'records': [
-            for (final e in _chon.entries)
-              {
-                'sinh_vien': e.key,
-                'trang_thai': e.value.trangThai,
-                'di_tre': e.value.laDiTre,
-                'ghi_chu': _ghiChu[e.key] ?? '',
-              },
-          ],
-        },
-      );
-      if (!mounted) return;
-      showAppToast(
-        context,
-        'Đã lưu điểm danh cả lớp. Buổi chuyển sang “Đã điểm danh”.',
-      );
-      widget.onSaved();
-    } on ApiFailure catch (f) {
-      if (mounted) {
-        showAppToast(context, failureText(f, 'Không lưu được điểm danh.'));
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder<Json>(
-    future: _future,
-    builder: (context, snap) {
-      if (snap.hasError) {
-        return ListErrorCard(
-          onRetry: () {
-            final next = _fetch();
-            setState(() {
-              _future = next;
-            });
-          },
-        );
-      }
-      final d = snap.data;
-      if (d == null) return const ListSkeleton();
-      _seed(d);
-      final rows = [for (final r in d['records'] as List) Json.from(r as Map)];
-      final can = d['co_the_diem_danh'] == true;
-      final tong = d.num0('tong_so_buoi');
-      int dem(DiemDanhChon c) => _chon.values.where((v) => v == c).length;
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppColors.cardShadow,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Wrap(
-              spacing: 10,
-              runSpacing: 6,
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text(
-                  '${ngayDayDu(widget.session.str('ngay_hoc'))} · ${buoiTiet(widget.session)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: AppColors.navy,
-                  ),
-                ),
-                if (can)
-                  OutlinedButton(
-                    onPressed: () => setState(() {
-                      for (final k in _chon.keys) {
-                        _chon[k] = DiemDanhChon.coMat;
-                      }
-                    }),
-                    child: const Text('Tất cả có mặt'),
-                  ),
-              ],
-            ),
-            if (!can) ...[
-              const SizedBox(height: 10),
-              AlertBanner(
-                kind: BannerKind.info,
-                message: d.str('lop_trang_thai') != 'DANG_HOC'
-                    ? 'Chỉ điểm danh được khi lớp đang học. Bạn đang xem dữ liệu đã lưu.'
-                    : d['con_han_sua'] == false
-                    ? (d.num0('so_ngay_xin_sua') == 0
-                          ? 'Chỉ sửa được điểm danh trong ngày học. Bạn đang xem dữ liệu đã lưu.'
-                          : 'Đã quá hạn sửa điểm danh (${d.num0('so_ngay_xin_sua')} ngày kể từ buổi học). Bạn đang xem dữ liệu đã lưu.')
-                    : 'Buổi chưa tới ngày học nên chưa điểm danh được.',
-              ),
-            ],
-            const SizedBox(height: 12),
-            if (rows.isEmpty)
-              const Text(
-                'Chưa có sinh viên đăng ký lớp.',
-                style: TextStyle(color: AppColors.muted),
-              ),
-            for (final r in rows) _studentRow(r, tong, can),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 14,
-              runSpacing: 4,
-              children: [
-                for (final c in DiemDanhChon.values)
-                  Text(
-                    '${c.label} ${dem(c)}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.label,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            AppButton(
-              label: 'Lưu điểm danh',
-              height: 46,
-              loading: _saving,
-              onPressed: can && rows.isNotEmpty ? _save : null,
-            ),
-          ],
-        ),
-      );
-    },
-  );
-
-  Widget _studentRow(Json r, int tong, bool can) {
-    final id = r.num0('sinh_vien');
-    final chon = _chon[id] ?? DiemDanhChon.coMat;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.divider)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                r.str('ho_ten'),
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              Text(
-                '${r.str('ma_sv')} · Vắng KP ${r.num0('so_buoi_vang_kp')}/$tong (${(r['ty_le_vang'] as num).toStringAsFixed(0)}%)',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
-              ),
-              if (r['canh_bao_vang'] == true)
-                StatusChip.of('Nguy cơ cấm thi', StatusChip.red),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final c in DiemDanhChon.values)
-                ChoiceChip(
-                  label: Text(c.label),
-                  selected: chon == c,
-                  onSelected: can ? (_) => setState(() => _chon[id] = c) : null,
-                ),
-            ],
-          ),
-        ],
       ),
     );
   }

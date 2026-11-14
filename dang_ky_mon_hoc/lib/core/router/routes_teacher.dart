@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../features/dashboard/teacher_dashboard.dart';
 import '../../features/attendance/face/face_review_screen.dart';
 import '../../features/attendance/teacher_attendance_screen.dart';
-import '../../features/attendance/tu_diem_danh/gv_tu_diem_danh_screen.dart';
 import '../../features/grades/teacher_grades_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/profile/profile_screen.dart';
@@ -42,15 +41,9 @@ const teacherRoutes = RoleRoutes(
     RouteDef(
       '/teacher/attendance',
       'Điểm danh',
-      subtitle: 'Chọn lớp, điểm danh cả lớp và duyệt yêu cầu sửa của sinh viên',
-      builder: TeacherAttendanceScreen.new,
-    ),
-    RouteDef(
-      '/teacher/self-attendance',
-      'Tự điểm danh',
       subtitle:
-          'Mở phiên cho sinh viên tự điểm danh bằng khuôn mặt + GPS và theo dõi thời gian thực',
-      builder: GvTuDiemDanhScreen.new,
+          'Chọn lớp, mở tự điểm danh, điểm danh cả lớp và duyệt yêu cầu sửa của sinh viên',
+      builder: TeacherAttendanceScreen.new,
     ),
     RouteDef(
       '/teacher/faces',
@@ -86,11 +79,6 @@ const teacherRoutes = RoleRoutes(
     ]),
     NavGroup('HỌC VỤ', [
       NavItem('Điểm danh', '/teacher/attendance', Icons.task_alt_outlined),
-      NavItem(
-        'Tự điểm danh',
-        '/teacher/self-attendance',
-        Icons.how_to_reg_outlined,
-      ),
       NavItem('Duyệt khuôn mặt', '/teacher/faces', Icons.face_outlined),
       NavItem('Nhập điểm', '/teacher/grades', Icons.edit_outlined),
     ]),

@@ -1,5 +1,6 @@
 """API điểm danh (GV-06..09, SV-10, PDT-10): buổi sinh sẵn, lưu cả lớp, tỷ lệ vắng, yêu cầu sửa."""
 
+from django.db.models import Count, Q
 from django.http import FileResponse, Http404
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
@@ -73,7 +74,9 @@ class SessionViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     )
     def list(self, request):
         lop = _lop_xem_duoc(request.user, request.query_params.get("lop_hoc_phan"))
-        qs = lop.buoi_diem_danh.all()
+        qs = lop.buoi_diem_danh.annotate(
+            so_dang_ngo=Count("chi_tiet", filter=Q(chi_tiet__dang_ngo=True))
+        ).order_by("ngay_hoc", "buoi")  # annotate + GROUP BY bỏ Meta.ordering → ghi lại để phân trang ổn định
         page = self.paginate_queryset(qs)
         res = self.get_paginated_response(self.get_serializer(page, many=True).data)
         res.data["tong_so_buoi"] = qs.count()

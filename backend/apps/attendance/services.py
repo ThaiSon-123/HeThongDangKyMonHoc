@@ -292,7 +292,9 @@ def xu_ly_yeu_cau(request_id, gv, duyet, ghi_chu=""):
     yc.save(update_fields=["trang_thai", "nguoi_duyet", "ngay_duyet", "ghi_chu"])
     if duyet:
         att.trang_thai, att.di_tre = _chuan_hoa(yc.trang_thai_mong_muon, yc.di_tre_mong_muon)
-        att.save(update_fields=["trang_thai", "di_tre", "cap_nhat_luc"])
+        # GV đã quyết → phiên tự điểm danh đang mở không ghi đè kết quả vừa duyệt nữa.
+        att.nguoi_quyet, att.dang_ngo = gv, False
+        att.save(update_fields=["trang_thai", "di_tre", "nguoi_quyet", "dang_ngo", "cap_nhat_luc"])
     return yc
 
 

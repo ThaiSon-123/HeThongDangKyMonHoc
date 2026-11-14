@@ -101,6 +101,24 @@ Map<String, dynamic> records({bool can = true, bool conHan = true}) => {
   ],
 };
 
+/// `GET tu-diem-danh/` của buổi chưa từng mở phiên tự điểm danh (panel buổi luôn gọi thêm API này).
+Map<String, dynamic> chuaMoTuDiemDanh(int id) => {
+  'session': {
+    'id': id,
+    'mo_luc': null,
+    'het_han_luc': null,
+    'dong_luc': null,
+    'dang_mo': false,
+    'ban_kinh_m': null,
+    'tam_sai_so_m': null,
+    'kiem_tra_phong': false,
+  },
+  'dang_mo': false,
+  'dem': {'co_mat': 0, 'dang_ngo': 0, 'chua': 0},
+  'goi_y_tinh_lai_tam': false,
+  'rows': <Object>[],
+};
+
 Future<void> openTeacher(
   WidgetTester t,
   FakeAdapter api, {
@@ -135,6 +153,9 @@ FakeAdapter gvApi({Map<String, Handler> extra = const {}}) => FakeAdapter({
   }),
   'GET /attendance/requests/': (_) => reply(200, pageOf([yeuCau()])),
   'GET /attendance/sessions/11/records/': (_) => reply(200, records()),
+  for (final id in [11, 12, 13])
+    'GET /attendance/sessions/$id/tu-diem-danh/': (_) =>
+        reply(200, chuaMoTuDiemDanh(id)),
   ...extra,
 });
 
@@ -220,6 +241,64 @@ void main() {
           ),
           isTrue,
         );
+      },
+    );
+
+    testWidgets(
+      'dòng sinh viên có đơn xin sửa chờ duyệt: hiện chip, bấm sang tab Yêu cầu sửa',
+      (t) async {
+        final api = gvApi();
+        await openTeacher(t, api);
+        await tapText(t, '— Chọn lớp để bắt đầu —');
+        await t.tap(find.text('CNTT101-01 · Nhập môn lập trình').last);
+        await t.pumpAndSettle();
+        await tapText(t, 'Thứ 5, 07/01/2027');
+        // Đơn của SV2023014 (Trần Hoàng Nam) ở buổi 07/01; SV còn lại không có đơn.
+        expect(find.text('Có đơn chờ duyệt'), findsOneWidget);
+
+        await tapText(t, 'Có đơn chờ duyệt');
+        expect(find.text('Lý do: Xe hỏng, đến muộn'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'danh sách buổi: chip phiên đang mở / đã tự điểm danh / số đáng ngờ; nút Duyệt khuôn mặt có số chờ duyệt',
+      (t) async {
+        final api = gvApi(
+          extra: {
+            'GET /attendance/sessions/': (_) => reply(200, {
+              ...pageOf([
+                {
+                  ...buoi(11, '2027-01-07'),
+                  'da_mo_tu_diem_danh': true,
+                  'dang_mo_tu_diem_danh': false,
+                  'so_dang_ngo': 2,
+                },
+                {
+                  ...buoi(12, '2027-01-13', tt: 'MO'),
+                  'da_mo_tu_diem_danh': true,
+                  'dang_mo_tu_diem_danh': true,
+                  'so_dang_ngo': 0,
+                },
+                buoi(13, '2027-01-21', tt: 'MO'),
+              ]),
+              'tong_so_buoi': 3,
+            }),
+            'GET /attendance/faces/pending/': (_) => reply(200, [
+              {'id': 1},
+              {'id': 2},
+              {'id': 3},
+            ]),
+          },
+        );
+        await openTeacher(t, api);
+        expect(find.text('Duyệt khuôn mặt (3)'), findsOneWidget);
+        await tapText(t, '— Chọn lớp để bắt đầu —');
+        await t.tap(find.text('CNTT101-01 · Nhập môn lập trình').last);
+        await t.pumpAndSettle();
+        expect(find.text('Phiên đang mở'), findsOneWidget);
+        expect(find.text('Đã tự điểm danh'), findsOneWidget);
+        expect(find.text('2 đáng ngờ'), findsOneWidget);
       },
     );
 

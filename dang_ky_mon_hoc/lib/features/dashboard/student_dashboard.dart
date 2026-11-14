@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/api/page_result.dart';
 import '../../core/format.dart';
 import '../../core/theme/app_colors.dart';
+import '../../shared/widgets/alert_banner.dart';
 import '../registration/timetable_screen.dart' show clockProvider;
 import '../reports/report_widgets.dart' show LuoiStat, StatCard;
 import '../training/resource_list.dart' show ListErrorCard, ListSkeleton;
@@ -18,6 +20,7 @@ class _Data {
     this.hocPhi,
     this.diemDanh,
     this.thongBao = const [],
+    this.phienMo = const [],
   });
 
   final Json hoSo;
@@ -25,6 +28,9 @@ class _Data {
   final Json? hocPhi;
   final Json? diemDanh;
   final List<Json> thongBao;
+
+  /// Phiên tự điểm danh đang mở mà SV chưa có mặt (huy hiệu nhắc điểm danh).
+  final List<Json> phienMo;
 }
 
 /// Tổng quan sinh viên (SV-02 tóm tắt) — mockup `SV-Web-TongQuan` / `SV-App-TongQuan`: lời chào, 4 thẻ
@@ -48,6 +54,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
       hoacNull(() => api.get('/tuition/my/')),
       hoacNull(() => api.get('/attendance/my/')),
       hoacNull(() => api.list('/notifications/', pageSize: 3)),
+      hoacNull(() => api.getList('/attendance/open-sessions/')),
     ]);
     return _Data(
       hoSo: r[0]! as Json,
@@ -55,6 +62,10 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
       hocPhi: r[2] as Json?,
       diemDanh: r[3] as Json?,
       thongBao: (r[4] as PageResult<Json>?)?.items ?? const [],
+      phienMo: [
+        for (final p in (r[5] as List<Json>? ?? const <Json>[]))
+          if (p.str('trang_thai') != 'CO_MAT') p,
+      ],
     );
   }
 
@@ -99,6 +110,24 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
               phu:
                   '${hs.str('ma_sv')} · $nganh · ${hs.str('khoa_nhap_hoc')} · ${ngayDayDu(now)}',
             ),
+            if (d.phienMo.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              AlertBanner(
+                kind: BannerKind.warning,
+                title: d.phienMo.length == 1
+                    ? 'Đang có 1 phiên tự điểm danh'
+                    : 'Đang có ${d.phienMo.length} phiên tự điểm danh',
+                message:
+                    '${d.phienMo.map((p) => p.str('ma_lop')).join(', ')} — bạn chưa điểm danh.',
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => context.go('/student/attendance'),
+                  child: const Text('Điểm danh ngay'),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             LuoiStat(
               children: [

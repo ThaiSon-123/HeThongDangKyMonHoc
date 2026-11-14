@@ -9,10 +9,35 @@ from apps.training.models import TrangThaiDon
 
 
 class SessionSerializer(serializers.ModelSerializer):
+    # Chip trên danh sách buổi của GV: buổi từng / đang mở tự điểm danh và số SV đáng ngờ chờ duyệt.
+    da_mo_tu_diem_danh = serializers.SerializerMethodField()
+    dang_mo_tu_diem_danh = serializers.SerializerMethodField()
+    so_dang_ngo = serializers.SerializerMethodField()
+
     class Meta:
         model = AttendanceSession
-        fields = ["id", "lop_hoc_phan", "ngay_hoc", "buoi", "tiet_bat_dau", "trang_thai"]
+        fields = [
+            "id",
+            "lop_hoc_phan",
+            "ngay_hoc",
+            "buoi",
+            "tiet_bat_dau",
+            "trang_thai",
+            "da_mo_tu_diem_danh",
+            "dang_mo_tu_diem_danh",
+            "so_dang_ngo",
+        ]
         read_only_fields = fields
+
+    def get_da_mo_tu_diem_danh(self, obj) -> bool:
+        return obj.mo_luc is not None
+
+    def get_dang_mo_tu_diem_danh(self, obj) -> bool:
+        return obj.dang_mo_tu_diem_danh()
+
+    def get_so_dang_ngo(self, obj) -> int:
+        n = getattr(obj, "so_dang_ngo", None)  # list() đã annotate sẵn → không N+1
+        return n if n is not None else obj.chi_tiet.filter(dang_ngo=True).count()
 
 
 class SessionListSerializer(serializers.Serializer):

@@ -64,7 +64,8 @@ const studentRoutes = RoleRoutes(
     RouteDef(
       '/student/attendance',
       'Điểm danh',
-      subtitle: 'Tỷ lệ vắng, từng buổi học và yêu cầu sửa điểm danh',
+      subtitle:
+          'Tự điểm danh khi giảng viên mở phiên, tỷ lệ vắng, từng buổi học và yêu cầu sửa điểm danh',
       builder: StudentAttendanceScreen.new,
     ),
     RouteDef(
@@ -135,7 +136,6 @@ const studentRoutes = RoleRoutes(
       ),
       NavItem('Điểm', '/student/grades', Icons.star_outline),
       NavItem('Điểm danh', '/student/attendance', Icons.task_alt_outlined),
-      NavItem('Tự điểm danh', '/student/checkin', Icons.how_to_reg_outlined),
       NavItem(
         'Học phí',
         '/student/tuition',

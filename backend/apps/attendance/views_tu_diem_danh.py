@@ -84,6 +84,7 @@ class CheckinSerializer(serializers.Serializer):
 class DatTrangThaiSerializer(serializers.Serializer):
     sinh_vien = serializers.ListField(child=serializers.IntegerField(), min_length=1)
     trang_thai = serializers.ChoiceField(choices=TrangThaiDiemDanh.choices)
+    di_tre = serializers.BooleanField(required=False, default=False)  # chỉ có nghĩa khi CO_MAT
 
 
 class QuyetLuotSerializer(serializers.Serializer):
@@ -297,7 +298,7 @@ class TuDiemDanhView(APIView):
         s = DatTrangThaiSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         d = s.validated_data
-        n = tdd.quyet_tay(request.user, pk, d["sinh_vien"], d["trang_thai"])
+        n = tdd.quyet_tay(request.user, pk, d["sinh_vien"], d["trang_thai"], d["di_tre"])
         write_audit(
             request,
             HanhDong.UPDATE,
@@ -307,6 +308,7 @@ class TuDiemDanhView(APIView):
                 "hanh_dong": "dat_trang_thai",
                 "sinh_vien": d["sinh_vien"],
                 "trang_thai": d["trang_thai"],
+                "di_tre": d["di_tre"],
             },
         )
         kq = tdd.danh_sach_phien(request.user, pk)
