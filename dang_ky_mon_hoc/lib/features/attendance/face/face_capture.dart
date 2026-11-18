@@ -66,10 +66,18 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     if (cam == null || _dangChup) return;
     setState(() => _dangChup = true);
     try {
+      var buocThu = 0;
       for (final (loiNhac, soKhung) in widget.chuoi!) {
         setState(() => _loiNhac = loiNhac);
-        await Future<void>.delayed(const Duration(milliseconds: 900));
+        // Cho người dùng kịp đọc lời nhắc và làm hành động: bước đầu (nhìn thẳng) chờ 1 giây, các bước sau
+        // (quay đầu) chờ 2 giây; các khung cách nhau 0,5 giây để bắt được lúc đã quay xong.
+        await Future<void>.delayed(
+          Duration(milliseconds: buocThu++ == 0 ? 1000 : 2000),
+        );
         for (var i = 0; i < soKhung; i++) {
+          if (i > 0) {
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+          }
           _anh.add(await (await cam.takePicture()).readAsBytes());
         }
       }
