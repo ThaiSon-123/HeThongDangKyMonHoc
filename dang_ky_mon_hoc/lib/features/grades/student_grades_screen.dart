@@ -12,7 +12,7 @@ import '../training/training_api.dart';
 String _d(Object? v, [String empty = '—']) => v == null ? empty : v.toString();
 
 const _nau = Color(0xFFB26A00);
-const _nenO = Color(0xFFF4F5FA);
+Color get _nenO => AppColors.tint(const Color(0xFFF4F5FA));
 
 /// Khoảng GPA thang 4 của từng xếp loại (BR-25f) — hiện dưới thẻ Xếp loại.
 const _khoangXepLoai = <String, String>{
@@ -101,7 +101,7 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
             _tongKet(d, yeuCau, compact),
             const SizedBox(height: 16),
             if (stats.isEmpty)
-              const _Card(
+              _Card(
                 child: Text(
                   'Chưa có học kỳ nào. Điểm hiển thị sau khi Phòng đào tạo duyệt.',
                   style: TextStyle(color: AppColors.muted),
@@ -192,7 +192,7 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppColors.cardShadow,
         ),
@@ -211,7 +211,7 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
                 children: [
                   Text(
                     s.str('ten_hk'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.navy,
@@ -235,7 +235,7 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
                   compact ? 16 : 20,
                   16,
                 ),
-                child: const Text(
+                child: Text(
                   'Chưa có môn nào trong học kỳ này.',
                   style: TextStyle(color: AppColors.muted),
                 ),
@@ -252,7 +252,7 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
 
   /// Web: bảng điểm — dải tiêu đề xám, tên môn đậm, chip điểm chữ.
   Widget _bang(List<Json> rows) {
-    const dau = TextStyle(
+    final dau = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w700,
       color: AppColors.muted,
@@ -277,13 +277,13 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
     return Table(
       columnWidths: cot,
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      border: const TableBorder(
+      border: TableBorder(
         horizontalInside: BorderSide(color: AppColors.divider),
       ),
       children: [
         TableRow(
-          decoration: const BoxDecoration(
-            color: Color(0xFFF7F8FC),
+          decoration: BoxDecoration(
+            color: AppColors.tint(const Color(0xFFF7F8FC)),
             border: Border(
               top: BorderSide(color: AppColors.divider),
               bottom: BorderSide(color: AppColors.divider),
@@ -313,7 +313,7 @@ class _StudentGradesScreenState extends ConsumerState<StudentGradesScreen> {
             children: [
               o(
                 g.str('ma_mon'),
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
               o(
                 g.str('ten_mon'),
@@ -351,7 +351,7 @@ Widget _chuChip(String chu) {
 /// App: mỗi môn một dòng trong thẻ học kỳ (bảng 10 cột không vừa điện thoại).
 Widget _theMon(Json g) => Container(
   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-  decoration: const BoxDecoration(
+  decoration: BoxDecoration(
     border: Border(top: BorderSide(color: AppColors.divider)),
   ),
   child: Row(
@@ -367,12 +367,12 @@ Widget _theMon(Json g) => Container(
             ),
             Text(
               '${g.str('ma_mon')} · ${_d(g['tin_chi'])} TC',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
             const SizedBox(height: 4),
             Text(
               'QT ${_d(g['diem_qua_trinh'])} · GK ${_d(g['diem_giua_ky'])} · CK ${_d(g['diem_cuoi_ky'])}',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ],
         ),
@@ -389,7 +389,7 @@ Widget _theMon(Json g) => Container(
           if (g['gpa_thang_4'] != null)
             Text(
               'Hệ 4: ${g['gpa_thang_4']}',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
         ],
       ),
@@ -399,18 +399,12 @@ Widget _theMon(Json g) => Container(
 
 /// Thẻ tổng kết: nhãn · giá trị lớn (+ phụ " / 130") · ghi chú.
 class _TheTong extends StatelessWidget {
-  const _TheTong(
-    this.nhan,
-    this.giaTri,
-    this.ghiChu, {
-    this.mau = AppColors.navy,
-    this.phu,
-  });
+  const _TheTong(this.nhan, this.giaTri, this.ghiChu, {this.mau, this.phu});
 
   final String nhan;
   final String giaTri;
   final String ghiChu;
-  final Color mau;
+  final Color? mau;
   final String? phu;
 
   @override
@@ -418,10 +412,7 @@ class _TheTong extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          nhan,
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
-        ),
+        Text(nhan, style: TextStyle(fontSize: 13, color: AppColors.muted)),
         const SizedBox(height: 4),
         Row(
           crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -432,21 +423,18 @@ class _TheTong extends StatelessWidget {
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
-                color: mau,
+                color: mau ?? AppColors.navy,
               ),
             ),
             if (phu != null)
               Text(
                 phu!,
-                style: const TextStyle(fontSize: 18, color: AppColors.muted),
+                style: TextStyle(fontSize: 18, color: AppColors.muted),
               ),
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          ghiChu,
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
+        Text(ghiChu, style: TextStyle(fontSize: 12, color: AppColors.muted)),
       ],
     ),
   );
@@ -454,12 +442,12 @@ class _TheTong extends StatelessWidget {
 
 /// Ô số liệu nhỏ của một học kỳ.
 class _O extends StatelessWidget {
-  const _O(this.nhan, this.giaTri, this.compact, {this.mau = AppColors.navy});
+  const _O(this.nhan, this.giaTri, this.compact, {this.mau});
 
   final String nhan;
   final String giaTri;
   final bool compact;
-  final Color mau;
+  final Color? mau;
 
   @override
   Widget build(BuildContext context) => Expanded(
@@ -483,7 +471,7 @@ class _O extends StatelessWidget {
             child: Text(
               nhan,
               maxLines: 1,
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ),
           const SizedBox(height: 2),
@@ -496,7 +484,7 @@ class _O extends StatelessWidget {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w700,
-                color: mau,
+                color: mau ?? AppColors.navy,
               ),
             ),
           ),
@@ -516,7 +504,7 @@ class _Card extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),

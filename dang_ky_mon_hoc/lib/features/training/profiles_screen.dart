@@ -170,7 +170,7 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Tài khoản chưa có hồ sơ',
                       style: sectionTitleStyle,
@@ -178,10 +178,7 @@ class _ProfilesScreenState extends ConsumerState<ProfilesScreen> {
                   ),
                   Text(
                     '${items.length} tài khoản',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
                   ),
                 ],
               ),

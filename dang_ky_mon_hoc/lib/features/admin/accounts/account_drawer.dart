@@ -52,7 +52,7 @@ class _Drawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       elevation: 16,
       child: SizedBox(
         width: width < 560 ? width : 520,
@@ -61,8 +61,12 @@ class _Drawer extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.fromLTRB(24, 22, 16, 16),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFFE3E6EE))),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: AppColors.tint(const Color(0xFFE3E6EE)),
+                  ),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,7 +77,7 @@ class _Drawer extends StatelessWidget {
                       children: [
                         Text(
                           user.fullName.isEmpty ? user.username : user.fullName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
                             color: AppColors.navy,
@@ -82,7 +86,7 @@ class _Drawer extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           user.username,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             color: AppColors.muted,
                             fontFamily: 'monospace',
@@ -133,9 +137,9 @@ class _Drawer extends StatelessWidget {
                       const SizedBox(height: 12),
                       _Rows(user.profileRows, keyWidth: 170, boldValue: true),
                       const SizedBox(height: 16),
-                      const _Note(
+                      _Note(
                         'Chỉ xem. Chỉnh sửa hồ sơ tại Phòng đào tạo.',
-                        bg: Color(0xFFE8EAF6),
+                        bg: AppColors.tint(const Color(0xFFE8EAF6)),
                         fg: AppColors.primaryDark,
                       ),
                     ],
@@ -179,10 +183,7 @@ class _Rows extends StatelessWidget {
                   width: keyWidth,
                   child: Text(
                     k,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 14, color: AppColors.muted),
                   ),
                 ),
                 Expanded(

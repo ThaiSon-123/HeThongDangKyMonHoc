@@ -184,7 +184,7 @@ class _FilterBar extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
@@ -205,7 +205,7 @@ class _FilterBar extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Vai trò',
                 style: TextStyle(
                   fontSize: 13,
@@ -301,7 +301,7 @@ class _RoleChipButton extends StatelessWidget {
           constraints: const BoxConstraints(minHeight: 40),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: on ? AppColors.primary : Colors.white,
+            color: on ? AppColors.primary : AppColors.surface,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: on ? AppColors.primary : AppColors.border,
@@ -353,7 +353,7 @@ class _TableCard extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
@@ -386,7 +386,7 @@ class _TableCard extends StatelessWidget {
             },
           ),
           if (page.items.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 40, horizontal: 24),
               child: Center(
                 child: Text(
@@ -397,7 +397,7 @@ class _TableCard extends StatelessWidget {
             ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.divider)),
             ),
             child: Wrap(
@@ -408,7 +408,7 @@ class _TableCard extends StatelessWidget {
               children: [
                 Text(
                   '${page.count} bản ghi',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
                 _Pager(filter: filter, pages: pages),
               ],
@@ -442,7 +442,7 @@ class _Pager extends ConsumerWidget {
         ),
         Text(
           'Trang ${filter.page}/$pages · ${AccountsFilter.pageSize} dòng/trang',
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         IconButton(
           tooltip: 'Trang sau',
@@ -478,7 +478,7 @@ class _HeaderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFFAFAFA),
+      color: AppColors.tint(const Color(0xFFFAFAFA)),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
@@ -488,7 +488,7 @@ class _HeaderRow extends StatelessWidget {
               i,
               Text(
                 _titles[i].toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: AppColors.muted,
@@ -523,9 +523,9 @@ class _UserRow extends StatelessWidget {
   Widget _profileCell() {
     switch (user.hasProfile) {
       case null:
-        return const Text('—', style: TextStyle(color: AppColors.border));
+        return Text('—', style: TextStyle(color: AppColors.border));
       case true:
-        return const Text(
+        return Text(
           '✓ Đã có',
           style: TextStyle(
             color: AppColors.success,
@@ -560,7 +560,7 @@ class _UserRow extends StatelessWidget {
       Text(
         user.email,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 13, color: AppColors.label),
+        style: TextStyle(fontSize: 13, color: AppColors.label),
       ),
       Align(alignment: Alignment.centerLeft, child: roleChip(user.role)),
       _profileCell(),
@@ -594,7 +594,7 @@ class _UserRow extends StatelessWidget {
       ),
       Text(
         lastLoginText(user),
-        style: const TextStyle(fontSize: 13, color: AppColors.label),
+        style: TextStyle(fontSize: 13, color: AppColors.label),
       ),
       // Hai nút co lại vừa cột (không bao giờ tràn), canh phải.
       FittedBox(
@@ -615,8 +615,10 @@ class _UserRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
-          color: user.isLocked ? const Color(0xFFFFF8F8) : Colors.white,
-          border: const Border(top: BorderSide(color: AppColors.divider)),
+          color: user.isLocked
+              ? AppColors.tint(const Color(0xFFFFF8F8))
+              : AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.divider)),
         ),
         child: Row(
           children: [
@@ -646,7 +648,7 @@ class _SmallButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          side: const BorderSide(color: Color(0xFFC4C9D4)),
+          side: BorderSide(color: AppColors.tint(const Color(0xFFC4C9D4))),
           foregroundColor: AppColors.primary,
           textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
@@ -666,7 +668,7 @@ class _Skeleton extends StatelessWidget {
       height: h,
       width: w,
       decoration: BoxDecoration(
-        color: const Color(0xFFECEFF5),
+        color: AppColors.tint(const Color(0xFFECEFF5)),
         borderRadius: BorderRadius.circular(10),
       ),
     );
@@ -675,7 +677,7 @@ class _Skeleton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppColors.cardShadow,
         ),
@@ -704,7 +706,7 @@ class _ErrorCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
@@ -714,11 +716,11 @@ class _ErrorCard extends StatelessWidget {
             width: 56,
             height: 56,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFFDECEA),
+              color: AppColors.tint(const Color(0xFFFDECEA)),
             ),
-            child: const Text(
+            child: Text(
               '!',
               style: TextStyle(
                 fontSize: 28,
@@ -728,7 +730,7 @@ class _ErrorCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'Không tải được dữ liệu',
             style: TextStyle(
               fontSize: 18,
@@ -737,7 +739,7 @@ class _ErrorCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Kết nối bị gián đoạn hoặc máy chủ đang bận. Hãy thử lại sau ít giây.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: AppColors.muted, height: 1.5),

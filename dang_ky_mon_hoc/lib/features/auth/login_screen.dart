@@ -199,9 +199,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE3E6EE)),
+                    border: Border.all(
+                      color: AppColors.tint(const Color(0xFFE3E6EE)),
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x0F101828),
@@ -221,14 +223,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Dùng tài khoản do nhà trường cấp.',
                         style: TextStyle(fontSize: 14, color: AppColors.muted),
                       ),
                       const SizedBox(height: 20),
                       _form(wide: true),
                       const SizedBox(height: 20),
-                      const Text(
+                      Text(
                         'Giáo viên và sinh viên dùng được cả web lẫn ứng dụng. Quản trị, Phòng đào tạo và Kế toán chỉ dùng trên web.',
                         style: TextStyle(
                           fontSize: 12,
@@ -294,8 +296,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.vertical(
                         top: Radius.circular(24),
                       ),
@@ -352,7 +354,7 @@ class _LogoTile extends StatelessWidget {
       child: Text(
         'ĐK',
         style: TextStyle(
-          color: AppColors.navy,
+          color: AppColors.navyBrand,
           fontWeight: FontWeight.w700,
           fontSize: fontSize,
         ),

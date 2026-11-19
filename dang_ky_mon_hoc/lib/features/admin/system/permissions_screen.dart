@@ -65,7 +65,7 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 alignment: WrapAlignment.spaceBetween,
                 children: [
-                  const Text.rich(
+                  Text.rich(
                     TextSpan(
                       children: [
                         TextSpan(text: 'Quyền theo vai trò là '),
@@ -130,7 +130,7 @@ class _Legend extends StatelessWidget {
     children: [
       icon,
       const SizedBox(width: 8),
-      Text(label, style: const TextStyle(fontSize: 13, color: AppColors.label)),
+      Text(label, style: TextStyle(fontSize: 13, color: AppColors.label)),
     ],
   );
 }
@@ -148,7 +148,7 @@ class _Matrix extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
         color: color,
-        border: const Border(top: BorderSide(color: AppColors.divider)),
+        border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Row(
         children: [
@@ -171,14 +171,14 @@ class _Matrix extends StatelessWidget {
           row(
             Text(
               nhom.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
             ),
             [for (final _ in roles) const SizedBox.shrink()],
-            color: const Color(0xFFF1F3FA),
+            color: AppColors.tint(const Color(0xFFF1F3FA)),
           ),
         );
       }
@@ -202,7 +202,7 @@ class _Matrix extends StatelessWidget {
             child: Column(
               children: [
                 row(
-                  const Text(
+                  Text(
                     'QUYỀN',
                     style: TextStyle(
                       fontSize: 12,
@@ -214,7 +214,7 @@ class _Matrix extends StatelessWidget {
                     for (final r in roles)
                       Text(
                         _vaiTro[r] ?? r,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: AppColors.muted,
@@ -252,7 +252,7 @@ class _Yes extends StatelessWidget {
         color: AppColors.successBg,
         borderRadius: BorderRadius.circular(7),
       ),
-      child: const Text(
+      child: Text(
         '✓',
         style: TextStyle(
           color: AppColors.success,
@@ -275,13 +275,10 @@ class _No extends StatelessWidget {
       height: 26,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: const Color(0xFFECEFF1),
+        color: AppColors.tint(const Color(0xFFECEFF1)),
         borderRadius: BorderRadius.circular(7),
       ),
-      child: const Text(
-        '✕',
-        style: TextStyle(color: AppColors.muted, fontSize: 13),
-      ),
+      child: Text('✕', style: TextStyle(color: AppColors.muted, fontSize: 13)),
     ),
   );
 }

@@ -219,7 +219,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppColors.cardShadow,
         ),
@@ -229,7 +229,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             if (_coTheGui)
               Container(
                 padding: EdgeInsets.fromLTRB(compact ? 6 : 14, 0, 16, 0),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: AppColors.divider)),
                 ),
                 child: Wrap(
@@ -259,7 +259,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Widget _trong(String text) => Padding(
     padding: const EdgeInsets.all(32),
     child: Center(
-      child: Text(text, style: const TextStyle(color: AppColors.muted)),
+      child: Text(text, style: TextStyle(color: AppColors.muted)),
     ),
   );
 
@@ -280,7 +280,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.divider)),
             ),
             child: Wrap(
@@ -312,10 +312,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     ),
                     Text(
                       '${d.num0('chua_doc')} chưa đọc',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.muted,
-                      ),
+                      style: TextStyle(fontSize: 13, color: AppColors.muted),
                     ),
                   ],
                 ),
@@ -343,7 +340,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final compact = isCompact(context);
     final gio = Text(
       formatIso(n.str('ngay_gui')),
-      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+      style: TextStyle(fontSize: 12, color: AppColors.muted),
     );
     return InkWell(
       onTap: () => _read(n),
@@ -354,8 +351,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           vertical: 14,
         ),
         decoration: BoxDecoration(
-          color: chua ? const Color(0xFFF6F7FD) : Colors.white,
-          border: const Border(bottom: BorderSide(color: AppColors.divider)),
+          color: chua
+              ? AppColors.tint(const Color(0xFFF6F7FD))
+              : AppColors.surface,
+          border: Border(bottom: BorderSide(color: AppColors.divider)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,18 +399,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     n.str('noi_dung'),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.label,
-                    ),
+                    style: TextStyle(fontSize: 14, color: AppColors.label),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Từ ${n.str('nguoi_gui_ten')}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                   if (compact) ...[const SizedBox(height: 2), gio],
                 ],
@@ -447,7 +440,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 horizontal: compact ? 16 : 20,
                 vertical: 14,
               ),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: AppColors.divider)),
               ),
               child: Column(
@@ -472,10 +465,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     n.str('noi_dung'),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.label,
-                    ),
+                    style: TextStyle(fontSize: 14, color: AppColors.label),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -485,10 +475,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     children: [
                       Text(
                         'Tới ${_nguoiNhanLabel(n)} · ${formatIso(n.str('ngay_gui'))}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.muted,
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                       if (n.str('trang_thai') == 'DA_GUI')
                         OutlinedButton(

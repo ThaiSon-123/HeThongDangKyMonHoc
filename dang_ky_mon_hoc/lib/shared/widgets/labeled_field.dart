@@ -58,7 +58,7 @@ class LabeledField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: AppColors.label,
@@ -101,7 +101,7 @@ class LabeledField extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               helper!,
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ),
         if (hasError)
@@ -109,7 +109,7 @@ class LabeledField extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.danger,

@@ -149,7 +149,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
@@ -223,7 +223,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     if (hocKy.length < 2) {
       return Text(
         d.str('ten_hk'),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
           color: AppColors.navy,
@@ -384,7 +384,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
@@ -419,7 +419,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                                 ),
                                 Text(
                                   _dm(mon.add(Duration(days: i))),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 11,
                                     color: AppColors.muted,
                                   ),
@@ -454,7 +454,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                                 padding: const EdgeInsets.only(top: 8),
                                 child: Text(
                                   'Tiết $t',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 10,
                                     color: AppColors.muted,
                                   ),
@@ -473,7 +473,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                       ],
                     ),
                   ),
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
                       'Sáng 1–5 · Chiều 6–10 · Tối 11–15',
@@ -499,7 +499,7 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
               boxShadow: AppColors.cardShadow,
               border: Border(
@@ -521,12 +521,12 @@ class _TimetableScreenState extends ConsumerState<TimetableScreen> {
                 ),
                 Text(
                   '${l.str('ma_lop')} · GV ${l.str('giao_vien_ten')}',
-                  style: const TextStyle(fontSize: 13, color: AppColors.label),
+                  style: TextStyle(fontSize: 13, color: AppColors.label),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${lichText(l['lich_hoc'] as List)} · ${phongText(l['lich_hoc'] as List)}',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ],
             ),
@@ -596,7 +596,7 @@ class _Empty extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
@@ -604,17 +604,14 @@ class _Empty extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: AppColors.navy,
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          message,
-          style: const TextStyle(fontSize: 14, color: AppColors.muted),
-        ),
+        Text(message, style: TextStyle(fontSize: 14, color: AppColors.muted)),
       ],
     ),
   );
@@ -635,7 +632,7 @@ class NhacHocPhi extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
             boxShadow: AppColors.cardShadow,
           ),
@@ -644,11 +641,11 @@ class NhacHocPhi extends StatelessWidget {
               Container(
                 width: 80,
                 height: 80,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.errorBannerBg,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.lock_clock_outlined,
                   size: 40,
                   color: AppColors.danger,
@@ -667,7 +664,7 @@ class NhacHocPhi extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: AppColors.muted,
                   height: 1.5,

@@ -154,7 +154,7 @@ class _FinanceReportsScreenState extends ConsumerState<FinanceReportsScreen> {
           },
         ),
         const SizedBox(height: 24),
-        const Text('Chi tiết theo sinh viên', style: sectionTitleStyle),
+        Text('Chi tiết theo sinh viên', style: sectionTitleStyle),
         const SizedBox(height: 12),
         ResourceList(
           controller: _ctl,
@@ -261,9 +261,7 @@ class _Summary extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Expanded(
-                    child: Text('Theo ngành', style: sectionTitleStyle),
-                  ),
+                  Expanded(child: Text('Theo ngành', style: sectionTitleStyle)),
                   _legend('Phải thu', phaiThuColor),
                   const SizedBox(width: 16),
                   _legend('Đã thu', AppColors.primary),
@@ -271,7 +269,7 @@ class _Summary extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               if (nganh.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: Text(
                     'Chưa có học phí nào trong phạm vi này.',
@@ -313,7 +311,7 @@ class _Summary extends StatelessWidget {
         decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
       const SizedBox(width: 6),
-      Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+      Text(label, style: TextStyle(fontSize: 12, color: AppColors.muted)),
     ],
   );
 }

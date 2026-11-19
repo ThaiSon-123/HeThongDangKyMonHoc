@@ -93,14 +93,14 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
           ),
           Text(
             '${formatIso(r.str('thoi_gian'))}${r['ip'] != null ? ' · IP ${r.str('ip')}' : ''}',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF4F5FA),
+              color: AppColors.tint(const Color(0xFFF4F5FA)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: SelectableText(
@@ -211,7 +211,7 @@ class _AuditLogScreenState extends ConsumerState<AuditLogScreen> {
               Text(
                 tomTat(r),
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: AppColors.label),
+                style: TextStyle(fontSize: 12, color: AppColors.label),
               ),
             ],
           ),

@@ -145,7 +145,7 @@ class _StudentAttendanceScreenState
                   else
                     Text(
                       d.my.str('ten_hk'),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                         color: AppColors.navy,
@@ -241,7 +241,7 @@ class _StudentAttendanceScreenState
         Container(
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: AppColors.cardShadow,
           ),
@@ -249,7 +249,7 @@ class _StudentAttendanceScreenState
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: AppColors.divider)),
                 ),
                 child: Row(
@@ -275,13 +275,13 @@ class _StudentAttendanceScreenState
                   // Chi tiết mở ngay dưới buổi vừa bấm (bấm lại để đóng).
                   if (_buoi?.num0('session') == b.num0('session'))
                     Container(
-                      color: const Color(0xFFF7F8FC),
+                      color: AppColors.tint(const Color(0xFFF7F8FC)),
                       padding: EdgeInsets.all(compact ? 8 : 16),
                       child: _detail(lop, _buoi!, d.my.num0('so_ngay_xin_sua')),
                     ),
                 ]
               else if (yeuCau.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(32),
                   child: Center(
                     child: Text(
@@ -313,8 +313,8 @@ class _StudentAttendanceScreenState
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: le, vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEEF0FA) : null,
-          border: const Border(bottom: BorderSide(color: AppColors.divider)),
+          color: selected ? AppColors.tint(const Color(0xFFEEF0FA)) : null,
+          border: Border(bottom: BorderSide(color: AppColors.divider)),
         ),
         child: Row(
           children: [
@@ -328,10 +328,7 @@ class _StudentAttendanceScreenState
                   ),
                   Text(
                     buoiTiet(b),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -368,7 +365,7 @@ class _StudentAttendanceScreenState
     final daDiemDanh = buoi.where((b) => b['trang_thai'] != null).length;
     const nau = Color(0xFFB26A00);
     final compact = isCompact(context);
-    Widget o(String nhan, int v, {Color mau = AppColors.navy}) => Expanded(
+    Widget o(String nhan, int v, {Color? mau}) => Expanded(
       child: Container(
         padding: EdgeInsets.fromLTRB(
           compact ? 10 : 16,
@@ -377,7 +374,7 @@ class _StudentAttendanceScreenState
           12,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFFF4F5FA),
+          color: AppColors.tint(const Color(0xFFF4F5FA)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -389,7 +386,7 @@ class _StudentAttendanceScreenState
               child: Text(
                 nhan,
                 maxLines: 1,
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
             const SizedBox(height: 2),
@@ -398,7 +395,7 @@ class _StudentAttendanceScreenState
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: mau,
+                color: mau ?? AppColors.navy,
               ),
             ),
           ],
@@ -496,7 +493,7 @@ class _StudentAttendanceScreenState
         children: [
           Text(
             ngayDayDu(b.str('ngay_hoc')),
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 16,
               color: AppColors.navy,
@@ -504,7 +501,7 @@ class _StudentAttendanceScreenState
           ),
           Text(
             '${buoiText(b.str('buoi'))} · tiết ${b.num0('tiet_bat_dau')}',
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
           ),
           const SizedBox(height: 10),
           Row(
@@ -522,17 +519,17 @@ class _StudentAttendanceScreenState
           ],
           const SizedBox(height: 12),
           if (chuaDiemDanh)
-            const Text(
+            Text(
               'Buổi chưa diễn ra nên chưa có điểm danh.',
               style: TextStyle(color: AppColors.muted),
             )
           else if (cho)
-            const Text(
+            Text(
               'Yêu cầu sửa của bạn đang chờ giáo viên duyệt.',
               style: TextStyle(color: AppColors.muted),
             )
           else if (dongLop)
-            const Text(
+            Text(
               'Lớp đã đóng nên không thể gửi yêu cầu sửa điểm danh.',
               style: TextStyle(color: AppColors.muted),
             )
@@ -541,7 +538,7 @@ class _StudentAttendanceScreenState
               soNgayXinSua == 0
                   ? 'Chỉ được xin sửa điểm danh trong ngày học.'
                   : 'Đã quá hạn xin sửa điểm danh ($soNgayXinSua ngày kể từ buổi học).',
-              style: const TextStyle(color: AppColors.muted),
+              style: TextStyle(color: AppColors.muted),
             )
           else
             FilledButton(
@@ -586,16 +583,16 @@ class _StudentAttendanceScreenState
           Text('Đổi: ${doiText(r)}'),
           Text(
             'Lý do: ${r.str('ly_do')}',
-            style: const TextStyle(color: AppColors.label),
+            style: TextStyle(color: AppColors.label),
           ),
           if (r.str('ghi_chu').isNotEmpty)
             Text(
               'Giáo viên: ${r.str('ghi_chu')}',
-              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
             ),
           Text(
             '${r['minh_chung'] != null ? 'Có minh chứng · ' : ''}Gửi lúc ${formatIso(r.str('ngay_gui'))}',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
         ],
       ),
@@ -701,7 +698,7 @@ class _RequestDialogState extends ConsumerState<_RequestDialog> {
       children: [
         Text(
           ngayDayDu(widget.buoi.str('ngay_hoc')),
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         const SizedBox(height: 12),
         LabeledDropdown<DiemDanhChon?>(
@@ -722,7 +719,7 @@ class _RequestDialogState extends ConsumerState<_RequestDialog> {
           enabled: !_loading,
         ),
         const SizedBox(height: 14),
-        const Text(
+        Text(
           'Minh chứng (không bắt buộc)',
           style: TextStyle(
             fontSize: 13,
@@ -739,7 +736,7 @@ class _RequestDialogState extends ConsumerState<_RequestDialog> {
               onPressed: _loading ? null : _pick,
               child: const Text('Chọn ảnh hoặc PDF'),
             ),
-            const Text(
+            Text(
               'Tối đa 5 MB',
               style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
@@ -760,10 +757,7 @@ class _RequestDialogState extends ConsumerState<_RequestDialog> {
 
   Widget _err(String m) => Padding(
     padding: const EdgeInsets.only(top: 6),
-    child: Text(
-      m,
-      style: const TextStyle(fontSize: 12, color: AppColors.danger),
-    ),
+    child: Text(m, style: TextStyle(fontSize: 12, color: AppColors.danger)),
   );
 }
 
@@ -777,7 +771,7 @@ class _Card extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
@@ -797,7 +791,7 @@ class _Hint extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: AppColors.navy,
@@ -807,7 +801,7 @@ class _Hint extends StatelessWidget {
         Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14, color: AppColors.muted),
+          style: TextStyle(fontSize: 14, color: AppColors.muted),
         ),
       ],
     ),

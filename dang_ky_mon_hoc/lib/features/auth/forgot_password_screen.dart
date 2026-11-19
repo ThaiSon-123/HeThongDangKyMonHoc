@@ -151,7 +151,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       ? AppColors.success
                       : i + 1 == _step
                       ? AppColors.primary
-                      : const Color(0xFFECEFF1),
+                      : AppColors.tint(const Color(0xFFECEFF1)),
                 ),
                 child: Text(
                   i + 1 < _step ? '✓' : '${i + 1}',
@@ -197,7 +197,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               ),
               const SizedBox(height: 6),
             ],
-            const Text(
+            Text(
               'Nhập email gắn với tài khoản. Chúng tôi sẽ gửi mã xác thực 6 số để bạn đặt lại mật khẩu.',
               style: TextStyle(
                 fontSize: 14,
@@ -320,15 +320,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               Container(
                 width: compact ? 72 : 64,
                 height: compact ? 72 : 64,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.successBg,
                 ),
-                child: const Icon(
-                  Icons.check,
-                  size: 34,
-                  color: AppColors.success,
-                ),
+                child: Icon(Icons.check, size: 34, color: AppColors.success),
               ),
               const SizedBox(height: 14),
               const Text(
@@ -336,7 +332,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'Các phiên đăng nhập cũ đã bị đăng xuất. Hãy đăng nhập bằng mật khẩu mới.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -407,9 +403,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             child: Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE3E6EE)),
+                border: Border.all(
+                  color: AppColors.tint(const Color(0xFFE3E6EE)),
+                ),
                 boxShadow: const [
                   BoxShadow(
                     color: Color(0x0F101828),

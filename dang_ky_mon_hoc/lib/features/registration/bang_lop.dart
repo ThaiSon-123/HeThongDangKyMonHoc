@@ -47,7 +47,7 @@ class BangLop extends StatelessWidget {
 
   final List<DongLop> dong;
 
-  static const _dau = TextStyle(
+  static TextStyle get _dau => TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w700,
     color: AppColors.muted,
@@ -77,12 +77,12 @@ class BangLop extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
           child: Row(
             children: [
-              cot(3, const Text('MÃ LỚP', style: _dau)),
-              cot(3, const Text('GIÁO VIÊN', style: _dau)),
-              cot(3, const Text('LỊCH HỌC', style: _dau)),
-              if (coThoiGian) cot(3, const Text('THỜI GIAN HỌC', style: _dau)),
-              cot(2, const Text('PHÒNG', style: _dau)),
-              cot(3, const Text('SĨ SỐ', style: _dau)),
+              cot(3, Text('MÃ LỚP', style: _dau)),
+              cot(3, Text('GIÁO VIÊN', style: _dau)),
+              cot(3, Text('LỊCH HỌC', style: _dau)),
+              if (coThoiGian) cot(3, Text('THỜI GIAN HỌC', style: _dau)),
+              cot(2, Text('PHÒNG', style: _dau)),
+              cot(3, Text('SĨ SỐ', style: _dau)),
               if (coNut) const SizedBox(width: 132),
             ],
           ),
@@ -92,7 +92,7 @@ class BangLop extends StatelessWidget {
             opacity: d.mo ? 0.45 : 1,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.divider)),
               ),
               child: Row(
@@ -164,7 +164,7 @@ class BangLop extends StatelessWidget {
     opacity: d.mo ? 0.45 : 1,
     child: Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Column(
@@ -183,12 +183,12 @@ class BangLop extends StatelessWidget {
           Text(d.giaoVien, style: const TextStyle(fontSize: 13)),
           Text(
             '${d.lich} · ${d.phong}',
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
           ),
           if (d.thoiGian != null)
             Text(
               'Học: ${d.thoiGian}',
-              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
             ),
           if (d.siSo != null && d.siSoToiDa != null || d.hanhDong != null) ...[
             const SizedBox(height: 8),
@@ -231,7 +231,7 @@ class TieuDeMon extends StatelessWidget {
         ? null
         : Text(
             maMon!,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'monospace',
               fontSize: 12,
               color: AppColors.muted,

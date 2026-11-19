@@ -71,7 +71,7 @@ class StatCard extends StatelessWidget {
     width: width ?? (isCompact(context) ? soCot2(context, 16) : 200),
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
       border: accent == null
@@ -81,10 +81,7 @@ class StatCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
-        ),
+        Text(label, style: TextStyle(fontSize: 13, color: AppColors.muted)),
         const SizedBox(height: 6),
         // Số tiền dài (vd 40.970.000 ₫) thu nhỏ vừa thẻ thay vì xuống dòng.
         FittedBox(
@@ -102,10 +99,7 @@ class StatCard extends StatelessWidget {
         ),
         if (note != null) ...[
           const SizedBox(height: 4),
-          Text(
-            note!,
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
-          ),
+          Text(note!, style: TextStyle(fontSize: 12, color: AppColors.muted)),
         ],
       ],
     ),

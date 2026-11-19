@@ -162,7 +162,7 @@ class _PdtDashboardState extends ConsumerState<PdtDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Học kỳ đang chọn', style: sectionTitleStyle),
+                      Text('Học kỳ đang chọn', style: sectionTitleStyle),
                       const SizedBox(height: 10),
                       _thongTin(
                         'Thời gian',
@@ -284,14 +284,14 @@ class _PdtDashboardState extends ConsumerState<PdtDashboard> {
     margin: const EdgeInsets.only(bottom: 10),
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: const Color(0xFFF4F5FA),
+      color: AppColors.tint(const Color(0xFFF4F5FA)),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
       children: [
         Text(
           '${v.so}',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.w700,
             color: AppColors.navy,
@@ -306,7 +306,7 @@ class _PdtDashboardState extends ConsumerState<PdtDashboard> {
               if (v.chiTiet != null)
                 Text(
                   v.chiTiet!,
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
             ],
           ),
@@ -327,7 +327,7 @@ class _PdtDashboardState extends ConsumerState<PdtDashboard> {
           width: 130,
           child: Text(
             nhan,
-            style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            style: TextStyle(color: AppColors.muted, fontSize: 13),
           ),
         ),
         Expanded(

@@ -52,7 +52,7 @@ class AppButton extends StatelessWidget {
                 shape: shape,
                 textStyle: text,
                 foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
+                side: BorderSide(color: AppColors.primary),
               ),
               child: child,
             )

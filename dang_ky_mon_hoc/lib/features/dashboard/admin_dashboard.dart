@@ -185,7 +185,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
             spacing: 12,
             runSpacing: 6,
             children: [
-              const Text('Tài khoản theo vai trò', style: sectionTitleStyle),
+              Text('Tài khoản theo vai trò', style: sectionTitleStyle),
               d.dangKhoa == 0
                   ? StatusChip.of(
                       'Không có tài khoản bị khóa',
@@ -200,7 +200,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           const SizedBox(height: 4),
           Text(
             'Tổng $tong tài khoản',
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
           ),
           const SizedBox(height: 14),
           for (final (ma, ten) in _vaiTro)
@@ -212,10 +212,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                     width: isCompact(context) ? 100 : 130,
                     child: Text(
                       ten,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.label,
-                      ),
+                      style: TextStyle(fontSize: 14, color: AppColors.label),
                     ),
                   ),
                   Expanded(
@@ -224,7 +221,9 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                       child: LinearProgressIndicator(
                         value: tong == 0 ? 0 : d.soTaiKhoan[ma]! / tong,
                         minHeight: 10,
-                        backgroundColor: const Color(0xFFECEFF5),
+                        backgroundColor: AppColors.tint(
+                          const Color(0xFFECEFF5),
+                        ),
                         color: AppColors.primary,
                       ),
                     ),
@@ -234,7 +233,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                     child: Text(
                       '${d.soTaiKhoan[ma]}',
                       textAlign: TextAlign.right,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppColors.navy,
@@ -257,7 +256,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text('Sao lưu gần nhất', style: sectionTitleStyle),
               ),
               if (file != null)
@@ -268,7 +267,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           ),
           const SizedBox(height: 12),
           if (file == null)
-            const Text(
+            Text(
               'Chưa có bản sao lưu nào.',
               style: TextStyle(color: AppColors.muted),
             )
@@ -310,12 +309,12 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(24, 20, 24, 12),
             child: Text('Hoạt động gần đây', style: sectionTitleStyle),
           ),
           if (nhatKy.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
               child: Text(
                 'Chưa có thao tác nào được ghi nhận.',
@@ -328,14 +327,14 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
                 horizontal: compact ? 16 : 24,
                 vertical: 10,
               ),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.divider)),
               ),
               child: compact ? _dongNhatKyHep(l) : _dongNhatKy(l),
             ),
           Container(
             padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 16),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.divider)),
             ),
             child: Align(
@@ -364,7 +363,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
         width: 140,
         child: Text(
           formatIso(l.str('thoi_gian')),
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          style: TextStyle(fontSize: 12, color: AppColors.muted),
         ),
       ),
       SizedBox(
@@ -389,7 +388,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
         child: Text(
           '${tenDoiTuong[l.str('doi_tuong')] ?? l.str('doi_tuong')} · ${tomTat(l)}',
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: AppColors.muted),
+          style: TextStyle(color: AppColors.muted),
         ),
       ),
     ],
@@ -419,11 +418,11 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
         '${tenDoiTuong[l.str('doi_tuong')] ?? l.str('doi_tuong')} · ${tomTat(l)}',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: AppColors.muted, fontSize: 13),
+        style: TextStyle(color: AppColors.muted, fontSize: 13),
       ),
       Text(
         formatIso(l.str('thoi_gian')),
-        style: const TextStyle(fontSize: 12, color: AppColors.muted),
+        style: TextStyle(fontSize: 12, color: AppColors.muted),
       ),
     ],
   );
@@ -437,7 +436,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
           width: 100,
           child: Text(
             nhan,
-            style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            style: TextStyle(color: AppColors.muted, fontSize: 13),
           ),
         ),
         Expanded(
@@ -467,7 +466,7 @@ class _Suc extends StatelessWidget {
       width: isCompact(context) ? MediaQuery.sizeOf(context).width - 32 : 240,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
@@ -490,7 +489,7 @@ class _Suc extends StatelessWidget {
               children: [
                 Text(
                   ten,
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -520,7 +519,7 @@ class _Suc extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   ghiChu,
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ],
             ),

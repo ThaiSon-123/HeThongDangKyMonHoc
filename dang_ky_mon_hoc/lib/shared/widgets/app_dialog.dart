@@ -33,7 +33,7 @@ class AppDialog extends StatelessWidget {
                 header: true,
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppColors.navy,
@@ -112,7 +112,7 @@ class DialogButton extends StatelessWidget {
                 textStyle: text,
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 foregroundColor: AppColors.text,
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(color: AppColors.border),
               ),
               child: child,
             ),
@@ -144,11 +144,7 @@ Future<bool> showConfirmDialog(
       ],
       child: Text(
         message,
-        style: const TextStyle(
-          fontSize: 14,
-          color: AppColors.label,
-          height: 1.5,
-        ),
+        style: TextStyle(fontSize: 14, color: AppColors.label, height: 1.5),
       ),
     ),
   );

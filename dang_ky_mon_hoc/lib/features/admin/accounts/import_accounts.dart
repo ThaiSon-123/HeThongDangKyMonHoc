@@ -68,9 +68,9 @@ Future<void> _baoLoi(BuildContext context, String loi) => showDialog<void>(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(loi, style: const TextStyle(color: AppColors.danger, height: 1.5)),
+        Text(loi, style: TextStyle(color: AppColors.danger, height: 1.5)),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Bấm "Tải file mẫu" để lấy đúng mẫu, điền rồi nhập lại.',
           style: TextStyle(color: AppColors.muted, fontSize: 13),
         ),
@@ -113,7 +113,7 @@ class _XemTruocState extends State<_XemTruoc> {
     }
   }
 
-  static const _dau = TextStyle(
+  static TextStyle get _dau => TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w700,
     color: AppColors.muted,
@@ -152,10 +152,10 @@ class _XemTruocState extends State<_XemTruoc> {
           ),
           if (_loi != null) ...[
             const SizedBox(height: 8),
-            Text(_loi!, style: const TextStyle(color: AppColors.danger)),
+            Text(_loi!, style: TextStyle(color: AppColors.danger)),
           ],
           const SizedBox(height: 12),
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
@@ -168,14 +168,14 @@ class _XemTruocState extends State<_XemTruoc> {
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.divider),
+          Divider(height: 1, color: AppColors.divider),
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 420),
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: rows.length,
               separatorBuilder: (_, _) =>
-                  const Divider(height: 1, color: AppColors.divider),
+                  Divider(height: 1, color: AppColors.divider),
               itemBuilder: (_, i) => _dong(rows[i]),
             ),
           ),
@@ -214,10 +214,7 @@ class _XemTruocState extends State<_XemTruoc> {
                   )
                 : Text(
                     loi.join(' '),
-                    style: const TextStyle(
-                      color: AppColors.danger,
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: AppColors.danger, fontSize: 13),
                   ),
           ),
         ],

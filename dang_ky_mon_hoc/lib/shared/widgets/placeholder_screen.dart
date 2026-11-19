@@ -14,7 +14,7 @@ class PlaceholderBody extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.construction, size: 48, color: AppColors.border),
+          Icon(Icons.construction, size: 48, color: AppColors.border),
           const SizedBox(height: 12),
           Text('$title — đang phát triển'),
         ],

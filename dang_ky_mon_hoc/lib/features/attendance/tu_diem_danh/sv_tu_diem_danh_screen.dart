@@ -202,7 +202,7 @@ class PhienCard extends ConsumerWidget {
           Text(
             '${ngayDayDu(s.str('ngay_hoc'))} · ${buoiText(s.str('buoi'))} · '
             'đóng lúc ${hetHan == null ? '—' : formatDateTime(hetHan)} · còn $con lượt',
-            style: const TextStyle(color: AppColors.muted),
+            style: TextStyle(color: AppColors.muted),
           ),
           if (s['dang_ngo'] == true) ...[
             const SizedBox(height: 8),
@@ -214,7 +214,7 @@ class PhienCard extends ConsumerWidget {
             onPressed: coMat || con == 0 ? null : onDiemDanh,
           ),
           if (!coMat && con == 0)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 8),
               child: Text(
                 'Bạn đã hết lượt. Hãy báo giảng viên để điểm danh thủ công.',
@@ -449,7 +449,7 @@ class _LuongState extends ConsumerState<SvLuong> {
                         onPressed: _dangDoc ? null : _docEsp32,
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Hoặc gõ tay mã giảng viên đọc / hiện trên màn:',
                         style: TextStyle(color: AppColors.muted),
                       ),

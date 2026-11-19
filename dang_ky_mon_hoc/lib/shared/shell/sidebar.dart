@@ -7,6 +7,7 @@ import '../../core/auth/auth_repository.dart';
 import '../../core/auth/auth_user.dart';
 import '../../core/router/role_routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_mode.dart';
 import '../../features/profile/account_dialog.dart';
 import '../../features/profile/my_profile.dart';
 import '../widgets/avatar.dart';
@@ -58,11 +59,11 @@ class SidebarContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final id = currentIdentity(ref);
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.navy, AppColors.navyEnd],
+          colors: [AppColors.navyBrand, AppColors.navyEnd],
         ),
       ),
       padding: EdgeInsets.symmetric(
@@ -147,10 +148,10 @@ class _Brand extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Text(
+      child: Text(
         'ĐK',
         style: TextStyle(
-          color: AppColors.navy,
+          color: AppColors.navyBrand,
           fontWeight: FontWeight.w700,
           fontSize: 16,
         ),
@@ -300,7 +301,15 @@ class _UserBlock extends ConsumerWidget {
         child: Avatar(initials: initialsOf(name)),
       ),
     );
-    if (collapsed) return avatar;
+    if (collapsed) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const ThemeModeButton(color: AppColors.sidebarText),
+          avatar,
+        ],
+      );
+    }
     return Row(
       children: [
         avatar,
@@ -331,6 +340,7 @@ class _UserBlock extends ConsumerWidget {
             ],
           ),
         ),
+        const ThemeModeButton(color: AppColors.sidebarText),
         IconButton(
           tooltip: 'Đăng xuất',
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),

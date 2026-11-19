@@ -217,10 +217,7 @@ class _RegistrationsScreenState extends ConsumerState<RegistrationsScreen> {
                     ),
                     Text(
                       r.str('ma_lop'),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.muted,
-                      ),
+                      style: TextStyle(fontSize: 11, color: AppColors.muted),
                     ),
                   ],
                 ),

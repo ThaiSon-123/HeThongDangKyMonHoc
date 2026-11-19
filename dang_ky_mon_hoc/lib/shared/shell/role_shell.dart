@@ -70,7 +70,7 @@ class RoleShell extends ConsumerWidget {
       // Admin / PĐT / KT trên cửa sổ hẹp: AppBar + Drawer (design.md 2.2).
       return Scaffold(
         appBar: AppBar(
-          backgroundColor: AppColors.navy,
+          backgroundColor: AppColors.navyBrand,
           foregroundColor: Colors.white,
           title: Text(title),
         ),
@@ -187,7 +187,7 @@ class _PageHeader extends StatelessWidget {
                       ),
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: AppColors.subtitle,
@@ -199,7 +199,7 @@ class _PageHeader extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
                     color: AppColors.navy,
@@ -210,10 +210,7 @@ class _PageHeader extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
                       subtitle!,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.subtitle,
-                      ),
+                      style: TextStyle(fontSize: 14, color: AppColors.subtitle),
                     ),
                   ),
               ],
@@ -230,11 +227,11 @@ class _PageHeader extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: AppColors.cardShadow,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.notifications_none_outlined,
                     color: AppColors.navy,
                     size: 22,

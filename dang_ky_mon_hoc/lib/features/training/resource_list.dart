@@ -152,7 +152,7 @@ class _ResourceListState extends ConsumerState<ResourceList> {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
@@ -167,14 +167,14 @@ class _ResourceListState extends ConsumerState<ResourceList> {
                 child: Column(
                   children: [
                     _row(
-                      color: const Color(0xFFFAFAFA),
+                      color: AppColors.tint(const Color(0xFFFAFAFA)),
                       cells: [
                         for (final col in widget.columns)
                           _cell(
                             col,
                             Text(
                               col.title.toUpperCase(),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.muted,
@@ -200,8 +200,8 @@ class _ResourceListState extends ConsumerState<ResourceList> {
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF6F7FD),
+                          decoration: BoxDecoration(
+                            color: AppColors.tint(const Color(0xFFF6F7FD)),
                             border: Border(
                               top: BorderSide(color: AppColors.divider),
                             ),
@@ -220,14 +220,14 @@ class _ResourceListState extends ConsumerState<ResourceList> {
               child: Center(
                 child: Text(
                   widget.emptyText,
-                  style: const TextStyle(fontSize: 14, color: AppColors.muted),
+                  style: TextStyle(fontSize: 14, color: AppColors.muted),
                 ),
               ),
             ),
           if (widget.footer != null) widget.footer!(page),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.divider)),
             ),
             child: Wrap(
@@ -237,7 +237,7 @@ class _ResourceListState extends ConsumerState<ResourceList> {
               children: [
                 Text(
                   '${page.count} bản ghi',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -251,10 +251,7 @@ class _ResourceListState extends ConsumerState<ResourceList> {
                     ),
                     Text(
                       'Trang ${c.page}/$pages · $_pageSize dòng/trang',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.muted,
-                      ),
+                      style: TextStyle(fontSize: 13, color: AppColors.muted),
                     ),
                     IconButton(
                       tooltip: 'Trang sau',
@@ -273,22 +270,21 @@ class _ResourceListState extends ConsumerState<ResourceList> {
     );
   }
 
-  Widget _row({required List<Widget> cells, Color color = Colors.white}) =>
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: color,
-          border: const Border(top: BorderSide(color: AppColors.divider)),
-        ),
-        child: Row(
-          children: [
-            for (final (i, c) in cells.indexed) ...[
-              if (i > 0) const SizedBox(width: 16),
-              c,
-            ],
-          ],
-        ),
-      );
+  Widget _row({required List<Widget> cells, Color? color}) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    decoration: BoxDecoration(
+      color: color ?? AppColors.surface,
+      border: Border(top: BorderSide(color: AppColors.divider)),
+    ),
+    child: Row(
+      children: [
+        for (final (i, c) in cells.indexed) ...[
+          if (i > 0) const SizedBox(width: 16),
+          c,
+        ],
+      ],
+    ),
+  );
 }
 
 /// Thanh lọc (thẻ trắng): ô tìm kiếm, bộ lọc, nút "+ Thêm …".
@@ -301,7 +297,7 @@ class ListToolbar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
@@ -441,7 +437,9 @@ class RowButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         side: BorderSide(
-          color: danger ? const Color(0xFFE8B4B0) : const Color(0xFFC4C9D4),
+          color: danger
+              ? AppColors.tint(const Color(0xFFE8B4B0))
+              : AppColors.tint(const Color(0xFFC4C9D4)),
         ),
         foregroundColor: danger ? AppColors.danger : AppColors.primary,
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -482,7 +480,7 @@ class ListSkeleton extends StatelessWidget {
       height: h,
       width: w,
       decoration: BoxDecoration(
-        color: const Color(0xFFECEFF5),
+        color: AppColors.tint(const Color(0xFFECEFF5)),
         borderRadius: BorderRadius.circular(10),
       ),
     );
@@ -491,7 +489,7 @@ class ListSkeleton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppColors.cardShadow,
         ),
@@ -519,7 +517,7 @@ class ListErrorCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 24),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
@@ -529,11 +527,11 @@ class ListErrorCard extends StatelessWidget {
           width: 56,
           height: 56,
           alignment: Alignment.center,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Color(0xFFFDECEA),
+            color: AppColors.tint(const Color(0xFFFDECEA)),
           ),
-          child: const Text(
+          child: Text(
             '!',
             style: TextStyle(
               fontSize: 28,
@@ -543,7 +541,7 @@ class ListErrorCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        const Text(
+        Text(
           'Không tải được dữ liệu',
           style: TextStyle(
             fontSize: 18,
@@ -552,7 +550,7 @@ class ListErrorCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Kết nối bị gián đoạn hoặc máy chủ đang bận. Hãy thử lại sau ít giây.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: AppColors.muted, height: 1.5),

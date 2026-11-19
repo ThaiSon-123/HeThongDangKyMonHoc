@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/router/role_routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_mode.dart';
 import '../widgets/avatar.dart';
 
 /// Header navy bo đáy 28 của App (design.md 1.8): hàng trên gồm logo "ĐK" + cổng, chuông, avatar;
@@ -49,10 +50,10 @@ class AppHeader extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
+                child: Text(
                   'ĐK',
                   style: TextStyle(
-                    color: AppColors.navy,
+                    color: AppColors.navyBrand,
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
                   ),
@@ -65,6 +66,7 @@ class AppHeader extends StatelessWidget {
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ),
+              const ThemeModeButton(color: Colors.white),
               _BellButton(onTap: () => context.go(config.notificationsPath)),
               const SizedBox(width: 8),
               Semantics(
@@ -206,7 +208,7 @@ class FloatingBottomNav extends StatelessWidget {
       child: Container(
         height: 64,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(34),
           boxShadow: const [
             BoxShadow(

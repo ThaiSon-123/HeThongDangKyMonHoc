@@ -205,7 +205,7 @@ class _StudentDashboardState extends ConsumerState<StudentDashboard> {
                             ),
                             Text(
                               '${n.str('nguoi_gui_ten')} · ${formatIso(n.str('ngay_gui'))}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: AppColors.muted,
                               ),

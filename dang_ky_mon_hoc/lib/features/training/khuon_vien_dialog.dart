@@ -74,7 +74,7 @@ class _KhuonVienDialogState extends State<_KhuonVienDialog> {
         Text(
           'Chạm vào bản đồ để thêm góc theo thứ tự quanh khuôn viên; chạm vào một góc để xóa nó. '
           'Đang có ${_goc.length} góc${_goc.length < 3 ? ' (cần ít nhất 3)' : ''}.',
-          style: const TextStyle(color: AppColors.label, height: 1.5),
+          style: TextStyle(color: AppColors.label, height: 1.5),
         ),
         const SizedBox(height: 12),
         SizedBox(

@@ -23,7 +23,9 @@ class Avatar extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: soft ? const Color(0xFFE8EAF6) : AppColors.accent,
+        color: soft
+            ? AppColors.tint(const Color(0xFFE8EAF6))
+            : AppColors.accent,
       ),
       child: Text(
         initials,
@@ -48,12 +50,12 @@ class RoleChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8EAF6),
+        color: AppColors.tint(const Color(0xFFE8EAF6)),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
           color: AppColors.primary,

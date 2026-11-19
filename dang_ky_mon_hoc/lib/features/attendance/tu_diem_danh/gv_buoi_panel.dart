@@ -320,7 +320,7 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
               boxShadow: AppColors.cardShadow,
             ),
@@ -335,7 +335,7 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
                   children: [
                     Text(
                       '${ngayDayDu(widget.session.str('ngay_hoc'))} · ${buoiTiet(widget.session)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                         color: AppColors.navy,
@@ -381,7 +381,7 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
                 ],
                 const SizedBox(height: 12),
                 if (rows.isEmpty)
-                  const Text(
+                  Text(
                     'Chưa có sinh viên đăng ký lớp.',
                     style: TextStyle(color: AppColors.muted),
                   ),
@@ -396,10 +396,7 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
                     for (final c in DiemDanhChon.values)
                       Text(
                         '${c.label} ${dem(c)}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.label,
-                        ),
+                        style: TextStyle(fontSize: 13, color: AppColors.label),
                       ),
                   ],
                 ),
@@ -502,7 +499,7 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
     ];
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Column(
@@ -519,7 +516,7 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
               ),
               Text(
                 '${r.str('ma_sv')} · Vắng KP ${r.num0('so_buoi_vang_kp')}/$tong (${(r['ty_le_vang'] as num).toStringAsFixed(0)}%)',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
               if (r['canh_bao_vang'] == true)
                 StatusChip.of('Nguy cơ cấm thi', StatusChip.red),
@@ -538,7 +535,7 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
               padding: const EdgeInsets.only(top: 2),
               child: Text(
                 tag.join(' · '),
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
           const SizedBox(height: 6),
@@ -711,7 +708,7 @@ class _MaPhongState extends ConsumerState<_MaPhong> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.bluetooth, color: AppColors.success),
+                  Icon(Icons.bluetooth, color: AppColors.success),
                   const SizedBox(width: 6),
                   const Text('ESP32 đang phát mã'),
                   TextButton(onPressed: _ngat, child: const Text('Ngắt')),
@@ -724,7 +721,7 @@ class _MaPhongState extends ConsumerState<_MaPhong> {
                 label: const Text('Kết nối ESP32'),
               ),
           if (_loi != null)
-            Text(_loi!, style: const TextStyle(color: AppColors.danger)),
+            Text(_loi!, style: TextStyle(color: AppColors.danger)),
         ],
       ),
     );
@@ -771,7 +768,7 @@ class _MoPhienState extends ConsumerState<_MoPhien> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        Text(
           'Sinh viên chỉ điểm danh được khi GPS cho thấy đang ở trong khuôn viên trường '
           '(Phòng đào tạo vẽ ở mục Quy chế).',
           style: TextStyle(color: AppColors.label, height: 1.5),
@@ -901,7 +898,7 @@ class _ChiTietSv extends ConsumerWidget {
                       for (final c in (l['co'] as List? ?? const []))
                         coText[c] ?? '$c',
                     ].join(' · '),
-                    style: const TextStyle(color: AppColors.muted),
+                    style: TextStyle(color: AppColors.muted),
                   ),
                   if (l['co_anh_bang_chung'] == true)
                     Padding(

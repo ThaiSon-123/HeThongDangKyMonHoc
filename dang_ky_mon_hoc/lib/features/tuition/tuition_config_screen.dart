@@ -76,14 +76,14 @@ class _TieuDe extends StatelessWidget {
     children: [
       Text(
         tieuDe,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
           color: AppColors.navy,
         ),
       ),
       const SizedBox(height: 4),
-      Text(moTa, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+      Text(moTa, style: TextStyle(fontSize: 13, color: AppColors.muted)),
     ],
   );
 }
@@ -385,7 +385,7 @@ class _ChiaDotState extends ConsumerState<_ChiaDot> {
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: AppColors.cardShadow,
           ),
@@ -420,7 +420,7 @@ class _ChiaDotState extends ConsumerState<_ChiaDot> {
                         ),
                         child: Text(
                           'Đợt ${i + 1}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: AppColors.infoBannerText,
                           ),
@@ -457,7 +457,7 @@ class _ChiaDotState extends ConsumerState<_ChiaDot> {
                     ],
                   ),
                 ),
-              const Divider(color: AppColors.divider, height: 32),
+              Divider(color: AppColors.divider, height: 32),
               Wrap(
                 spacing: 16,
                 runSpacing: 12,

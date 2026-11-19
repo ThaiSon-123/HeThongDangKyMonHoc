@@ -32,7 +32,7 @@ class LabeledDropdown<T> extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: AppColors.label,
@@ -44,7 +44,9 @@ class LabeledDropdown<T> extends StatelessWidget {
           constraints: BoxConstraints(minHeight: compact ? 52 : 48),
           padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 12),
           decoration: BoxDecoration(
-            color: enabled ? AppColors.surface : const Color(0xFFF1F3F9),
+            color: enabled
+                ? AppColors.surface
+                : AppColors.tint(const Color(0xFFF1F3F9)),
             borderRadius: radius,
           ),
           // Viền vẽ đè (không chiếm chỗ) để chiều cao bằng đúng ô nhập bên cạnh.
@@ -78,7 +80,7 @@ class LabeledDropdown<T> extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               helper!,
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ),
       ],

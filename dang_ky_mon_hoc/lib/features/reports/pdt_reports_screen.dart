@@ -170,7 +170,7 @@ class _Body extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Lượt đăng ký theo môn', style: sectionTitleStyle),
+          Text('Lượt đăng ký theo môn', style: sectionTitleStyle),
           const SizedBox(height: 12),
           if (theoMon.isEmpty) const _Empty(),
           for (final m in theoMon.take(10))
@@ -187,7 +187,7 @@ class _Body extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Tỷ lệ lấp đầy theo lớp', style: sectionTitleStyle),
+          Text('Tỷ lệ lấp đầy theo lớp', style: sectionTitleStyle),
           const SizedBox(height: 12),
           if (theoLop.isEmpty) const _Empty(),
           for (final l in theoLop.take(10))
@@ -199,7 +199,7 @@ class _Body extends StatelessWidget {
               labelWidth: 110,
             ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Xanh < 70% · vàng 70–90% · đỏ > 90%',
             style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
@@ -265,7 +265,7 @@ class _Empty extends StatelessWidget {
   const _Empty();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.symmetric(vertical: 16),
     child: Text(
       'Không có lớp nào phù hợp với bộ lọc.',
@@ -324,11 +324,11 @@ class _ClassTable extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
                   child: Text('Chi tiết theo lớp', style: sectionTitleStyle),
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
                   child: Text(
                     'Bấm tiêu đề cột để sắp xếp.',
@@ -343,7 +343,7 @@ class _ClassTable extends StatelessWidget {
                         onTap: () => onSort(c.$1),
                         child: Text(
                           '${c.$2.toUpperCase()}${c.$1 == sortKey ? (asc ? ' ▲' : ' ▼') : ''}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppColors.muted,
@@ -353,7 +353,7 @@ class _ClassTable extends StatelessWidget {
                     ),
                 ], header: true),
                 if (sorted.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(20),
                     child: Text(
                       'Không có lớp nào phù hợp với bộ lọc.',
@@ -397,7 +397,7 @@ class _ClassTable extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
     decoration: BoxDecoration(
       border: Border(top: BorderSide(color: AppColors.divider)),
-      color: header ? const Color(0xFFF7F8FC) : null,
+      color: header ? AppColors.tint(const Color(0xFFF7F8FC)) : null,
     ),
     child: Row(
       children: [

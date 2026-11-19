@@ -21,14 +21,14 @@ class WebOnlyScreen extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(
+                Icon(
                   Icons.desktop_windows_outlined,
                   size: 44,
                   color: AppColors.primary,
@@ -40,7 +40,7 @@ class WebOnlyScreen extends ConsumerWidget {
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Tài khoản Quản trị, Phòng đào tạo và Kế toán không dùng được trên ứng dụng. Vui lòng đăng nhập bằng máy tính.',
                   textAlign: TextAlign.center,
                   style: TextStyle(

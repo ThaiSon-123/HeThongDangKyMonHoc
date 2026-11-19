@@ -136,7 +136,7 @@ class _Row extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(k, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+          Text(k, style: TextStyle(fontSize: 14, color: AppColors.muted)),
           Text(
             v,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),

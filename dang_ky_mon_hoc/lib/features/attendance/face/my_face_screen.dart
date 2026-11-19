@@ -152,7 +152,7 @@ class _DongY extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
+        Text(
           'Để tự điểm danh bằng điện thoại, hệ thống cần lưu đặc trưng khuôn mặt của bạn '
           '(theo Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân):\n\n'
           '• Chỉ lưu vector đặc trưng đã mã hóa, không lưu ảnh lâu dài. Ảnh đăng ký bị xóa ngay '

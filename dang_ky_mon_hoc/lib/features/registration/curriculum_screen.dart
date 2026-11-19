@@ -242,7 +242,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
             children: [
               Text(
                 '${d.ctdt.str('nganh_ten')} · Khóa ${d.ctdt.str('khoa_tuyen_sinh').replaceFirst(RegExp(r'^[Kk]'), '')}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: AppColors.navy,
@@ -250,7 +250,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
               ),
               Text(
                 'Mã CTĐT: ${d.ctdt.str('ma_ctdt')} · Yêu cầu $yeuCau tín chỉ',
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
               const SizedBox(height: 16),
               const Text(
@@ -310,7 +310,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Phân bổ theo khối kiến thức', style: sectionTitleStyle),
+        Text('Phân bổ theo khối kiến thức', style: sectionTitleStyle),
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, box) => Wrap(
@@ -331,7 +331,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
                         : 170,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF4F5FA),
+                      color: AppColors.tint(const Color(0xFFF4F5FA)),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -339,7 +339,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
                       children: [
                         Text(
                           nhan,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             color: AppColors.muted,
                           ),
@@ -354,7 +354,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
                         ),
                         Text(
                           '${trongKhoi.length} môn',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.muted,
                           ),
@@ -446,7 +446,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Text(
                   '${tatCa.length} môn · $tc tín chỉ · $bb bắt buộc · ${tatCa.length - bb} tự chọn',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ),
               if (isCompact(context))
@@ -460,7 +460,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
     if (out.isEmpty) {
       out.add(const SizedBox(height: 16));
       out.add(
-        const PanelCard(
+        PanelCard(
           child: Text(
             'Không có môn nào phù hợp với bộ lọc.',
             style: TextStyle(color: AppColors.muted),
@@ -472,7 +472,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
   }
 
   Widget _hang(MonCtdt? m) {
-    const dau = TextStyle(
+    final dau = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w700,
       color: AppColors.muted,
@@ -483,19 +483,19 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: m == null ? const Color(0xFFF7F8FC) : null,
-        border: const Border(top: BorderSide(color: AppColors.divider)),
+        color: m == null ? AppColors.tint(const Color(0xFFF7F8FC)) : null,
+        border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Row(
         children: m == null
             ? [
-                c(100, const Text('MÃ MÔN', style: dau)),
-                c(null, const Text('TÊN MÔN', style: dau), flex: 3),
-                c(40, const Text('TC', style: dau)),
-                c(140, const Text('KHỐI KIẾN THỨC', style: dau)),
-                c(90, const Text('LOẠI', style: dau)),
-                c(70, const Text('ĐIỂM', style: dau)),
-                c(120, const Text('TRẠNG THÁI', style: dau)),
+                c(100, Text('MÃ MÔN', style: dau)),
+                c(null, Text('TÊN MÔN', style: dau), flex: 3),
+                c(40, Text('TC', style: dau)),
+                c(140, Text('KHỐI KIẾN THỨC', style: dau)),
+                c(90, Text('LOẠI', style: dau)),
+                c(70, Text('ĐIỂM', style: dau)),
+                c(120, Text('TRẠNG THÁI', style: dau)),
               ]
             : [
                 c(100, Text(m.ma, style: monoStyle)),
@@ -511,7 +511,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
                       if (m.tienQuyet.isNotEmpty)
                         Text(
                           'Tiên quyết: ${m.tienQuyet.join(', ')}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.muted,
                           ),
@@ -538,7 +538,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
 
   Widget _theMon(MonCtdt m) => Container(
     padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       border: Border(top: BorderSide(color: AppColors.divider)),
     ),
     child: Row(
@@ -551,7 +551,7 @@ class _CurriculumScreenState extends ConsumerState<CurriculumScreen> {
               Text(m.ten, style: const TextStyle(fontWeight: FontWeight.w600)),
               Text(
                 '${m.ma} · ${m.tinChi} TC${m.tienQuyet.isEmpty ? '' : ' · Tiên quyết: ${m.tienQuyet.join(', ')}'}',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
               const SizedBox(height: 6),
               Wrap(

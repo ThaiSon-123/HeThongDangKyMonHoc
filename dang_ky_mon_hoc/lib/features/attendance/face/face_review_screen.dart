@@ -190,7 +190,7 @@ class _FaceReviewScreenState extends ConsumerState<FaceReviewScreen> {
                         ? '${ds.length} mẫu chờ duyệt (cũ nhất trước). Đối chiếu ảnh với người thật; '
                               'ảnh bị xóa ngay sau khi duyệt hoặc từ chối.'
                         : '${ds.length} mẫu $ten (mới nhất trước${ds.length >= 200 ? ', hiện 200 mẫu gần nhất' : ''}).',
-                    style: const TextStyle(color: AppColors.muted),
+                    style: TextStyle(color: AppColors.muted),
                   );
                 }
                 final m = ds[i - 1];
@@ -265,7 +265,7 @@ Future<String?> _hoiLyDo(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (moTa != null) ...[
-              Text(moTa, style: const TextStyle(color: AppColors.label)),
+              Text(moTa, style: TextStyle(color: AppColors.label)),
               const SizedBox(height: 12),
             ],
             Wrap(
@@ -351,10 +351,10 @@ class _MauCard extends StatelessWidget {
           Text(
             '${m.str('nganh')} · Khóa ${m.str('khoa_nhap_hoc')} · '
             'Gửi lúc ${formatIso(m['tao_luc'] as String?)}',
-            style: const TextStyle(color: AppColors.muted),
+            style: TextStyle(color: AppColors.muted),
           ),
           if (quyet.isNotEmpty)
-            Text(quyet, style: const TextStyle(color: AppColors.muted)),
+            Text(quyet, style: TextStyle(color: AppColors.muted)),
           if (m.str('trang_thai') == 'CHO_DUYET' && m.num0('so_anh') > 0) ...[
             const SizedBox(height: 12),
             Wrap(

@@ -102,14 +102,14 @@ class LoiChao extends StatelessWidget {
     children: [
       Text(
         'Xin chào, $ten',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w700,
           color: AppColors.navy,
         ),
       ),
       const SizedBox(height: 2),
-      Text(phu, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+      Text(phu, style: TextStyle(fontSize: 13, color: AppColors.muted)),
     ],
   );
 }
@@ -141,7 +141,7 @@ class KhoiTongQuan extends StatelessWidget {
         Text(tieuDe, style: sectionTitleStyle),
         const SizedBox(height: 10),
         if (children.isEmpty && trong != null)
-          Text(trong!, style: const TextStyle(color: AppColors.muted)),
+          Text(trong!, style: TextStyle(color: AppColors.muted)),
         ...children,
         if (lienKet != null && duongDan != null)
           Align(
@@ -235,7 +235,7 @@ class DongTiet extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F5FA),
+        color: AppColors.tint(const Color(0xFFF4F5FA)),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -243,7 +243,7 @@ class DongTiet extends StatelessWidget {
         children: [
           Text(
             'Tiết $bd–${tiet.lich.num0('tiet_ket_thuc')} · ${buoiCuaTiet(bd)} · P.${tiet.lich.str('phong')}',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           Text(
             tiet.lop.str('ten_mon'),
@@ -251,7 +251,7 @@ class DongTiet extends StatelessWidget {
           ),
           Text(
             '${tiet.lop.str('ma_lop')} · $phu',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
         ],
       ),

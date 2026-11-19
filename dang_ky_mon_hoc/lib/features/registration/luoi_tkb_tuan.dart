@@ -74,7 +74,7 @@ class LuoiTkbTuan extends StatelessWidget {
                         child: Text(
                           d,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: AppColors.label,
                           ),
@@ -107,7 +107,7 @@ class LuoiTkbTuan extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
                               'Tiết $t',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 color: AppColors.muted,
                               ),
@@ -127,7 +127,7 @@ class LuoiTkbTuan extends StatelessWidget {
                   ],
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 8),
                 child: Text(
                   'Sáng 1–5 · Chiều 6–10 · Tối 11–15',

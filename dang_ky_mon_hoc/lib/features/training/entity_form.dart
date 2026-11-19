@@ -464,7 +464,7 @@ class _PickerField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: AppColors.label,
@@ -498,7 +498,7 @@ class _PickerField extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     Icons.calendar_today_outlined,
                     size: 18,
                     color: AppColors.muted,
@@ -513,7 +513,7 @@ class _PickerField extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               helper!,
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ),
         if (hasError)
@@ -521,7 +521,7 @@ class _PickerField extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               error!,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.danger,
@@ -614,7 +614,7 @@ class _ApiSelectState extends ConsumerState<ApiSelect> {
               helper: widget.helper,
               error: widget.error,
               enabled: widget.enabled,
-              suffix: const Icon(Icons.arrow_drop_down, color: AppColors.muted),
+              suffix: Icon(Icons.arrow_drop_down, color: AppColors.muted),
               onChanged: (t) {
                 if (_selected != null && t != widget.labelOf(_selected!)) {
                   _selected = null;

@@ -34,29 +34,27 @@ const hanhDongText = {
 };
 
 /// Trạng thái tự điểm danh: có mặt / đáng ngờ (vắng + cờ) / vắng có phép / chưa điểm danh.
-Widget tuDiemDanhChip(String trangThai, bool dangNgo) =>
-    switch ((trangThai, dangNgo)) {
-      ('CO_MAT', _) => const StatusChip(
-        'Có mặt',
-        bg: AppColors.successBg,
-        fg: AppColors.success,
-      ),
-      (_, true) => const StatusChip(
-        'Đáng ngờ',
-        bg: AppColors.warnBannerBg,
-        fg: AppColors.warnBannerText,
-      ),
-      ('VANG_CO_PHEP', _) => const StatusChip(
-        'Vắng có phép',
-        bg: AppColors.infoBannerBg,
-        fg: AppColors.infoBannerText,
-      ),
-      _ => const StatusChip(
-        'Chưa điểm danh',
-        bg: AppColors.divider,
-        fg: AppColors.muted,
-      ),
-    };
+Widget tuDiemDanhChip(String trangThai, bool dangNgo) => switch ((
+  trangThai,
+  dangNgo,
+)) {
+  ('CO_MAT', _) => StatusChip(
+    'Có mặt',
+    bg: AppColors.successBg,
+    fg: AppColors.success,
+  ),
+  (_, true) => StatusChip(
+    'Đáng ngờ',
+    bg: AppColors.warnBannerBg,
+    fg: AppColors.warnBannerText,
+  ),
+  ('VANG_CO_PHEP', _) => StatusChip(
+    'Vắng có phép',
+    bg: AppColors.infoBannerBg,
+    fg: AppColors.infoBannerText,
+  ),
+  _ => StatusChip('Chưa điểm danh', bg: AppColors.divider, fg: AppColors.muted),
+};
 
 /// `mm:ss` còn lại tới [hetHan]; âm thì `00:00`.
 String conLai(DateTime hetHan, DateTime now) {

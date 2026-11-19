@@ -306,7 +306,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         const SizedBox(height: 12),
         Text(
           '${groups.length} môn · ${lop.length} lớp học phần đang mở',
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         const SizedBox(height: 8),
         if (groups.isEmpty)
@@ -315,7 +315,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               d.lop.isEmpty
                   ? 'Hiện không có lớp nào để đăng ký.'
                   : 'Không có môn phù hợp với bộ lọc.',
-              style: const TextStyle(color: AppColors.muted, fontSize: 14),
+              style: TextStyle(color: AppColors.muted, fontSize: 14),
             ),
           ),
         for (final g in groups.values) _courseTile(d, g),
@@ -373,14 +373,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 if (lyDoMon != null && lyDoMon != 'DA_DAT_MON')
                   Text(
                     c.str('ly_do'),
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.danger,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppColors.danger),
                   ),
                 Text(
                   '${classes.length} lớp',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ],
             ),
@@ -443,7 +440,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Widget _registered(_RegData d) {
     final rows = d.dangKy;
     if (rows.isEmpty) {
-      return const _Card(
+      return _Card(
         child: Text(
           'Bạn chưa đăng ký môn nào trong học kỳ này.',
           style: TextStyle(color: AppColors.muted, fontSize: 14),
@@ -477,7 +474,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             ),
                             TextSpan(
                               text: ' · ${r.num0('tong_tin_chi')} TC',
-                              style: const TextStyle(color: AppColors.muted),
+                              style: TextStyle(color: AppColors.muted),
                             ),
                           ],
                         ),
@@ -485,17 +482,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       const SizedBox(height: 2),
                       Text(
                         'Lớp ${r.str('ma_lop')} · GV ${r.str('giao_vien_ten')}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.label,
-                        ),
+                        style: TextStyle(fontSize: 13, color: AppColors.label),
                       ),
                       Text(
                         lichText(r['lich_hoc'] as List),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.muted,
-                        ),
+                        style: TextStyle(fontSize: 13, color: AppColors.muted),
                       ),
                     ],
                   ),
@@ -511,7 +502,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                     )
                   else
-                    const Text(
+                    Text(
                       'Liên hệ Phòng đào tạo để hủy',
                       style: TextStyle(fontSize: 12, color: AppColors.muted),
                     ),
@@ -526,7 +517,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   // ------------------------------------------------------------ lịch sử
   Widget _history(_RegData d) {
     if (d.history.isEmpty) {
-      return const _Card(
+      return _Card(
         child: Text(
           'Chưa có lịch sử đăng ký.',
           style: TextStyle(color: AppColors.muted, fontSize: 14),
@@ -585,11 +576,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         const SizedBox(height: 12),
         Text(
           '${ds.length} đăng ký',
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         const SizedBox(height: 8),
         if (ds.isEmpty)
-          const _Card(
+          _Card(
             child: Text(
               'Không có đăng ký nào phù hợp với bộ lọc.',
               style: TextStyle(color: AppColors.muted, fontSize: 14),
@@ -617,16 +608,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       Text(
                         '${h.str('ma_mon')} · ${h.str('ten_hk')} · ĐK ${formatIso(h.str('ngay_dang_ky')).split(' ').first}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.muted,
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                       if (h.str('trang_thai') == 'DA_HUY')
                         Text(
                           'Hủy ${formatIso(h.str('ngay_huy')).split(' ').first}'
                           '${h.str('ly_do_huy').isEmpty ? '' : ' · ${h.str('ly_do_huy')}'}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: AppColors.muted,
                           ),
@@ -672,7 +660,7 @@ class _Header extends StatelessWidget {
                 children: [
                   Text(
                     meta.str('ten_hk'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       color: AppColors.navy,
@@ -741,7 +729,7 @@ class _Card extends StatelessWidget {
     width: double.infinity,
     padding: EdgeInsets.all(padding),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),

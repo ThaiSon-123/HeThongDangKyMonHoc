@@ -171,7 +171,7 @@ class _TeacherAttendanceScreenState
   ) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
@@ -219,7 +219,7 @@ class _TeacherAttendanceScreenState
                 _lopChip(_lop!.str('trang_thai')),
                 Text(
                   '${lichText(_lop!['lich_hoc'] as List)} · ${_lop!.num0('si_so_hien_tai')} sinh viên',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ],
             ),
@@ -300,7 +300,7 @@ class _TeacherAttendanceScreenState
         const SizedBox(height: 2),
         Text(
           'Đã đến hạn $due · Đã điểm danh $done · Sắp tới ${d.sessions.length - due}',
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         const SizedBox(height: 10),
         if (d.sessions.isEmpty)
@@ -350,7 +350,9 @@ class _TeacherAttendanceScreenState
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFEEF0FA) : Colors.white,
+            color: selected
+                ? AppColors.tint(const Color(0xFFEEF0FA))
+                : AppColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected ? AppColors.primary : AppColors.divider,
@@ -368,10 +370,7 @@ class _TeacherAttendanceScreenState
                     ),
                     Text(
                       buoiTiet(s),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
                     ),
                   ],
                 ),
@@ -475,7 +474,7 @@ class _TeacherAttendanceScreenState
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: AppColors.cardShadow,
         ),
@@ -498,18 +497,18 @@ class _TeacherAttendanceScreenState
             ),
             Text(
               '${ngayDayDu(r.str('ngay_hoc'))} · ${buoiText(r.str('buoi'))} · gửi ${formatIso(r.str('ngay_gui'))}',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
             const SizedBox(height: 8),
             Text('Đổi: ${doiText(r)}', style: const TextStyle(fontSize: 14)),
             Text(
               'Lý do: ${r.str('ly_do')}',
-              style: const TextStyle(fontSize: 14, color: AppColors.label),
+              style: TextStyle(fontSize: 14, color: AppColors.label),
             ),
             if (r.str('ghi_chu').isNotEmpty)
               Text(
                 'Ghi chú: ${r.str('ghi_chu')}',
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             const SizedBox(height: 8),
             Wrap(
@@ -523,7 +522,7 @@ class _TeacherAttendanceScreenState
                     child: const Text('Xem minh chứng'),
                   )
                 else
-                  const Text(
+                  Text(
                     'Không đính kèm minh chứng',
                     style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
@@ -561,7 +560,7 @@ class _Hint extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
@@ -569,7 +568,7 @@ class _Hint extends StatelessWidget {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: AppColors.navy,
@@ -579,7 +578,7 @@ class _Hint extends StatelessWidget {
         Text(
           message,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14, color: AppColors.muted),
+          style: TextStyle(fontSize: 14, color: AppColors.muted),
         ),
       ],
     ),

@@ -299,7 +299,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
@@ -315,7 +315,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
               children: [
                 Text(
                   '${d.str('ma_lop')} · ${d.str('ten_mon')}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.navy,
@@ -330,7 +330,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
                   ),
                 Text(
                   'Hạn nhập điểm ${formatYmd(han)}',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ],
             ),
@@ -371,7 +371,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
               ),
             ),
           if (_rows.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(20, 4, 20, 16),
               child: Text(
                 'Chưa có sinh viên đăng ký lớp.',
@@ -384,7 +384,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
             _bang(nhap, datKhongDat),
           Container(
             padding: EdgeInsets.fromLTRB(compact ? 16 : 20, 12, 20, 14),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.divider)),
             ),
             child: compact
@@ -393,10 +393,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
                     children: [
                       Text(
                         ghiChuDuoi,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.muted,
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                       const SizedBox(height: 10),
                       Wrap(spacing: 10, runSpacing: 10, children: nut),
@@ -407,7 +404,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
                       Expanded(
                         child: Text(
                           ghiChuDuoi,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 13,
                             color: AppColors.muted,
                           ),
@@ -466,7 +463,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
 
   // ------------------------------------------------------------ bảng (Web)
   Widget _bang(bool nhap, bool datKhongDat) {
-    const dau = TextStyle(
+    final dau = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w700,
       color: AppColors.muted,
@@ -496,13 +493,13 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
             7: FlexColumnWidth(1.4),
           },
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-          border: const TableBorder(
+          border: TableBorder(
             horizontalInside: BorderSide(color: AppColors.divider),
           ),
           children: [
             TableRow(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF7F8FC),
+              decoration: BoxDecoration(
+                color: AppColors.tint(const Color(0xFFF7F8FC)),
                 border: Border.symmetric(
                   horizontal: BorderSide(color: AppColors.divider),
                 ),
@@ -522,7 +519,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
           ],
         ),
         if (coLoi)
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
             child: Text(
               'Ô viền đỏ sai định dạng: nhập số từ 0 đến 10, tối đa 2 chữ số thập phân.',
@@ -548,7 +545,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
         o(
           Text(
             r.json.str('ma_sv'),
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
           ),
         ),
         o(
@@ -581,7 +578,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
     return Container(
       key: ValueKey('${r.id}-$_version'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Column(
@@ -593,7 +590,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
           ),
           Text(
             r.json.str('ma_sv'),
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           const SizedBox(height: 10),
           Row(
@@ -609,10 +606,7 @@ class _GradeSheetPanelState extends ConsumerState<GradeSheetPanel> {
                     children: [
                       Text(
                         nhan,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.muted,
-                        ),
+                        style: TextStyle(fontSize: 11, color: AppColors.muted),
                       ),
                       const SizedBox(height: 4),
                       _o(c, enabled, compact: true),

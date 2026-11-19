@@ -41,7 +41,7 @@ class TabsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       border: Border(bottom: BorderSide(color: AppColors.divider)),
     ),
     child: Row(
@@ -137,7 +137,7 @@ class PanelCard extends StatelessWidget {
     width: double.infinity,
     padding: EdgeInsets.all(padding),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
@@ -145,11 +145,8 @@ class PanelCard extends StatelessWidget {
   );
 }
 
-const sectionTitleStyle = TextStyle(
-  fontSize: 15,
-  fontWeight: FontWeight.w700,
-  color: AppColors.navy,
-);
+TextStyle get sectionTitleStyle =>
+    TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy);
 
 const monoStyle = TextStyle(
   fontFamily: 'monospace',

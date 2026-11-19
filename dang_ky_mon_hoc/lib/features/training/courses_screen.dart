@@ -182,7 +182,7 @@ class _CourseListState extends ConsumerState<_CourseList> {
               ),
               Text(
                 r.str('ma_mon'),
-                style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                style: TextStyle(fontSize: 11, color: AppColors.muted),
               ),
             ],
           ),
@@ -197,7 +197,7 @@ class _CourseListState extends ConsumerState<_CourseList> {
                 TextSpan(
                   text:
                       '(${r.num0('tin_chi_ly_thuyet')} LT + ${r.num0('tin_chi_thuc_hanh')} TH)',
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ],
             ),
@@ -278,7 +278,7 @@ class _PrerequisitePanelState extends ConsumerState<_PrerequisitePanel> {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      Text(ma, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+      Text(ma, style: TextStyle(fontSize: 11, color: AppColors.muted)),
     ],
   );
 
@@ -330,7 +330,7 @@ class _PrerequisitePanelState extends ConsumerState<_PrerequisitePanel> {
         ],
         cells: (r) => [
           _mon(r.str('ten_mon'), r.str('ma_mon')),
-          const Icon(Icons.arrow_back, size: 18, color: AppColors.muted),
+          Icon(Icons.arrow_back, size: 18, color: AppColors.muted),
           _mon(r.str('ten_mon_tien_quyet'), r.str('ma_mon_tien_quyet')),
           RowActions([RowButton('Bỏ', () => _bo(r), danger: true)]),
         ],

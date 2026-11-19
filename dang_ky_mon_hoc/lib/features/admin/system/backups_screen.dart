@@ -196,7 +196,7 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(20),
                     child: Text(
                       'Danh sách bản sao lưu',
@@ -204,13 +204,13 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
                     ),
                   ),
                   _row(
-                    const Text('TÊN TỆP', style: _headStyle),
-                    const Text('THỜI GIAN', style: _headStyle),
-                    const Text('DUNG LƯỢNG', style: _headStyle),
+                    Text('TÊN TỆP', style: _headStyle),
+                    Text('THỜI GIAN', style: _headStyle),
+                    Text('DUNG LƯỢNG', style: _headStyle),
                     header: true,
                   ),
                   if (files.isEmpty)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(20),
                       child: Text(
                         'Chưa có bản sao lưu nào.',
@@ -227,10 +227,7 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       '${files.length} bản ghi',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.muted,
-                      ),
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
                     ),
                   ),
                 ],
@@ -247,7 +244,7 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
     },
   );
 
-  static const _headStyle = TextStyle(
+  static TextStyle get _headStyle => TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w700,
     color: AppColors.muted,
@@ -256,8 +253,8 @@ class _BackupsScreenState extends ConsumerState<BackupsScreen> {
   Widget _row(Widget a, Widget b, Widget c, {bool header = false}) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
     decoration: BoxDecoration(
-      color: header ? const Color(0xFFF7F8FC) : null,
-      border: const Border(top: BorderSide(color: AppColors.divider)),
+      color: header ? AppColors.tint(const Color(0xFFF7F8FC)) : null,
+      border: Border(top: BorderSide(color: AppColors.divider)),
     ),
     child: Row(
       children: [
@@ -285,22 +282,19 @@ class _InfoCard extends StatelessWidget {
     width: 300,
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
-        ),
+        Text(title, style: TextStyle(fontSize: 13, color: AppColors.muted)),
         const SizedBox(height: 6),
         if (big != null)
           Text(
             big!,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: AppColors.navy,
@@ -309,10 +303,7 @@ class _InfoCard extends StatelessWidget {
         ?action,
         if (note != null) ...[
           const SizedBox(height: 6),
-          Text(
-            note!,
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
-          ),
+          Text(note!, style: TextStyle(fontSize: 12, color: AppColors.muted)),
         ],
       ],
     ),

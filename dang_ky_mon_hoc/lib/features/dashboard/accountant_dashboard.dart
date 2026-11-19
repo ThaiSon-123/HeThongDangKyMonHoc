@@ -161,13 +161,13 @@ class _AccountantDashboardState extends ConsumerState<AccountantDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Phải thu và đã thu theo ngành',
                     style: sectionTitleStyle,
                   ),
                   const SizedBox(height: 12),
                   if (nganh.isEmpty)
-                    const Text(
+                    Text(
                       'Chưa có học phí nào trong học kỳ này.',
                       style: TextStyle(color: AppColors.muted),
                     ),

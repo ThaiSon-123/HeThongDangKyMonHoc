@@ -41,11 +41,7 @@ class _ErrorState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.cloud_off_outlined,
-            size: 40,
-            color: AppColors.muted,
-          ),
+          Icon(Icons.cloud_off_outlined, size: 40, color: AppColors.muted),
           const SizedBox(height: 12),
           const Text('Không tải được hồ sơ.'),
           const SizedBox(height: 12),
@@ -197,7 +193,7 @@ class _WideIdentity extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'THÔNG TIN HỌC VỤ · CHỈ ĐỌC',
             style: TextStyle(
               fontSize: 12,
@@ -219,10 +215,7 @@ class _WideIdentity extends StatelessWidget {
                     children: [
                       Text(
                         k,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.muted,
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -238,7 +231,7 @@ class _WideIdentity extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             _readOnlyNote,
             style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
@@ -271,7 +264,7 @@ class _CompactIdentity extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'THÔNG TIN HỌC VỤ · CHỈ ĐỌC',
                 style: TextStyle(
                   fontSize: 12,
@@ -285,7 +278,7 @@ class _CompactIdentity extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.only(bottom: 10),
                   margin: const EdgeInsets.only(bottom: 10),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(color: AppColors.divider),
                     ),
@@ -296,10 +289,7 @@ class _CompactIdentity extends StatelessWidget {
                     children: [
                       Text(
                         k,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.muted,
-                        ),
+                        style: TextStyle(fontSize: 14, color: AppColors.muted),
                       ),
                       const SizedBox(width: 12),
                       Flexible(
@@ -315,7 +305,7 @@ class _CompactIdentity extends StatelessWidget {
                     ],
                   ),
                 ),
-              const Text(
+              Text(
                 'Liên hệ Phòng đào tạo nếu cần chỉnh sửa thông tin này.',
                 style: TextStyle(
                   fontSize: 12,

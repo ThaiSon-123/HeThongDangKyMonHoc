@@ -89,7 +89,7 @@ class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: AppColors.cardShadow,
               ),
@@ -133,7 +133,7 @@ class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Điểm đã khóa vẫn chưa hiển thị cho sinh viên cho tới khi Phòng đào tạo duyệt.',
                     style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
@@ -148,11 +148,11 @@ class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
                   horizontal: 24,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: AppColors.cardShadow,
                 ),
-                child: const Column(
+                child: Column(
                   children: [
                     Text(
                       'Chọn lớp để nhập điểm',

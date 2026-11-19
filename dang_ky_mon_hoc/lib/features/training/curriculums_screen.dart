@@ -399,7 +399,7 @@ class _CurriculumCoursesState extends ConsumerState<_CurriculumCourses> {
       ),
       const SizedBox(height: 24),
       if (_ctdt == null)
-        const PanelCard(
+        PanelCard(
           child: Text(
             'Chọn một CTĐT ở trên để xem và gán môn.',
             style: TextStyle(color: AppColors.muted, fontSize: 14),
@@ -429,7 +429,7 @@ class _CurriculumCoursesState extends ConsumerState<_CurriculumCourses> {
                 ),
                 Text(
                   r.str('ma_mon'),
-                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                  style: TextStyle(fontSize: 11, color: AppColors.muted),
                 ),
               ],
             ),

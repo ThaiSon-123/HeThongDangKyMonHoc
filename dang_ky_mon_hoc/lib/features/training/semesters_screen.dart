@@ -113,10 +113,7 @@ class _SemestersScreenState extends ConsumerState<SemestersScreen> {
                   ),
                   Text(
                     'Năm học ${r.str('nam_hoc')}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -221,7 +218,7 @@ class _SemesterDetail extends ConsumerWidget {
             children: [
               Text(
                 '${semester.str('ten_hk')} · ${semester.str('nam_hoc')}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: AppColors.navy,
@@ -233,10 +230,10 @@ class _SemesterDetail extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             '${formatYmd(semester.str('ngay_bat_dau'))} – ${formatYmd(semester.str('ngay_ket_thuc'))}',
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
           ),
           const SizedBox(height: 24),
-          const Text('Cửa sổ đăng ký', style: sectionTitleStyle),
+          Text('Cửa sổ đăng ký', style: sectionTitleStyle),
           const SizedBox(height: 8),
           Wrap(
             spacing: 16,
@@ -263,7 +260,7 @@ class _SemesterDetail extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 24),
-          const Text('Giới hạn tín chỉ đăng ký', style: sectionTitleStyle),
+          Text('Giới hạn tín chỉ đăng ký', style: sectionTitleStyle),
           const SizedBox(height: 8),
           Wrap(
             spacing: 16,

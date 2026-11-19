@@ -300,7 +300,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 '1. Chọn môn muốn học',
                 style: TextStyle(
                   fontSize: 17,
@@ -310,7 +310,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
               ),
               Text(
                 '${d.tenHk} · tích chọn các môn bạn muốn học',
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
               const SizedBox(height: 16),
               LocMon(tim: _tim, onTim: (_) => setState(() {})),
@@ -343,7 +343,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                   mon.isEmpty
                       ? 'Hiện không có lớp nào để xếp lịch.'
                       : 'Không có môn phù hợp với bộ lọc.',
-                  style: const TextStyle(color: AppColors.muted),
+                  style: TextStyle(color: AppColors.muted),
                 ),
               for (final m in hienThi) _monTile(d, m),
             ],
@@ -387,7 +387,9 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       child: Container(
         margin: const EdgeInsets.only(top: 10),
         decoration: BoxDecoration(
-          color: _chon.contains(m.id) ? const Color(0xFFF4F6FE) : Colors.white,
+          color: _chon.contains(m.id)
+              ? AppColors.tint(const Color(0xFFF4F6FE))
+              : AppColors.surface,
           border: Border.all(
             color: _chon.contains(m.id) ? AppColors.primary : AppColors.divider,
             width: _chon.contains(m.id) ? 1.5 : 1,
@@ -417,7 +419,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
               if (daDat) StatusChip.of('Đã đạt', StatusChip.green),
               Text(
                 '${m.lop.length} lớp đang mở',
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             ],
           ),
@@ -426,7 +428,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           expandedAlignment: Alignment.centerLeft,
           expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
               child: Text(
                 'Giáo viên mong muốn',
@@ -466,7 +468,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                 _gv[m.id] == null
                     ? 'Để hệ thống tự chọn lớp phù hợp nhất với ưu tiên của bạn.'
                     : 'Lớp của giáo viên đã chọn được ưu tiên xếp.',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
             const SizedBox(height: 4),
@@ -542,17 +544,14 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          chuThich,
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
+        Text(chuThich, style: TextStyle(fontSize: 12, color: AppColors.muted)),
       ],
     );
     return PanelCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '2. Ưu tiên cá nhân',
             style: TextStyle(
               fontSize: 17,
@@ -616,7 +615,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                 coToHop
                     ? 'Có ${_toHop.length} tổ hợp không trùng lịch'
                     : 'Không xếp được tổ hợp nào',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: AppColors.navy,
@@ -633,7 +632,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                   'Hãy bỏ bớt môn hoặc đổi ưu tiên rồi thử lại.',
                 ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Gợi ý chỉ để tham khảo — chưa đăng ký. Điểm tính theo ưu tiên bạn đã chọn.',
                 style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
@@ -709,7 +708,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
         ),
         Text(
           'Trang ${trang + 1}/$soTrang · tổ hợp ${dau + 1}–$cuoi trong ${_toHop.length}',
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         IconButton(
           tooltip: 'Trang sau',
@@ -733,7 +732,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Lịch lặp hằng tuần. Ô xám là các lớp bạn đã đăng ký trong học kỳ.',
             style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
@@ -771,7 +770,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
         border: Border.all(
@@ -792,7 +791,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                   children: [
                     Text(
                       'Tổ hợp ${i + 1}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppColors.navy,
@@ -810,7 +809,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const Text('/100', style: TextStyle(color: AppColors.muted)),
+              Text('/100', style: TextStyle(color: AppColors.muted)),
             ],
           ),
           const SizedBox(height: 8),
@@ -835,7 +834,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           const SizedBox(height: 8),
           Text(
             'Tổng ${t.tongTinChi} tín chỉ',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           const SizedBox(height: 12),
           Padding(
@@ -906,7 +905,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F5FA),
+        color: AppColors.tint(const Color(0xFFF4F5FA)),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -918,12 +917,12 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           ),
           Text(
             '${l.maLop} · GV ${l.giaoVien} · ${l.lichText}',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           if (_thoiGian(_meta, l) != null)
             Text(
               'Thời gian học: ${_thoiGian(_meta, l)}',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           if (khac.length > 1)
             DropdownButton<int>(
@@ -931,7 +930,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
               isExpanded: true,
               value: l.id,
               underline: const SizedBox.shrink(),
-              style: const TextStyle(fontSize: 12, color: AppColors.primary),
+              style: TextStyle(fontSize: 12, color: AppColors.primary),
               items: [
                 for (final k in khac)
                   DropdownMenuItem(
@@ -961,7 +960,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Kết quả đăng ký',
             style: TextStyle(
               fontSize: 17,
@@ -1008,7 +1007,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
           if (!_dangDangKy) ...[
             const SizedBox(height: 8),
             if (loi)
-              const Text(
+              Text(
                 'Môn lỗi không làm hủy các môn đã đăng ký thành công. Bạn có thể đăng ký lại môn lỗi ở trang Đăng ký môn học.',
                 style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
@@ -1041,7 +1040,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
   }
 
   Widget _bieuTuong(_KQ k) => switch (k) {
-    _KQ.ok => const Text(
+    _KQ.ok => Text(
       '✓',
       style: TextStyle(
         color: AppColors.success,
@@ -1049,7 +1048,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
         fontSize: 18,
       ),
     ),
-    _KQ.loi => const Text(
+    _KQ.loi => Text(
       '✕',
       style: TextStyle(
         color: AppColors.danger,
@@ -1062,7 +1061,7 @@ class _AutoScheduleScreenState extends ConsumerState<AutoScheduleScreen> {
       height: 18,
       child: CircularProgressIndicator(strokeWidth: 2),
     ),
-    _KQ.cho => const Text('•', style: TextStyle(color: AppColors.muted)),
+    _KQ.cho => Text('•', style: TextStyle(color: AppColors.muted)),
   };
 }
 
@@ -1106,7 +1105,7 @@ class _Stepper extends StatelessWidget {
               ),
             ),
           if (i < nhan.length - 1)
-            const Text('›', style: TextStyle(color: AppColors.muted)),
+            Text('›', style: TextStyle(color: AppColors.muted)),
         ],
       ],
     );

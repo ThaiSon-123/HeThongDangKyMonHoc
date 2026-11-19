@@ -150,7 +150,7 @@ class _TeacherClassesScreenState extends ConsumerState<TeacherClassesScreen> {
             const SizedBox(width: 24),
             Expanded(
               child: _selected == null
-                  ? const PanelCard(
+                  ? PanelCard(
                       child: Text(
                         'Chọn một lớp ở danh sách bên trái để xem chi tiết.',
                         style: TextStyle(color: AppColors.muted),
@@ -238,7 +238,7 @@ class _ClassList extends ConsumerWidget {
               total == 0
                   ? 'Bạn chưa được phân công lớp nào.'
                   : 'Không có lớp nào ở trạng thái này.',
-              style: const TextStyle(color: AppColors.muted),
+              style: TextStyle(color: AppColors.muted),
             ),
           ),
         for (final c in classes)
@@ -278,7 +278,7 @@ class _ClassCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Material(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
@@ -301,7 +301,7 @@ class _ClassCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         lop.str('ten_mon'),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: AppColors.navy,
@@ -314,7 +314,7 @@ class _ClassCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${lop.str('ma_lop')} · ${lop.str('ten_hk')}',
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -379,13 +379,10 @@ class _Pill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     decoration: BoxDecoration(
-      color: const Color(0xFFF1F3FA),
+      color: AppColors.tint(const Color(0xFFF1F3FA)),
       borderRadius: BorderRadius.circular(8),
     ),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 11, color: AppColors.label),
-    ),
+    child: Text(text, style: TextStyle(fontSize: 11, color: AppColors.label)),
   );
 }
 
@@ -468,7 +465,7 @@ class _ClassDetailState extends ConsumerState<_ClassDetail> {
       children: [
         Text(
           lop.str('ten_mon'),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.w700,
             color: AppColors.navy,
@@ -476,7 +473,7 @@ class _ClassDetailState extends ConsumerState<_ClassDetail> {
         ),
         Text(
           '${lop.str('ma_lop')} · ${lop.str('ten_hk')}',
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
       ],
     );
@@ -522,10 +519,7 @@ class _ClassDetailState extends ConsumerState<_ClassDetail> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: AppColors.muted)),
         const SizedBox(height: 2),
         value,
       ],
@@ -585,7 +579,7 @@ class _ClassDetailState extends ConsumerState<_ClassDetail> {
   Widget _schedule(Json lop) {
     final lich = [for (final l in lop['lich_hoc'] as List) Json.from(l as Map)];
     if (lich.isEmpty) {
-      return const Text(
+      return Text(
         'Lớp chưa có lịch học.',
         style: TextStyle(color: AppColors.muted),
       );
@@ -595,7 +589,7 @@ class _ClassDetailState extends ConsumerState<_ClassDetail> {
         for (final l in lich)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.divider)),
             ),
             child: Row(
@@ -646,7 +640,7 @@ class _ClassDetailState extends ConsumerState<_ClassDetail> {
               Expanded(
                 child: Text(
                   '${d.num0('si_so')}/${d.num0('si_so_toi_da')} sinh viên đã đăng ký',
-                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ),
               SizedBox(
@@ -668,14 +662,14 @@ class _ClassDetailState extends ConsumerState<_ClassDetail> {
           ),
           const SizedBox(height: 12),
           if (rows.isEmpty)
-            const Text(
+            Text(
               'Chưa có sinh viên nào đăng ký lớp này.',
               style: TextStyle(color: AppColors.muted),
             ),
           for (final (i, r) in rows.indexed)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.divider)),
               ),
               child: Row(

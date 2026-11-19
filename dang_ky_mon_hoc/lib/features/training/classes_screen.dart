@@ -347,7 +347,7 @@ class _SiSo extends StatelessWidget {
               value: ratio,
               minHeight: 6,
               color: color,
-              backgroundColor: const Color(0xFFECEFF5),
+              backgroundColor: AppColors.tint(const Color(0xFFECEFF5)),
             ),
           ),
         ),
@@ -604,13 +604,13 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
       }
       final items = snap.data;
       if (items == null) {
-        return const Text(
+        return Text(
           'Không tải được danh sách sinh viên.',
           style: TextStyle(color: AppColors.muted, fontSize: 14),
         );
       }
       if (items.isEmpty) {
-        return const Text(
+        return Text(
           'Chưa có sinh viên đăng ký.',
           style: TextStyle(color: AppColors.muted, fontSize: 14),
         );
@@ -621,7 +621,7 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
           for (final r in items)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.divider)),
               ),
               child: Row(
@@ -633,10 +633,7 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
                   Expanded(child: Text(r.str('ho_ten'))),
                   Text(
                     formatIso(r.str('ngay_dang_ky')).split(' ').first,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -645,7 +642,7 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
           Text(
             'Hiển thị ${items.length} / ${lop.num0('si_so_hien_tai')} sinh viên. '
             'Quản lý và hủy hộ ở mục Theo dõi đăng ký.',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
         ],
       );
@@ -665,12 +662,12 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
           children: [
             Text(
               '${lop.str('ten_mon')} · GV ${lop.str('giao_vien_ten')}',
-              style: const TextStyle(fontSize: 14, color: AppColors.label),
+              style: TextStyle(fontSize: 14, color: AppColors.label),
             ),
             trangThaiChip(tt),
             Text(
               'Sĩ số ${lop.num0('si_so_hien_tai')}/${lop.num0('si_so_toi_da')}',
-              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
             ),
           ],
         ),
@@ -692,24 +689,24 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
           'MO' => 'Lớp tự chuyển sang Đang học khi đến ngày bắt đầu. Muốn học sớm hơn, hãy sửa ngày bắt đầu của lớp.',
           'DA_DONG' => 'Lớp đã đóng — điểm danh và nhập điểm đã bị khóa.',
           _ => '',
-        }, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        }, style: TextStyle(fontSize: 12, color: AppColors.muted)),
         const SizedBox(height: 18),
         Row(
           children: [
-            const Expanded(child: Text('Lịch học', style: sectionTitleStyle)),
+            Expanded(child: Text('Lịch học', style: sectionTitleStyle)),
             if (tt != 'DA_DONG') RowButton('Thêm buổi học', _addSchedule),
           ],
         ),
         const SizedBox(height: 8),
         if (lich.isEmpty)
-          const Text(
+          Text(
             'Lớp chưa có lịch học.',
             style: TextStyle(color: AppColors.muted, fontSize: 14),
           ),
         for (final l in lich)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.divider)),
             ),
             child: Row(
@@ -741,11 +738,11 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
           _WeekGrid(lich, key: const ValueKey('week-grid')),
         ],
         const SizedBox(height: 18),
-        const Text('Sinh viên đăng ký', style: sectionTitleStyle),
+        Text('Sinh viên đăng ký', style: sectionTitleStyle),
         const SizedBox(height: 8),
         _studentList(lop),
         const SizedBox(height: 18),
-        const Text('Hạn nhập điểm', style: sectionTitleStyle),
+        Text('Hạn nhập điểm', style: sectionTitleStyle),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -790,7 +787,7 @@ class _WeekGrid extends StatelessWidget {
       child: Center(
         child: Text(
           t,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
             color: AppColors.muted,
@@ -815,10 +812,7 @@ class _WeekGrid extends StatelessWidget {
                   width: 44,
                   child: Text(
                     'Tiết $tiet',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 10, color: AppColors.muted),
                   ),
                 ),
                 for (var thu = 2; thu <= 8; thu++)
@@ -832,8 +826,8 @@ class _WeekGrid extends StatelessWidget {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: c == null
-                                ? const Color(0xFFF4F5FA)
-                                : const Color(0xFFC5CAE9),
+                                ? AppColors.tint(const Color(0xFFF4F5FA))
+                                : AppColors.tint(const Color(0xFFC5CAE9)),
                             borderRadius: BorderRadius.circular(3),
                           ),
                           child: c == null || c.isEmpty
@@ -841,7 +835,7 @@ class _WeekGrid extends StatelessWidget {
                               : Text(
                                   c,
                                   overflow: TextOverflow.clip,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.primaryDark,

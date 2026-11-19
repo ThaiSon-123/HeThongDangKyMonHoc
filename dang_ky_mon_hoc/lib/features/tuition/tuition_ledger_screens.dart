@@ -320,7 +320,7 @@ class _TuitionDetailDialogState extends ConsumerState<TuitionDetailDialog> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(k, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        Text(k, style: TextStyle(fontSize: 12, color: AppColors.muted)),
         Text(v, style: const TextStyle(fontWeight: FontWeight.w700)),
       ],
     ),
@@ -341,7 +341,7 @@ class _TuitionDetailDialogState extends ConsumerState<TuitionDetailDialog> {
           children: [
             Text(
               '${d.str('ho_ten')} · ${d.str('ma_sv')}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: AppColors.navy,
@@ -353,7 +353,7 @@ class _TuitionDetailDialogState extends ConsumerState<TuitionDetailDialog> {
         ),
         Text(
           '${d.str('nganh_ten')} · ${d.str('ten_hk')}${d['han_dong'] != null ? ' · hạn đóng ${formatYmd(d.str('han_dong'))}' : ''}',
-          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         const SizedBox(height: 14),
         Wrap(
@@ -370,7 +370,7 @@ class _TuitionDetailDialogState extends ConsumerState<TuitionDetailDialog> {
         ),
         const SizedBox(height: 14),
         if (chuaTinh)
-          const Text(
+          Text(
             'Cần tính học phí trước khi ghi thu / hoàn.',
             style: TextStyle(color: AppColors.muted, fontSize: 13),
           )
@@ -403,17 +403,17 @@ class _TuitionDetailDialogState extends ConsumerState<TuitionDetailDialog> {
             ],
           ),
         const SizedBox(height: 18),
-        const Text('Giao dịch', style: sectionTitleStyle),
+        Text('Giao dịch', style: sectionTitleStyle),
         const SizedBox(height: 6),
         if (gd.isEmpty)
-          const Text(
+          Text(
             'Chưa có giao dịch nào.',
             style: TextStyle(color: AppColors.muted),
           ),
         for (final p in gd)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.divider)),
             ),
             child: Row(
@@ -442,10 +442,10 @@ class _TuitionDetailDialogState extends ConsumerState<TuitionDetailDialog> {
             ),
           ),
         const SizedBox(height: 18),
-        const Text('Chi tiết từng môn', style: sectionTitleStyle),
+        Text('Chi tiết từng môn', style: sectionTitleStyle),
         const SizedBox(height: 6),
         if (chiTiet.isEmpty)
-          const Text(
+          Text(
             'Chưa có môn nào (hoặc chưa cấu hình giá).',
             style: TextStyle(color: AppColors.muted),
           ),
@@ -462,7 +462,7 @@ class _TuitionDetailDialogState extends ConsumerState<TuitionDetailDialog> {
                 ),
                 Text(
                   '${c.num0('tin_chi_ly_thuyet')} LT · ${c.num0('tin_chi_thuc_hanh')} TH   ',
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
                 Text(
                   formatVnd(c['thanh_tien']),
@@ -655,7 +655,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
                 ),
                 Text(
                   '${r.str('ma_sv')} · ${r.str('nganh_ten')}',
-                  style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                  style: TextStyle(fontSize: 11, color: AppColors.muted),
                 ),
               ],
             ),
@@ -668,7 +668,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
             r['qua_han'] == true
                 ? Text(
                     '${_tre(r)}  Quá hạn',
-                    style: const TextStyle(color: AppColors.danger),
+                    style: TextStyle(color: AppColors.danger),
                   )
                 : const Text('—'),
             RowActions([

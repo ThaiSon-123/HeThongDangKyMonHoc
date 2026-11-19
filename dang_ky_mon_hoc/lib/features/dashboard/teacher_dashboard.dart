@@ -190,7 +190,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Lớp của tôi',
                     style: TextStyle(
                       fontSize: 15,
@@ -202,7 +202,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
                   if (d.lop
                       .where((l) => l.str('trang_thai') != 'DA_DONG')
                       .isEmpty)
-                    const Text(
+                    Text(
                       'Bạn chưa có lớp nào đang dạy.',
                       style: TextStyle(color: AppColors.muted),
                     ),
@@ -254,7 +254,7 @@ class _TeacherDashboardState extends ConsumerState<TeacherDashboard> {
               ),
               Text(
                 '${l.str('ma_lop')} · ${l.num0('si_so_hien_tai')}/${l.num0('si_so_toi_da')} SV · $lich',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
               Text(
                 'Hạn nhập điểm: $han',

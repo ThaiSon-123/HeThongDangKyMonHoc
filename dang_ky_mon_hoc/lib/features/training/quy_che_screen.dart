@@ -96,7 +96,7 @@ class _QuyCheScreenState extends ConsumerState<QuyCheScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.info_outline,
                     size: 20,
                     color: AppColors.infoBannerText,
@@ -106,7 +106,7 @@ class _QuyCheScreenState extends ConsumerState<QuyCheScreen> {
                     child: Text(
                       'Thay đổi chỉ áp dụng cho thao tác về sau, không tính lại dữ liệu đã có.'
                       '${sua is Map ? ' Sửa lần cuối bởi ${sua['boi']} · ${formatIso(sua['luc'] as String?)}.' : ''}',
-                      style: const TextStyle(color: AppColors.infoBannerText),
+                      style: TextStyle(color: AppColors.infoBannerText),
                     ),
                   ),
                 ],
@@ -256,7 +256,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFFE8EAF6),
+                color: AppColors.tint(const Color(0xFFE8EAF6)),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -274,10 +274,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
                   const SizedBox(height: 2),
                   Text(
                     _nhomMoTa[widget.title] ?? '',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.muted,
-                    ),
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -305,7 +302,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
           const SizedBox(height: 12),
         ],
         if (widget.fill) const Spacer(),
-        const Divider(height: 24, color: AppColors.divider),
+        Divider(height: 24, color: AppColors.divider),
         Wrap(
           spacing: 12,
           runSpacing: 8,
@@ -352,7 +349,7 @@ class _KhuonVien extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Khuôn viên trường',
             style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.label),
           ),
@@ -377,9 +374,12 @@ class _KhuonVien extends StatelessWidget {
             ],
           ),
           if (error != null)
-            Text(error!, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+            Text(
+              error!,
+              style: TextStyle(color: AppColors.danger, fontSize: 12),
+            ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Nhớ bấm "Lưu nhóm này" sau khi vẽ.',
             style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),

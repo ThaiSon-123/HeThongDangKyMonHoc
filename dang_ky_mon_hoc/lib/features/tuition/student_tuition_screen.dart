@@ -36,7 +36,7 @@ class _Card extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: AppColors.cardShadow,
     ),
@@ -112,7 +112,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
             ] else ...[
               Text(
                 d.str('ten_hk'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: AppColors.navy,
@@ -187,7 +187,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
     final trai = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Trạng thái học phí',
           style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
@@ -197,7 +197,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
           const SizedBox(height: 14),
           Text(
             'Bắt đầu đóng học phí từ ${formatYmd(d.str('ngay_bat_dau_dong'))}.',
-            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
           ),
         ] else if (conNo > 0) ...[
           const SizedBox(height: 14),
@@ -281,7 +281,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
   }
 
   Widget _chiTietCard(List<Json> chiTiet, bool compact) {
-    const dau = TextStyle(
+    final dau = TextStyle(
       fontSize: 12,
       fontWeight: FontWeight.w700,
       color: AppColors.muted,
@@ -294,14 +294,14 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 18, 20, 14),
             child: Text(
               'Chi tiết học phí từng môn',
@@ -313,7 +313,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
             ),
           ),
           if (chiTiet.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Text(
                 'Chưa có môn nào được tính học phí.',
@@ -323,20 +323,20 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
           else ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: const BoxDecoration(
-                color: Color(0xFFF7F8FC),
+              decoration: BoxDecoration(
+                color: AppColors.tint(const Color(0xFFF7F8FC)),
                 border: Border.symmetric(
                   horizontal: BorderSide(color: AppColors.divider),
                 ),
               ),
               child: Row(
                 children: [
-                  const Expanded(child: Text('MÔN HỌC', style: dau)),
+                  Expanded(child: Text('MÔN HỌC', style: dau)),
                   if (!compact) ...[
                     so('TC LT', style: dau),
                     so('TC TH', style: dau),
                   ],
-                  const SizedBox(
+                  SizedBox(
                     width: 110,
                     child: Text(
                       'THÀNH TIỀN',
@@ -353,7 +353,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
                   horizontal: 20,
                   vertical: 12,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: AppColors.divider)),
                 ),
                 child: Row(
@@ -370,7 +370,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
                             compact
                                 ? '${c.str('ma_mon')} · ${c.num0('tin_chi_ly_thuyet')} TC LT · ${c.num0('tin_chi_thuc_hanh')} TC TH'
                                 : c.str('ma_mon'),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: AppColors.muted,
                             ),
@@ -403,7 +403,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Giao dịch',
           style: TextStyle(
             fontWeight: FontWeight.w700,
@@ -413,7 +413,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
         ),
         const SizedBox(height: 12),
         if (gd.isEmpty)
-          const Text(
+          Text(
             'Chưa có giao dịch nào.',
             style: TextStyle(color: AppColors.muted),
           ),
@@ -422,7 +422,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF4F5FA),
+              color: AppColors.tint(const Color(0xFFF4F5FA)),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -438,10 +438,7 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
                       ),
                       Text(
                         '${formatIso(p.str('ngay'))} · ${phuongThucLabel(p.str('phuong_thuc'))}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.muted,
-                        ),
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                     ],
                   ),
@@ -449,13 +446,13 @@ class _StudentTuitionScreenState extends ConsumerState<StudentTuitionScreen> {
                 const SizedBox(width: 8),
                 Text(
                   p.str('bien_lai_ma'),
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ],
             ),
           ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Thanh toán qua VNPay hoặc trực tiếp tại phòng Kế toán.',
           style: TextStyle(fontSize: 12, color: AppColors.muted),
         ),
@@ -607,18 +604,15 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                d.str('ten_hk'),
-                style: const TextStyle(color: AppColors.muted),
-              ),
+              Text(d.str('ten_hk'), style: TextStyle(color: AppColors.muted)),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Công nợ hiện tại',
                 style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
               Text(
                 formatVnd(conNo),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: AppColors.navy,
@@ -634,7 +628,7 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
                 ),
               ] else ...[
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   'Hình thức đóng',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
@@ -659,7 +653,7 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
                   ],
                 ),
                 if (!coDot)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 6),
                     child: Text(
                       'Học kỳ này chưa cấu hình chia đợt.',
@@ -682,7 +676,7 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
                 ),
                 const SizedBox(height: 10),
                 _tieuDeBang(),
-                const Divider(color: AppColors.divider, height: 12),
+                Divider(color: AppColors.divider, height: 12),
                 for (final dot in dots) _dongDot(dot),
               ],
             ),
@@ -717,7 +711,7 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Quét mã QR bằng điện thoại để mở trang thanh toán VNPay (môi trường thử nghiệm). '
                   'Thanh toán xong, học phí được cập nhật tự động.',
                   style: TextStyle(fontSize: 13, color: AppColors.muted),
@@ -872,13 +866,13 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
   }
 
   Widget _tieuDeBang() {
-    const kieu = TextStyle(
+    final kieu = TextStyle(
       fontSize: 11,
       fontWeight: FontWeight.w700,
       letterSpacing: 0.5,
       color: AppColors.muted,
     );
-    return const Row(
+    return Row(
       children: [
         SizedBox(width: 56, child: Text('ĐỢT', style: kieu)),
         Expanded(child: Text('HẠN ĐÓNG', style: kieu)),
@@ -968,7 +962,7 @@ class _StudentPayScreenState extends ConsumerState<StudentPayScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'Đang chờ thanh toán… (tự cập nhật khi VNPay báo kết quả)',
               style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
@@ -1043,7 +1037,7 @@ class _KetQuaThanhToan extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [nen, Colors.white],
+          colors: [nen, AppColors.surface],
           stops: const [0, 0.4],
         ),
       ),
@@ -1090,11 +1084,7 @@ class _KetQuaThanhToan extends StatelessWidget {
           Text(
             moTa,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.muted,
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: 14, color: AppColors.muted, height: 1.5),
           ),
           if (soTien != null || ma.isNotEmpty) ...[
             const SizedBox(height: 20),
@@ -1108,7 +1098,7 @@ class _KetQuaThanhToan extends StatelessWidget {
               child: Column(
                 children: [
                   if (soTien != null) ...[
-                    const Text(
+                    Text(
                       'Số tiền',
                       style: TextStyle(fontSize: 12, color: AppColors.muted),
                     ),
@@ -1121,7 +1111,7 @@ class _KetQuaThanhToan extends StatelessWidget {
                         color: thanhCong ? AppColors.success : AppColors.navy,
                       ),
                     ),
-                    const Divider(color: AppColors.divider, height: 24),
+                    Divider(color: AppColors.divider, height: 24),
                   ],
                   _dongChiTiet('Phương thức', 'VNPay'),
                   if (ma.isNotEmpty)
@@ -1179,7 +1169,7 @@ class _KetQuaThanhToan extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       children: [
-        Text(nhan, style: const TextStyle(color: AppColors.muted)),
+        Text(nhan, style: TextStyle(color: AppColors.muted)),
         const Spacer(),
         Text(giaTri, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
