@@ -761,6 +761,7 @@ class _MoPhien extends ConsumerStatefulWidget {
 class _MoPhienState extends ConsumerState<_MoPhien> {
   int _phut = 10;
   bool _qr = false;
+  bool _gps = true;
 
   @override
   Widget build(BuildContext context) => SectionCard(
@@ -769,8 +770,8 @@ class _MoPhienState extends ConsumerState<_MoPhien> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Sinh viên chỉ điểm danh được khi GPS cho thấy đang ở trong khuôn viên trường '
-          '(Phòng đào tạo vẽ ở mục Quy chế).',
+          'Khuôn mặt luôn được kiểm tra. GPS (trong khuôn viên) và ESP32 (trong phòng) '
+          'bật hoặc tắt riêng từng cái.',
           style: TextStyle(color: AppColors.label, height: 1.5),
         ),
         const SizedBox(height: 16),
@@ -794,20 +795,37 @@ class _MoPhienState extends ConsumerState<_MoPhien> {
         // Material trong suốt: SwitchListTile cần Material ngay phía trên (SectionCard có nền).
         Material(
           color: Colors.transparent,
-          child: SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _qr,
-            onChanged: (v) => setState(() => _qr = v),
-            title: const Text('Bắt mã phòng'),
-            subtitle: const Text(
-              'Mã đổi mỗi 30 giây; sinh viên đọc từ ESP32 (cắm vào máy này) hoặc gõ tay mã hiện trên màn.',
-            ),
+          child: Column(
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _gps,
+                onChanged: (v) => setState(() => _gps = v),
+                title: const Text('Kiểm tra GPS'),
+                subtitle: const Text(
+                  'Sinh viên phải ở trong khuôn viên trường (Phòng đào tạo vẽ ở mục Quy chế).',
+                ),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _qr,
+                onChanged: (v) => setState(() => _qr = v),
+                title: const Text('Bắt mã phòng (ESP32)'),
+                subtitle: const Text(
+                  'Mã đổi mỗi 30 giây; sinh viên đọc từ ESP32 (cắm vào máy này) hoặc gõ tay mã hiện trên màn.',
+                ),
+              ),
+            ],
           ),
         ),
         AppButton(
           label: 'Mở phiên',
           loading: widget.busy,
-          onPressed: () => widget.onMo({'thoi_han': _phut, 'kiem_tra_phong': _qr}),
+          onPressed: () => widget.onMo({
+            'thoi_han': _phut,
+            'kiem_tra_phong': _qr,
+            'kiem_tra_gps': _gps,
+          }),
         ),
       ],
     ),

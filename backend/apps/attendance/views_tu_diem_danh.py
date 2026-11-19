@@ -56,6 +56,7 @@ class DangKyMatSerializer(serializers.Serializer):
 class MoPhienSerializer(serializers.Serializer):
     thoi_han = serializers.IntegerField(min_value=1, max_value=240, required=False)
     kiem_tra_phong = serializers.BooleanField(default=False)
+    kiem_tra_gps = serializers.BooleanField(default=True)
 
 
 class MoLaiSerializer(serializers.Serializer):
@@ -69,12 +70,12 @@ class ThuThachSerializer(serializers.Serializer):
 class CheckinSerializer(serializers.Serializer):
     nonce = serializers.CharField(max_length=40)
     khung = _anh(3, 10)
-    mau_gps = serializers.JSONField()
+    mau_gps = serializers.JSONField(required=False, default=list)  # rỗng khi phiên tắt GPS
     device_id = serializers.CharField(max_length=64, required=False, allow_blank=True)
     nen_tang = serializers.ChoiceField(choices=["android", "web"], default="android")
 
     def validate_mau_gps(self, v):
-        s = MauGpsSerializer(data=v, many=True, allow_empty=False, max_length=100)
+        s = MauGpsSerializer(data=v, many=True, allow_empty=True, max_length=100)
         s.is_valid(raise_exception=True)
         return s.validated_data
 
@@ -183,6 +184,7 @@ class OpenSessionsView(APIView):
                     "buoi": s.buoi,
                     "het_han_luc": s.het_han_luc,
                     "kiem_tra_phong": s.kiem_tra_phong,
+                    "kiem_tra_gps": s.kiem_tra_gps,
                     "trang_thai": a.trang_thai if a else TrangThaiDiemDanh.VANG_KHONG_PHEP,
                     "dang_ngo": bool(a and a.dang_ngo),
                     "luot_con_lai": max(toi_da - da_dung, 0),
@@ -240,6 +242,7 @@ def _phien_payload(s):
         "dong_luc": s.dong_luc,
         "dang_mo": s.dang_mo_tu_diem_danh(),
         "kiem_tra_phong": s.kiem_tra_phong,
+        "kiem_tra_gps": s.kiem_tra_gps,
     }
 
 
@@ -256,6 +259,7 @@ class MoPhienView(APIView):
             pk,
             d.get("thoi_han") or tdd.thoi_han_mac_dinh(),
             d["kiem_tra_phong"],
+            kiem_tra_gps=d["kiem_tra_gps"],
         )
         write_audit(request, HanhDong.UPDATE, "AttendanceSession", pk, {"hanh_dong": "mo_phien"})
         return Response(_phien_payload(phien))

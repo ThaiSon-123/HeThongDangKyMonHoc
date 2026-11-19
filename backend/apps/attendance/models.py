@@ -36,6 +36,8 @@ class AttendanceSession(models.Model):
         related_name="phien_tu_diem_danh_da_mo",
     )
     kiem_tra_phong = models.BooleanField(default=False)
+    # Công tắc độc lập với kiem_tra_phong: GPS (trong khuôn viên) và ESP32 (trong phòng) bật/tắt riêng.
+    kiem_tra_gps = models.BooleanField(default=True)
     ma_phong_bi_mat = models.BinaryField(null=True, blank=True)
 
     class Meta:

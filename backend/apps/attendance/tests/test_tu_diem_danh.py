@@ -612,3 +612,60 @@ def test_open_sessions_cua_sv(login_as, phien_mo):
     data = login_as(svs[0]).get("/api/attendance/open-sessions/").data
     assert [x["id"] for x in data] == [s.id] and data[0]["luot_con_lai"] == 5
     assert login_as(StudentProfileFactory().user).get("/api/attendance/open-sessions/").data == []
+
+
+# ------------------------------------------------------------------ GPS và ESP32 bật/tắt độc lập
+
+
+def _diem_danh_khong_gps(login_as, engine, s, u):
+    c = login_as(u)
+    r = thu_thach(c, s)
+    assert r.status_code == 201, r.data
+    data = {"nonce": r.data["nonce"], "khung": khung_dat(engine, prefix=f"u{u.id}-")}
+    return c.post(url(s, "checkin"), data, format="multipart")
+
+
+def test_tat_gps_khong_can_khuon_vien_va_khong_doi_mau_gps(login_as, engine, gv, lop):
+    _, s, svs = lop
+    SystemConfig.objects.filter(khoa="khuon_vien").update(gia_tri="")
+    r = mo(gv, s, kiem_tra_gps=False)
+    assert r.status_code == 200 and r.data["kiem_tra_gps"] is False and not r.data["kiem_tra_phong"]
+    mau_duyet(svs[0])
+    r = _diem_danh_khong_gps(login_as, engine, s, svs[0])
+    assert r.status_code == 200 and r.data["ket_qua"] == "CO_MAT"
+    luot = CheckinAttempt.objects.get()
+    assert luot.lat is None and luot.d_m is None and luot.co == []
+
+
+def test_tat_gps_bo_qua_mau_gps_gui_len(login_as, engine, gv, lop):
+    _, s, svs = lop
+    mo(gv, s, kiem_tra_gps=False)
+    mau_duyet(svs[0])
+    # Mẫu GPS xa khuôn viên, sai số lớn, vị trí giả: đều bị bỏ qua khi phiên tắt GPS.
+    r = diem_danh(login_as, engine, s, svs[0], mau=gps(n=3, acc=500, dlat=5000 * M, mock=True))
+    assert r.data["ket_qua"] == "CO_MAT"
+
+
+def test_bat_gps_ma_khong_gui_mau_thi_gps_kem(login_as, engine, phien_mo):
+    s, svs = phien_mo
+    r = _diem_danh_khong_gps(login_as, engine, s, svs[0])
+    assert _ly_do(r) == ("KHONG_DAT", "GPS_KEM", 4)
+
+
+def test_tat_gps_bat_esp32_van_kiem_tra_ma_phong(login_as, engine, gv, lop):
+    _, s, svs = lop
+    mo(gv, s, kiem_tra_gps=False, kiem_tra_phong=True)
+    mau_duyet(svs[0])
+    c = login_as(svs[0])
+    r = c.post(url(s, "challenge"), {"ma_phong": "AAAAAAAA"}, format="json")
+    assert r.status_code == 409 and r.data["error"]["details"]["ly_do"] == "MA_PHONG_SAI"
+    ma = gv.get(url(s, "room-token")).data["ma"]
+    r = c.post(url(s, "challenge"), {"ma_phong": ma}, format="json")
+    assert r.status_code == 201 and r.data["kiem_tra_gps"] is False and r.data["kiem_tra_phong"]
+
+
+def test_open_sessions_tra_ve_kiem_tra_gps(login_as, gv, lop):
+    _, s, svs = lop
+    mo(gv, s, kiem_tra_gps=False)
+    data = login_as(svs[0]).get("/api/attendance/open-sessions/").data
+    assert data[0]["kiem_tra_gps"] is False and data[0]["kiem_tra_phong"] is False

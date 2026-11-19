@@ -185,6 +185,7 @@ void main() {
       expect(api.bodies['POST /attendance/sessions/11/mo-phien/'], {
         'thoi_han': 10,
         'kiem_tra_phong': false,
+        'kiem_tra_gps': true,
       });
       expect(find.text('Tự điểm danh đang mở · còn 05:00'), findsOneWidget);
     });
@@ -308,6 +309,7 @@ void main() {
       int con = 5,
       String tt = 'VANG_KHONG_PHEP',
       bool qr = false,
+      bool gps = true,
     }) => {
       'id': 11,
       'lop_hoc_phan': 3,
@@ -317,6 +319,7 @@ void main() {
       'buoi': 'SANG',
       'het_han_luc': '2027-01-13T08:05:00+07:00',
       'kiem_tra_phong': qr,
+      'kiem_tra_gps': gps,
       'trang_thai': tt,
       'dang_ngo': false,
       'luot_con_lai': con,
@@ -443,6 +446,30 @@ void main() {
       expect(f['nen_tang'], 'android');
       expect(f['device_id'], hasLength(32));
       expect(body.files.length, 6);
+      expect(find.text('Đã ghi nhận có mặt.'), findsOneWidget);
+    });
+
+    testWidgets('phiên tắt GPS → bỏ bước vị trí (mau_gps rỗng dù máy có GPS), có mặt', (t) async {
+      final api = svApi({
+        'GET /attendance/open-sessions/': (_) =>
+            reply(200, [moSv(gps: false)]),
+        'POST /attendance/sessions/11/challenge/': (_) =>
+            reply(201, thuThach()),
+        'POST /attendance/sessions/11/checkin/': (_) => reply(200, {
+          'ket_qua': 'CO_MAT',
+          'trang_thai': 'CO_MAT',
+          'dang_ngo': false,
+          'ly_do': null,
+          'luot_con_lai': 4,
+        }),
+      });
+      await moSvScreen(t, api);
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Điểm danh');
+      final body =
+          api.bodies['POST /attendance/sessions/11/checkin/'] as FormData;
+      final f = Map.fromEntries(body.fields);
+      expect(f['mau_gps'], '[]');
       expect(find.text('Đã ghi nhận có mặt.'), findsOneWidget);
     });
 

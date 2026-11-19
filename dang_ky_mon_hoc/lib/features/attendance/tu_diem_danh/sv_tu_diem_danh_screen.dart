@@ -330,23 +330,29 @@ class _LuongState extends ConsumerState<SvLuong> {
     }
   }
 
-  /// GPS → chụp → gửi.
+  /// Phiên tắt GPS (`kiem_tra_gps == false`) thì bỏ bước lấy vị trí; thiếu trường (server cũ) coi như bật.
+  bool get _canGps => widget.phien['kiem_tra_gps'] != false;
+
+  /// GPS (nếu phiên bật) → chụp → gửi.
   Future<void> _tiep() async {
     final t = _thuThach!;
     try {
-      setState(() {
-        _buoc = _Buoc.gps;
-        _soMau = 0;
-        _saiSo = null;
-      });
-      final mau = await ref.read(layMauGpsProvider)(6, (m) {
-        if (mounted) {
-          setState(() {
-            _soMau++;
-            _saiSo = (m['acc'] as num).toDouble();
-          });
-        }
-      });
+      var mau = <MauGps>[];
+      if (_canGps) {
+        setState(() {
+          _buoc = _Buoc.gps;
+          _soMau = 0;
+          _saiSo = null;
+        });
+        mau = await ref.read(layMauGpsProvider)(6, (m) {
+          if (mounted) {
+            setState(() {
+              _soMau++;
+              _saiSo = (m['acc'] as num).toDouble();
+            });
+          }
+        });
+      }
       if (!mounted) return;
       setState(() => _buoc = _Buoc.chup);
       final hanhDong = hanhDongText[t.str('hanh_dong')] ?? t.str('hanh_dong');
@@ -436,7 +442,7 @@ class _LuongState extends ConsumerState<SvLuong> {
                     Text(
                       '${widget.phien['kiem_tra_phong'] == true ? 'Hệ thống kiểm tra bạn có trong phòng học trước (bật Bluetooth). ' : ''}'
                       'Mỗi lượt điểm danh được tính khi bắt đầu chụp (tối đa 5 lượt mỗi phiên). '
-                      'Chuẩn bị: bật định vị, đứng trong lớp, đủ sáng.',
+                      'Chuẩn bị: ${_canGps ? 'bật định vị, ' : ''}đứng trong lớp, đủ sáng.',
                       style: const TextStyle(height: 1.5),
                     ),
                     const SizedBox(height: 12),
@@ -479,7 +485,11 @@ class _LuongState extends ConsumerState<SvLuong> {
                   _Buoc.gui => [
                     const LinearProgressIndicator(),
                     const SizedBox(height: 8),
-                    const Text('Đang kiểm tra khuôn mặt và vị trí…'),
+                    Text(
+                      _canGps
+                          ? 'Đang kiểm tra khuôn mặt và vị trí…'
+                          : 'Đang kiểm tra khuôn mặt…',
+                    ),
                   ],
                   _Buoc.ketQua => _ketQuaWidgets(_ketQua!),
                 },

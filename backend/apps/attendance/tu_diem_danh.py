@@ -320,7 +320,7 @@ def thoi_han_mac_dinh():
 
 
 @transaction.atomic
-def mo_phien(gv, session_id, thoi_han, kiem_tra_phong, now=None):
+def mo_phien(gv, session_id, thoi_han, kiem_tra_phong, now=None, kiem_tra_gps=True):
     now = now or timezone.now()
     s = _phien_gv(gv, session_id, khoa=True)
     _kiem_tra_hom_nay(s, now)
@@ -329,7 +329,7 @@ def mo_phien(gv, session_id, thoi_han, kiem_tra_phong, now=None):
             Codes.TRANG_THAI_KHONG_HOP_LE,
             "Buổi này đã mở tự điểm danh; dùng Mở lại nếu phiên đã đóng.",
         )
-    if khuon_vien() is None:
+    if kiem_tra_gps and khuon_vien() is None:
         raise _loi(
             Codes.TRANG_THAI_KHONG_HOP_LE,
             "Phòng đào tạo chưa vẽ khuôn viên trường nên chưa mở được tự điểm danh.",
@@ -342,6 +342,7 @@ def mo_phien(gv, session_id, thoi_han, kiem_tra_phong, now=None):
         gv,
     )
     s.kiem_tra_phong = kiem_tra_phong
+    s.kiem_tra_gps = kiem_tra_gps
     s.ma_phong_bi_mat = secrets.token_bytes(32)
     s.trang_thai = TrangThaiSession.DA_DIEM_DANH
     s.save()
@@ -573,6 +574,7 @@ def xin_thu_thach(sv, session_id, ma_phong="", now=None):
         "het_han_luc": c.het_han_luc,
         "luot_con_lai": toi_da - da_dung - 1,
         "kiem_tra_phong": s.kiem_tra_phong,
+        "kiem_tra_gps": s.kiem_tra_gps,
     }
 
 
@@ -643,19 +645,23 @@ def diem_danh(sv, session_id, khung, nonce, mau_gps, device_id, nen_tang, ip, no
     # Bước 3 (mã phòng) đã kiểm tra lúc cấp thử thách: có nonce hợp lệ nghĩa là đã ở trong phòng.
 
     # Bước 4: vị trí so với khuôn viên; xa quá 2 lần sai lệch cho phép thì dừng, không chạy mô hình.
+    # Phiên tắt GPS: bỏ qua cả bước, không dùng mẫu GPS (có thể rỗng) cho cờ.
     g = settings.GPS
-    fix = geo.aggregate(mau, g["max_acc_sv_m"], g["min_mau_sv"], g["max_span_s"])
-    if fix is None:
-        return xong(4, "GPS_KEM")
-    vien = khuon_vien()
-    if vien is None:  # PĐT xóa khuôn viên giữa phiên
-        return xong(4, "CHUA_CO_KHUON_VIEN")
-    r = sai_lech_khuon_vien_m()
-    d = geo.distance_to_polygon_m(fix.lat, fix.lng, vien)
-    luot.lat, luot.lng, luot.sai_so_m, luot.d_m, luot.r_m = fix.lat, fix.lng, fix.acc, d, r
-    vi_tri = geo.classify(d, r)
-    if vi_tri == "far":
-        return xong(4, "QUA_XA")
+    if s.kiem_tra_gps:
+        fix = geo.aggregate(mau, g["max_acc_sv_m"], g["min_mau_sv"], g["max_span_s"])
+        if fix is None:
+            return xong(4, "GPS_KEM")
+        vien = khuon_vien()
+        if vien is None:  # PĐT xóa khuôn viên giữa phiên
+            return xong(4, "CHUA_CO_KHUON_VIEN")
+        r = sai_lech_khuon_vien_m()
+        d = geo.distance_to_polygon_m(fix.lat, fix.lng, vien)
+        luot.lat, luot.lng, luot.sai_so_m, luot.d_m, luot.r_m = fix.lat, fix.lng, fix.acc, d, r
+        vi_tri = geo.classify(d, r)
+        if vi_tri == "far":
+            return xong(4, "QUA_XA")
+    else:
+        fix, vi_tri, mau = None, "ok", []
 
     # Bước 5–6: chất lượng + hành động + chống giả, rồi so khớp.
     mau_mat = mau_duyet(sv)
@@ -671,6 +677,8 @@ def diem_danh(sv, session_id, khung, nonce, mau_gps, device_id, nen_tang, ip, no
         CheckinAttempt.objects.filter(session=s, sinh_vien=sv, lat__isnull=False)
         .order_by("-id")
         .first()
+        if fix is not None
+        else None
     )
     nhay = truoc is not None and geo.jump_from_previous(
         geo.Fix(truoc.lat, truoc.lng, truoc.sai_so_m),
