@@ -5,9 +5,8 @@ from django.db import models
 
 class SystemConfig(models.Model):
     khoa = models.CharField(max_length=100, unique=True)
-    gia_tri = models.CharField(
-        max_length=200
-    )  # lưu chuỗi, nơi đọc tự parse (get_int/get_decimal/get_bool)
+    # lưu chuỗi, nơi đọc tự parse (get_int/get_decimal/get_bool); 4000 đủ cho đa giác khuôn viên
+    gia_tri = models.CharField(max_length=4000)
     mo_ta = models.CharField(max_length=255, blank=True)
     cap_nhat_luc = models.DateTimeField(auto_now=True)
 

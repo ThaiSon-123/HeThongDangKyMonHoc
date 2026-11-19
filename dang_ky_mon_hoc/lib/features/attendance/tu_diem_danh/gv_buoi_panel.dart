@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_failure.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/format.dart';
+import '../../../core/serial/esp32_serial.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/alert_banner.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -21,7 +22,6 @@ import '../../registration/timetable_screen.dart' show clockProvider;
 import '../../training/resource_list.dart' show ListErrorCard, ListSkeleton;
 import '../../training/training_api.dart';
 import '../attendance_format.dart';
-import 'thiet_bi.dart';
 import 'tu_diem_danh_text.dart';
 
 String _ymd(DateTime d) =>
@@ -143,8 +143,6 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
       if (ok != null && mounted) showAppToast(context, ok);
     } on ApiFailure catch (f) {
       setState(() => _loi = f.message ?? failureText(f, 'Thao tác thất bại.'));
-    } on GpsLoi catch (e) {
-      setState(() => _loi = e.message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -183,23 +181,6 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
       () => _api.post('${_path}mo-lai/', {'thoi_han': phut}),
       'Đã mở lại phiên.',
     );
-  }
-
-  Future<void> _tinhLaiTam() async {
-    final ok = await showConfirmDialog(
-      context,
-      title: 'Tính lại tâm phiên?',
-      message:
-          'Phần lớn sinh viên đã qua khuôn mặt đang lệch cùng một phía. Tâm mới = vị trí giữa của họ; '
-          'kết quả chỉ được nâng lên, không bị hạ.',
-      actionLabel: 'Tính lại',
-    );
-    if (ok) {
-      await _lam(
-        () => _api.post('${_path}tinh-lai-tam/'),
-        'Đã tính lại tâm phiên.',
-      );
-    }
   }
 
   Future<void> _luu() async {
@@ -467,22 +448,6 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
     final hetHan = DateTime.tryParse(s.str('het_han_luc'));
     final dem = Json.from(tdd['dem'] as Map);
     return [
-      if (tdd['goi_y_tinh_lai_tam'] == true) ...[
-        const AlertBanner(
-          kind: BannerKind.warning,
-          title: 'Tâm phiên có thể bị lệch.',
-          message:
-              'Phần lớn sinh viên đã qua khuôn mặt đang bị "lệch vị trí" về cùng một phía.',
-        ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: _busy ? null : _tinhLaiTam,
-            child: const Text('Tính lại tâm'),
-          ),
-        ),
-        const SizedBox(height: 4),
-      ],
       SectionCard(
         child: Wrap(
           spacing: 24,
@@ -502,10 +467,6 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
             Text('Có mặt: ${dem.num0('co_mat')}'),
             Text('Đáng ngờ: ${dem.num0('dang_ngo')}'),
             Text('Chưa: ${dem.num0('chua')}'),
-            Text(
-              'Bán kính ${s.num0('ban_kinh_m')} m · sai số tâm ${(s['tam_sai_so_m'] as num?)?.round() ?? '—'} m',
-              style: const TextStyle(color: AppColors.muted),
-            ),
             if (choPhepDieuKhien)
               if (dangMo)
                 OutlinedButton(
@@ -520,6 +481,10 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
           ],
         ),
       ),
+      if (dangMo && s['kiem_tra_phong'] == true) ...[
+        const SizedBox(height: 12),
+        _MaPhong(key: ValueKey('ma-phong-$_id'), path: _path),
+      ],
     ];
   }
 
@@ -629,6 +594,143 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
   }
 }
 
+/// Mã phòng đang hiệu lực (đổi mỗi 30 giây) và đẩy xuống ESP32 qua Web Serial để phát BLE
+/// (docs/ke-hoach-gps-khuon-vien-va-esp32.md §4.2). Không cắm ESP32 thì GV đọc mã cho lớp gõ tay.
+class _MaPhong extends ConsumerStatefulWidget {
+  const _MaPhong({super.key, required this.path});
+
+  final String path;
+
+  @override
+  ConsumerState<_MaPhong> createState() => _MaPhongState();
+}
+
+class _MaPhongState extends ConsumerState<_MaPhong> {
+  final _esp = Esp32Serial();
+  String? _ma;
+  String? _loi;
+  Timer? _doiMa; // lấy mã mới khi mã cũ hết hạn
+  Timer? _guiLai;
+
+  @override
+  void initState() {
+    super.initState();
+    _layMa();
+    // Mở cổng có thể làm ESP32 khởi động lại và bỏ lỡ lần gửi đầu → gửi lại mã đang có mỗi 5 giây.
+    _guiLai = Timer.periodic(const Duration(seconds: 5), (_) => _gui());
+  }
+
+  @override
+  void dispose() {
+    _doiMa?.cancel();
+    _guiLai?.cancel();
+    _esp.dong();
+    super.dispose();
+  }
+
+  void _hen(int ms) {
+    _doiMa?.cancel();
+    _doiMa = Timer(Duration(milliseconds: ms), _layMa);
+  }
+
+  Future<void> _layMa() async {
+    try {
+      final d = await ref
+          .read(trainingApiProvider)
+          .get('${widget.path}room-token/');
+      if (!mounted) return;
+      setState(() {
+        _ma = d.str('ma');
+        _loi = null;
+      });
+      _gui();
+      _hen(((d['het_han_sau_giay'] as num) * 1000).round() + 300);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loi = 'Không lấy được mã phòng, đang thử lại…');
+      _hen(3000);
+    }
+  }
+
+  Future<void> _gui() async {
+    final ma = _ma;
+    if (ma == null || !_esp.daKetNoi) return;
+    try {
+      await _esp.gui(ma);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _loi = 'Mất kết nối ESP32. Cắm lại rồi bấm "Kết nối ESP32".',
+        );
+      }
+    }
+  }
+
+  Future<void> _ketNoi() async {
+    try {
+      await _esp.ketNoi();
+    } catch (e) {
+      // NotFoundError = GV bấm Hủy trong hộp chọn cổng.
+      if (mounted && !'$e'.contains('NotFoundError')) {
+        setState(() => _loi = 'Không mở được cổng ESP32: $e');
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _loi = null);
+    await _gui();
+  }
+
+  Future<void> _ngat() async {
+    await _esp.dong();
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ma = _ma;
+    return SectionCard(
+      title: 'Mã phòng',
+      child: Wrap(
+        spacing: 24,
+        runSpacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          SelectableText(
+            ma == null || ma.length != 8
+                ? (ma ?? '—')
+                : '${ma.substring(0, 4)} ${ma.substring(4)}',
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 4,
+            ),
+          ),
+          if (Esp32Serial.hoTro)
+            if (_esp.daKetNoi)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.bluetooth, color: AppColors.success),
+                  const SizedBox(width: 6),
+                  const Text('ESP32 đang phát mã'),
+                  TextButton(onPressed: _ngat, child: const Text('Ngắt')),
+                ],
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: _ketNoi,
+                icon: const Icon(Icons.usb),
+                label: const Text('Kết nối ESP32'),
+              ),
+          if (_loi != null)
+            Text(_loi!, style: const TextStyle(color: AppColors.danger)),
+        ],
+      ),
+    );
+  }
+}
+
 Future<int?> _chonPhut(BuildContext context, String title) => showDialog<int>(
   context: context,
   builder: (ctx) => AppDialog(
@@ -648,7 +750,7 @@ Future<int?> _chonPhut(BuildContext context, String title) => showDialog<int>(
   ),
 );
 
-/// Form mở phiên: thời hạn, r₀, mã phòng; lấy GPS của GV ~10 giây rồi gửi.
+/// Form mở phiên: thời hạn và có bắt mã phòng (ESP32) hay không.
 class _MoPhien extends ConsumerStatefulWidget {
   const _MoPhien({required this.busy, required this.onMo});
 
@@ -661,39 +763,7 @@ class _MoPhien extends ConsumerStatefulWidget {
 
 class _MoPhienState extends ConsumerState<_MoPhien> {
   int _phut = 10;
-  int _r0 = 20;
   bool _qr = false;
-  bool _dangLay = false;
-  int _soMau = 0;
-  double? _saiSo;
-
-  Future<void> _mo() async {
-    setState(() {
-      _dangLay = true;
-      _soMau = 0;
-      _saiSo = null;
-    });
-    try {
-      final mau = await ref.read(layMauGpsProvider)(10, (m) {
-        if (mounted) {
-          setState(() {
-            _soMau++;
-            _saiSo = (m['acc'] as num).toDouble();
-          });
-        }
-      });
-      await widget.onMo({
-        'mau_gps': mau,
-        'thoi_han': _phut,
-        'r0': _r0,
-        'kiem_tra_phong': _qr,
-      });
-    } on GpsLoi catch (e) {
-      if (mounted) showAppToast(context, e.message);
-    } finally {
-      if (mounted) setState(() => _dangLay = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) => SectionCard(
@@ -702,8 +772,8 @@ class _MoPhienState extends ConsumerState<_MoPhien> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Đứng trong phòng học, giữ máy yên khoảng 10 giây để chốt vị trí lớp. '
-          'Sinh viên chỉ điểm danh được trong bán kính quanh vị trí này.',
+          'Sinh viên chỉ điểm danh được khi GPS cho thấy đang ở trong khuôn viên trường '
+          '(Phòng đào tạo vẽ ở mục Quy chế).',
           style: TextStyle(color: AppColors.label, height: 1.5),
         ),
         const SizedBox(height: 16),
@@ -722,17 +792,6 @@ class _MoPhienState extends ConsumerState<_MoPhien> {
                 onChanged: (v) => setState(() => _phut = v),
               ),
             ),
-            SizedBox(
-              width: 180,
-              child: LabeledDropdown<int>(
-                label: 'Bán kính gốc',
-                value: _r0,
-                options: [
-                  for (final r in const [10, 20, 30, 50]) (r, '$r m'),
-                ],
-                onChanged: (v) => setState(() => _r0 = v),
-              ),
-            ),
           ],
         ),
         // Material trong suốt: SwitchListTile cần Material ngay phía trên (SectionCard có nền).
@@ -742,24 +801,16 @@ class _MoPhienState extends ConsumerState<_MoPhien> {
             contentPadding: EdgeInsets.zero,
             value: _qr,
             onChanged: (v) => setState(() => _qr = v),
-            title: const Text('Bắt quét mã phòng (QR)'),
+            title: const Text('Bắt mã phòng'),
             subtitle: const Text(
-              'Chắc chắn đúng phòng; cần chiếu mã lên máy chiếu.',
+              'Mã đổi mỗi 30 giây; sinh viên đọc từ ESP32 (cắm vào máy này) hoặc gõ tay mã hiện trên màn.',
             ),
           ),
         ),
-        if (_dangLay)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Đang lấy GPS… $_soMau mẫu'
-              '${_saiSo == null ? '' : ', sai số hiện tại ${_saiSo!.round()} m'}',
-            ),
-          ),
         AppButton(
-          label: 'Lấy vị trí và mở phiên',
-          loading: _dangLay || widget.busy,
-          onPressed: _mo,
+          label: 'Mở phiên',
+          loading: widget.busy,
+          onPressed: () => widget.onMo({'thoi_han': _phut, 'kiem_tra_phong': _qr}),
         ),
       ],
     ),
@@ -845,7 +896,7 @@ class _ChiTietSv extends ConsumerWidget {
                       if (l['diem_that'] != null)
                         'người thật ${(l['diem_that'] as num).toStringAsFixed(2)}',
                       if (l['d_m'] != null)
-                        'cách ${(l['d_m'] as num).round()} m / r ${(l['r_m'] as num).round()} m',
+                        'ngoài khuôn viên ${(l['d_m'] as num).round()} m / cho phép ${(l['r_m'] as num).round()} m',
                       l.str('nen_tang'),
                       for (final c in (l['co'] as List? ?? const []))
                         coText[c] ?? '$c',

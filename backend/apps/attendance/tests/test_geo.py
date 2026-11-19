@@ -5,14 +5,12 @@ import pytest
 from apps.attendance.geo import (
     Fix,
     Sample,
-    adaptive_radius,
     aggregate,
     classify,
+    distance_to_polygon_m,
     has_jump,
     haversine_m,
     jump_from_previous,
-    recenter,
-    suggest_recenter,
 )
 
 
@@ -65,8 +63,42 @@ def test_classify_boundaries():
     assert classify(60, 30) == "drift" and classify(60.1, 30) == "far"
 
 
-def test_adaptive_radius():
-    assert adaptive_radius(20, 8, 14) == 42
+M = 1 / 111_195  # ~1 m theo vĩ độ
+L = M / math.cos(math.radians(21))  # ~1 m theo kinh độ ở vĩ độ 21
+VUONG = [
+    (21 - 50 * M, 105 - 50 * L),
+    (21 - 50 * M, 105 + 50 * L),
+    (21 + 50 * M, 105 + 50 * L),
+    (21 + 50 * M, 105 - 50 * L),
+]
+CHU_L = [
+    (21, 105),
+    (21, 105 + 100 * L),
+    (21 + 50 * M, 105 + 100 * L),
+    (21 + 50 * M, 105 + 50 * L),
+    (21 + 100 * M, 105 + 50 * L),
+    (21 + 100 * M, 105),
+]
+
+
+@pytest.mark.parametrize(
+    ("lat", "lng", "d"),
+    [
+        (21, 105, 0),  # giữa
+        (21 + 49 * M, 105 + 49 * L, 0),  # sát góc, vẫn trong
+        (21 + 80 * M, 105, 30),  # ngoài cạnh bắc 30 m
+        (21, 105 - 90 * L, 40),  # ngoài cạnh tây 40 m
+        (21 + 80 * M, 105 + 90 * L, 50),  # chéo góc: căn(30² + 40²)
+    ],
+)
+def test_distance_to_polygon_vuong(lat, lng, d):
+    assert distance_to_polygon_m(lat, lng, VUONG) == pytest.approx(d, abs=0.5)
+
+
+def test_distance_to_polygon_lom():
+    # Chữ L: chỗ khuyết góc trên phải nằm ngoài dù nằm trong hình bao.
+    assert distance_to_polygon_m(21 + 25 * M, 105 + 25 * L, CHU_L) == 0
+    assert distance_to_polygon_m(21 + 80 * M, 105 + 80 * L, CHU_L) == pytest.approx(30, abs=0.5)
 
 
 def test_has_jump():
@@ -100,30 +132,3 @@ def test_jump_from_previous():
     assert jump_from_previous(a, 0, b, 10, max_speed=30) is True  # 100 m/s
     assert jump_from_previous(a, 0, b, 100, max_speed=30) is False  # 10 m/s
     assert jump_from_previous(a, 5, b, 5, max_speed=30) is True  # cùng thời điểm
-
-
-def test_suggest_recenter():
-    c = (21.0, 105.0)
-    east = [(21.0, 105.0004 + i * 1e-5) for i in range(5)]  # ~42-46 m về phía đông
-    assert suggest_recenter(c, east, r0=20) is True
-    assert suggest_recenter(c, east[:4], r0=20) is False  # chưa đủ 5
-    assert suggest_recenter(c, east, r0=50) is False  # lệch chưa vượt r0
-    spread = [
-        (21.0004, 105.0),
-        (20.9996, 105.0),
-        (21.0, 105.0004),
-        (21.0, 104.9996),
-        (21.0004, 105.0004),
-    ]
-    assert suggest_recenter(c, spread, r0=20) is False  # lệch tứ phía
-
-
-def test_recenter_median():
-    pts = [
-        (21.0, 105.0004),
-        (21.0001, 105.0005),
-        (21.0002, 105.0006),
-        (25.0, 110.0),
-        (21.0001, 105.0005),
-    ]
-    assert recenter((21.0, 105.0), pts) == (21.0001, 105.0005)

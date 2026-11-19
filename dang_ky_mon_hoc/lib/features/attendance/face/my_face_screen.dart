@@ -15,10 +15,11 @@ import '../../training/training_api.dart';
 import 'face_capture.dart';
 
 const _mePath = '/attendance/face/me/';
+/// (lời nhắc, mã tư thế server kiểm tra lúc quét real time).
 const tuThe = [
-  'Nhìn thẳng',
-  'Quay đầu hơi sang trái',
-  'Quay đầu hơi sang phải',
+  ('Nhìn thẳng', 'thang'),
+  ('Quay đầu hơi sang trái', 'hoi_trai'),
+  ('Quay đầu hơi sang phải', 'hoi_phai'),
 ];
 
 /// Đồng ý dữ liệu sinh trắc + đăng ký / xem / xóa khuôn mặt dùng cho tự điểm danh (KH §7.1, §11).
@@ -208,7 +209,7 @@ class _TrangThai extends StatelessWidget {
         'Chờ duyệt',
         AppColors.infoBannerBg,
         AppColors.infoBannerText,
-        'Phòng đào tạo hoặc giảng viên đang đối chiếu ảnh của bạn. Trong lúc chờ, hãy nhờ giảng viên điểm danh thủ công.',
+        'Phòng đào tạo đang đối chiếu ảnh của bạn. Trong lúc chờ, hãy nhờ giảng viên điểm danh thủ công.',
       ),
       'TU_CHOI' => (
         'Bị từ chối',

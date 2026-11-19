@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +10,7 @@ import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_toast.dart';
 import '../../shared/widgets/labeled_field.dart';
 import '../admin/accounts/account_dialogs.dart' show failureText;
+import 'khuon_vien_dialog.dart';
 import 'resource_list.dart' show ListErrorCard, ListSkeleton;
 import 'training_api.dart';
 import 'training_widgets.dart';
@@ -18,6 +21,14 @@ const _truong = <String, (String, String?)>{
   'so_ngay_xin_sua_diem_danh': (
     'Số ngày sinh viên được xin sửa điểm danh',
     'Từ 0 đến 365, tính từ ngày học. 0 = chỉ trong ngày học.',
+  ),
+  'so_phut_mo_diem_danh': (
+    'Số phút mở phiên tự điểm danh',
+    'Từ 1 đến 240. Giáo viên vẫn chọn lại được khi mở phiên.',
+  ),
+  'sai_lech_khuon_vien_m': (
+    'Sai lệch GPS cho phép quanh khuôn viên (m)',
+    'Từ 0 đến 500. Ngoài khuôn viên quá 2 lần số này thì không điểm danh được.',
   ),
   'so_ngay_cho_phep_nhap_diem': (
     'Số ngày được nhập điểm sau khi kết thúc',
@@ -32,7 +43,7 @@ const _nhomIcon = <String, IconData>{
 
 const _nhomMoTa = <String, String>{
   'Điểm danh':
-      'Cảnh báo nguy cơ cấm thi theo tỷ lệ vắng và thời hạn xin sửa điểm danh.',
+      'Cảnh báo nguy cơ cấm thi theo tỷ lệ vắng, thời hạn xin sửa điểm danh và khuôn viên tự điểm danh.',
   'Nhập điểm': 'Thời gian giáo viên được nhập điểm sau khi lớp kết thúc.',
 };
 
@@ -188,8 +199,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
   Map<String, String> _errors = {};
   bool _saving = false;
 
-  bool get _coMacDinh =>
-      widget.items.every((i) => i.str('mac_dinh').isNotEmpty);
+  bool get _coMacDinh => widget.items.any((i) => i.str('mac_dinh').isNotEmpty);
 
   @override
   void dispose() {
@@ -201,7 +211,10 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
 
   void _reset() => setState(() {
     for (final i in widget.items) {
-      _ctl[i.str('khoa')]!.text = i.str('mac_dinh');
+      // Khóa không có mặc định (khuôn viên) giữ nguyên, tránh xóa mất hình đã vẽ.
+      if (i.str('mac_dinh').isNotEmpty) {
+        _ctl[i.str('khoa')]!.text = i.str('mac_dinh');
+      }
     }
     _errors = {};
   });
@@ -273,6 +286,12 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
         ),
         const SizedBox(height: 18),
         for (final i in widget.items) ...[
+          if (i.str('khoa') == 'khuon_vien')
+            _KhuonVien(
+              controller: _ctl['khuon_vien']!,
+              error: _errors['khuon_vien'],
+            )
+          else
           LabeledField(
             label: _truong[i.str('khoa')]?.$1 ?? i.str('khoa'),
             controller: _ctl[i.str('khoa')]!,
@@ -315,5 +334,57 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
         ),
       ],
     ),
+  );
+}
+
+/// Khuôn viên: số góc đã vẽ + nút mở bản đồ; giá trị (JSON) nằm trong [controller] để lưu cùng nhóm.
+class _KhuonVien extends StatelessWidget {
+  const _KhuonVien({required this.controller, this.error});
+
+  final TextEditingController controller;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: controller,
+    builder: (context, v, _) {
+      final n = v.text.trim().isEmpty ? 0 : (jsonDecode(v.text) as List).length;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Khuôn viên trường',
+            style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.label),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                n == 0 ? 'Chưa vẽ: giảng viên chưa mở được tự điểm danh.' : 'Đã vẽ $n góc.',
+                style: TextStyle(color: n == 0 ? AppColors.danger : AppColors.text),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final moi = await showKhuonVienDialog(context, controller.text);
+                  if (moi != null) controller.text = moi;
+                },
+                icon: const Icon(Icons.map_outlined),
+                label: Text(n == 0 ? 'Vẽ khuôn viên' : 'Sửa khuôn viên'),
+              ),
+            ],
+          ),
+          if (error != null)
+            Text(error!, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+          const SizedBox(height: 4),
+          const Text(
+            'Nhớ bấm "Lưu nhóm này" sau khi vẽ.',
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+        ],
+      );
+    },
   );
 }

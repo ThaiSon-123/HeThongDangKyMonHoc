@@ -49,12 +49,6 @@ class TeacherAttendanceScreen extends ConsumerStatefulWidget {
 class _TeacherAttendanceScreenState
     extends ConsumerState<TeacherAttendanceScreen> {
   late Future<List<Json>> _classes = _loadClasses();
-  // Số khuôn mặt chờ duyệt (GV: SV lớp mình) hiện ở nút "Duyệt khuôn mặt"; lỗi thì không hiện số.
-  late final Future<int> _soChoDuyet = ref
-      .read(trainingApiProvider)
-      .getList('/attendance/faces/pending/')
-      .then((l) => l.length)
-      .catchError((_) => 0);
   String? _hocKy; // tên học kỳ đang lọc (null = học kỳ mới nhất)
   Json? _lop;
   Future<_LopData>? _data;
@@ -212,22 +206,6 @@ class _TeacherAttendanceScreenState
             ],
             onChanged: (id) => _pick(
               id == null ? null : classes.firstWhere((c) => c.id == id),
-            ),
-          ),
-        ),
-        // Trên điện thoại không có menu bên → đây là lối vào duyệt khuôn mặt tự điểm danh.
-        Padding(
-          padding: const EdgeInsets.only(bottom: 2),
-          child: FutureBuilder<int>(
-            future: _soChoDuyet,
-            builder: (context, snap) => OutlinedButton.icon(
-              onPressed: () => context.go('/teacher/faces'),
-              icon: const Icon(Icons.face_outlined, size: 18),
-              label: Text(
-                (snap.data ?? 0) > 0
-                    ? 'Duyệt khuôn mặt (${snap.data})'
-                    : 'Duyệt khuôn mặt',
-              ),
             ),
           ),
         ),

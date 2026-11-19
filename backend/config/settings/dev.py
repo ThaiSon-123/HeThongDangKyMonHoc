@@ -16,6 +16,5 @@ PASSWORD_RESET_RETURN_TOKEN_IN_RESPONSE = env_bool("PASSWORD_RESET_RETURN_TOKEN_
 # Mặc định giữ đúng ngưỡng của base.py; prod không dùng file này.
 GPS = {
     **_GPS,
-    "max_acc_gv_m": env_int("GPS_MAX_ACC_GV_M", _GPS["max_acc_gv_m"]),
     "max_acc_sv_m": env_int("GPS_MAX_ACC_SV_M", _GPS["max_acc_sv_m"]),
 }

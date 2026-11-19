@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/api/api_failure.dart';
 import '../../../core/format.dart';
+import '../../../core/serial/esp32_ble.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/alert_banner.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -245,6 +246,7 @@ class _LuongState extends ConsumerState<SvLuong> {
   Json? _ketQua;
   String? _loi;
   final _ma = TextEditingController();
+  bool _dangDoc = false;
   int _soMau = 0;
   double? _saiSo;
   Timer? _timer;
@@ -269,24 +271,61 @@ class _LuongState extends ConsumerState<SvLuong> {
     super.dispose();
   }
 
+  /// Bấm Điểm danh. Phiên bắt mã phòng: kiểm tra "trong phòng" trước (đọc mã ESP32 qua Bluetooth;
+  /// không đọc được thì gõ tay). Server chỉ cấp thử thách, tức tính lượt, khi mã đúng.
   Future<void> _batDau() async {
     setState(() {
       _loi = null;
       _ketQua = null;
       _thuThach = null;
     });
+    if (widget.phien['kiem_tra_phong'] != true) return _xinThuThach('');
+    if (!Esp32Ble.hoTro) {
+      setState(() => _buoc = _Buoc.maPhong);
+      return;
+    }
+    await _docEsp32();
+  }
+
+  /// Đọc mã ESP32 đang phát qua Bluetooth rồi xin thử thách; hủy hoặc lỗi thì ở lại bước mã phòng
+  /// để thử lại hoặc gõ tay.
+  Future<void> _docEsp32() async {
+    setState(() {
+      _buoc = _Buoc.maPhong;
+      _dangDoc = true;
+      _loi = null;
+    });
     try {
-      final t = await _api.post('/attendance/sessions/$_id/challenge/');
-      setState(() => _thuThach = t);
-      if (t['kiem_tra_phong'] == true) {
-        setState(() => _buoc = _Buoc.maPhong);
-      } else {
-        await _tiep();
+      final ma = await Esp32Ble.docMa();
+      if (!mounted || ma == null) return;
+      _ma.text = ma;
+      await _xinThuThach(ma);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _loi =
+              'Không đọc được mã từ ESP32: bạn có thể đang ở ngoài phòng học. '
+              'Hãy bật Bluetooth, lại gần bàn giảng viên rồi thử lại, hoặc gõ mã giảng viên đọc.',
+        );
       }
+    } finally {
+      if (mounted) setState(() => _dangDoc = false);
+    }
+  }
+
+  /// Xin thử thách (kèm mã phòng nếu có) rồi sang GPS → chụp → gửi.
+  Future<void> _xinThuThach(String ma) async {
+    try {
+      final t = await _api.post('/attendance/sessions/$_id/challenge/', {
+        'ma_phong': ma.trim(),
+      });
+      setState(() => _thuThach = t);
+      await _tiep();
     } on ApiFailure catch (f) {
       setState(() {
-        _buoc = _Buoc.batDau;
-        _loi = f.message ?? failureText(f, 'Không xin được thử thách.');
+        // Sai mã phòng thì ở lại bước mã để thử lại; lỗi khác quay về đầu.
+        if (_buoc != _Buoc.maPhong) _buoc = _Buoc.batDau;
+        _loi = f.message ?? failureText(f, 'Không bắt đầu điểm danh được.');
       });
     }
   }
@@ -312,8 +351,8 @@ class _LuongState extends ConsumerState<SvLuong> {
       setState(() => _buoc = _Buoc.chup);
       final hanhDong = hanhDongText[t.str('hanh_dong')] ?? t.str('hanh_dong');
       final khung = await ref.read(faceBurstProvider)(context, [
-        ('Nhìn thẳng vào camera', 2),
-        (hanhDong, 4),
+        ('Nhìn thẳng vào camera', 2, 'thang'),
+        (hanhDong, 4, t.str('hanh_dong')),
       ]);
       if (!mounted) return;
       if (khung == null) {
@@ -332,7 +371,6 @@ class _LuongState extends ConsumerState<SvLuong> {
         fields: {
           'nonce': t.str('nonce'),
           'mau_gps': jsonEncode(mau),
-          'ma_phong': _ma.text.trim(),
           'device_id': deviceId,
           'nen_tang': nenTang,
         },
@@ -395,23 +433,39 @@ class _LuongState extends ConsumerState<SvLuong> {
                 const SizedBox(height: 12),
                 ...switch (_buoc) {
                   _Buoc.batDau => [
-                    const Text(
-                      'Mỗi lần bấm Bắt đầu tính 1 lượt (tối đa 5 lượt mỗi phiên). '
+                    Text(
+                      '${widget.phien['kiem_tra_phong'] == true ? 'Hệ thống kiểm tra bạn có trong phòng học trước (bật Bluetooth). ' : ''}'
+                      'Mỗi lượt điểm danh được tính khi bắt đầu chụp (tối đa 5 lượt mỗi phiên). '
                       'Chuẩn bị: bật định vị, đứng trong lớp, đủ sáng.',
-                      style: TextStyle(height: 1.5),
+                      style: const TextStyle(height: 1.5),
                     ),
                     const SizedBox(height: 12),
-                    AppButton(label: 'Bắt đầu', onPressed: _batDau),
+                    AppButton(label: 'Điểm danh', onPressed: _batDau),
                   ],
                   _Buoc.maPhong => [
+                    if (Esp32Ble.hoTro) ...[
+                      AppButton(
+                        label: _dangDoc ? 'Đang kiểm tra trong phòng…' : 'Đọc lại mã từ ESP32',
+                        onPressed: _dangDoc ? null : _docEsp32,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Hoặc gõ tay mã giảng viên đọc / hiện trên màn:',
+                        style: TextStyle(color: AppColors.muted),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     LabeledField(
                       label: 'Mã phòng (8 ký tự trên màn chiếu)',
                       controller: _ma,
                       hint: 'Vd: K7Q2M9XA',
-                      onSubmitted: (_) => _tiep(),
+                      onSubmitted: (_) => _xinThuThach(_ma.text),
                     ),
                     const SizedBox(height: 12),
-                    AppButton(label: 'Tiếp tục', onPressed: _tiep),
+                    AppButton(
+                      label: 'Tiếp tục',
+                      onPressed: _dangDoc ? null : () => _xinThuThach(_ma.text),
+                    ),
                   ],
                   _Buoc.gps => [
                     const LinearProgressIndicator(),

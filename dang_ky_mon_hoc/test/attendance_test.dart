@@ -262,7 +262,7 @@ void main() {
     );
 
     testWidgets(
-      'danh sách buổi: chip phiên đang mở / đã tự điểm danh / số đáng ngờ; nút Duyệt khuôn mặt có số chờ duyệt',
+      'danh sách buổi: chip phiên đang mở / đã tự điểm danh / số đáng ngờ; GV không còn lối vào duyệt khuôn mặt',
       (t) async {
         final api = gvApi(
           extra: {
@@ -284,15 +284,13 @@ void main() {
               ]),
               'tong_so_buoi': 3,
             }),
-            'GET /attendance/faces/pending/': (_) => reply(200, [
-              {'id': 1},
-              {'id': 2},
-              {'id': 3},
-            ]),
           },
         );
         await openTeacher(t, api);
-        expect(find.text('Duyệt khuôn mặt (3)'), findsOneWidget);
+        expect(
+          find.textContaining('Duyệt khuôn mặt'),
+          findsNothing,
+        ); // chỉ PĐT duyệt
         await tapText(t, '— Chọn lớp để bắt đầu —');
         await t.tap(find.text('CNTT101-01 · Nhập môn lập trình').last);
         await t.pumpAndSettle();

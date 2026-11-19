@@ -1,5 +1,6 @@
 """Cấu hình hệ thống (ADM-05) và sao lưu (ADM-08)."""
 
+import json
 import os
 import re
 import subprocess
@@ -25,6 +26,32 @@ def _so_nguyen(thap, cao=None):
     return kiem_tra
 
 
+def _da_giac(v):
+    """Khuôn viên: JSON `[[vĩ độ, kinh độ], ...]` ≥ 3 góc; chuỗi rỗng = chưa vẽ."""
+    s = str(v).strip()
+    if not s:
+        return ""
+    try:
+        pts = json.loads(s)
+        ok = (
+            isinstance(pts, list)
+            and 3 <= len(pts) <= 100
+            and all(
+                isinstance(p, list)
+                and len(p) == 2
+                and all(isinstance(x, int | float) and not isinstance(x, bool) for x in p)
+                and -90 <= p[0] <= 90
+                and -180 <= p[1] <= 180
+                for p in pts
+            )
+        )
+    except ValueError:
+        ok = False
+    if not ok:
+        raise ValueError("Khuôn viên phải có từ 3 đến 100 góc [vĩ độ, kinh độ].")
+    return json.dumps([[round(a, 7), round(b, 7)] for a, b in pts], separators=(",", ":"))
+
+
 # (khóa, nhóm, mô tả, mặc định, hàm kiểm tra). Ai sửa nhóm nào: xem NHOM_PDT / NHOM_ADMIN.
 CAU_HINH = [
     (
@@ -41,13 +68,20 @@ CAU_HINH = [
         "7",
         _so_nguyen(0, 365),
     ),
-    # Tự điểm danh khuôn mặt + GPS: tâm là vị trí GV lúc mở phiên, bán kính r = r₀ + sai số GPS (KH §5).
+    # Tự điểm danh: sinh viên phải ở trong khuôn viên (docs/ke-hoach-gps-khuon-vien-va-esp32.md §3).
     (
-        "ban_kinh_diem_danh_m",
+        "khuon_vien",
         "Điểm danh",
-        "Bán kính gốc r₀ (mét) mặc định khi giáo viên mở phiên tự điểm danh",
-        "20",
-        _so_nguyen(10, 50),
+        "Đa giác khuôn viên trường (các góc vĩ độ, kinh độ); chưa vẽ thì chưa mở được tự điểm danh",
+        "",
+        _da_giac,
+    ),
+    (
+        "sai_lech_khuon_vien_m",
+        "Điểm danh",
+        "Sai lệch GPS cho phép quanh khuôn viên (mét); xa hơn 2 lần thì không đạt",
+        "30",
+        _so_nguyen(0, 500),
     ),
     (
         "so_phut_mo_diem_danh",

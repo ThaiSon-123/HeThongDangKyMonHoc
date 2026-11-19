@@ -10,16 +10,13 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
 from apps.attendance import tu_diem_danh as tdd
+from apps.attendance.face import checks
 from apps.attendance.models import TrangThaiDiemDanh, TrangThaiMau
 from apps.audit.models import HanhDong
-from apps.auth.models import Role
+from apps.auth.services import full_name
 from core.mixins import write_audit
-from core.permissions import HasRole, IsGiaoVien, IsSinhVien
+from core.permissions import IsGiaoVien, IsPhongDaoTao, IsSinhVien
 from core.utils import client_ip, int_param
-
-
-class IsGiaoVienOrPdt(HasRole):
-    roles = (Role.GIAO_VIEN, Role.PHONG_DAO_TAO)
 
 
 class DiemDanhThrottle(UserRateThrottle):
@@ -57,9 +54,7 @@ class DangKyMatSerializer(serializers.Serializer):
 
 
 class MoPhienSerializer(serializers.Serializer):
-    mau_gps = MauGpsSerializer(many=True, allow_empty=False, max_length=100)
     thoi_han = serializers.IntegerField(min_value=1, max_value=240, required=False)
-    r0 = serializers.IntegerField(min_value=10, max_value=50, required=False)
     kiem_tra_phong = serializers.BooleanField(default=False)
 
 
@@ -67,11 +62,14 @@ class MoLaiSerializer(serializers.Serializer):
     thoi_han = serializers.IntegerField(min_value=1, max_value=240, required=False)
 
 
+class ThuThachSerializer(serializers.Serializer):
+    ma_phong = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
+
 class CheckinSerializer(serializers.Serializer):
     nonce = serializers.CharField(max_length=40)
     khung = _anh(3, 10)
     mau_gps = serializers.JSONField()
-    ma_phong = serializers.CharField(max_length=20, required=False, allow_blank=True)
     device_id = serializers.CharField(max_length=64, required=False, allow_blank=True)
     nen_tang = serializers.ChoiceField(choices=["android", "web"], default="android")
 
@@ -129,6 +127,31 @@ class MyFaceView(APIView):
         return Response(tdd.trang_thai_mat(request.user))
 
 
+class KhungThrottle(UserRateThrottle):
+    """Quét real time: ~1 khung / 0,8 giây khi đăng ký hoặc điểm danh; chỉ dò mặt nên rẻ."""
+
+    scope = "khung_mat"
+    rate = "150/min"
+
+
+class KiemTraKhungSerializer(serializers.Serializer):
+    anh = serializers.FileField()
+    tu_the = serializers.ChoiceField(choices=list(checks.POSES))
+
+
+class KiemTraKhungView(APIView):
+    permission_classes = [IsSinhVien]
+    parser_classes = [MultiPartParser, FormParser]
+    throttle_classes = [KhungThrottle]
+
+    @extend_schema(request=KiemTraKhungSerializer, responses=None)
+    def post(self, request):
+        s = KiemTraKhungSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        d = s.validated_data
+        return Response(tdd.kiem_tra_khung(_doc_anh([d["anh"]])[0], d["tu_the"]))
+
+
 class EnrollView(APIView):
     permission_classes = [IsSinhVien]
     parser_classes = [MultiPartParser, FormParser]
@@ -173,9 +196,13 @@ class ChallengeView(APIView):
     permission_classes = [IsSinhVien]
     throttle_classes = [DiemDanhThrottle]
 
-    @extend_schema(request=None, responses=None)
+    @extend_schema(request=ThuThachSerializer, responses=None)
     def post(self, request, pk):
-        return Response(tdd.xin_thu_thach(request.user, pk), status=201)
+        s = ThuThachSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        return Response(
+            tdd.xin_thu_thach(request.user, pk, s.validated_data.get("ma_phong", "")), status=201
+        )
 
 
 class CheckinView(APIView):
@@ -195,7 +222,6 @@ class CheckinView(APIView):
                 _doc_anh(d["khung"]),
                 d["nonce"],
                 [dict(x) for x in d["mau_gps"]],
-                d.get("ma_phong", ""),
                 d.get("device_id", ""),
                 d["nen_tang"],
                 client_ip(request),
@@ -213,8 +239,6 @@ def _phien_payload(s):
         "het_han_luc": s.het_han_luc,
         "dong_luc": s.dong_luc,
         "dang_mo": s.dang_mo_tu_diem_danh(),
-        "ban_kinh_m": s.ban_kinh_m,
-        "tam_sai_so_m": s.tam_sai_so_m,
         "kiem_tra_phong": s.kiem_tra_phong,
     }
 
@@ -230,9 +254,7 @@ class MoPhienView(APIView):
         phien = tdd.mo_phien(
             request.user,
             pk,
-            [dict(x) for x in d["mau_gps"]],
             d.get("thoi_han") or tdd.thoi_han_mac_dinh(),
-            d.get("r0") or tdd.r0_mac_dinh(),
             d["kiem_tra_phong"],
         )
         write_audit(request, HanhDong.UPDATE, "AttendanceSession", pk, {"hanh_dong": "mo_phien"})
@@ -260,18 +282,6 @@ class DongPhienView(APIView):
         phien = tdd.dong_phien(request.user, pk)
         write_audit(request, HanhDong.UPDATE, "AttendanceSession", pk, {"hanh_dong": "dong_phien"})
         return Response(_phien_payload(phien))
-
-
-class TinhLaiTamView(APIView):
-    permission_classes = [IsGiaoVien]
-
-    @extend_schema(request=None, responses=None)
-    def post(self, request, pk):
-        phien, nang = tdd.tinh_lai_tam(request.user, pk)
-        write_audit(
-            request, HanhDong.UPDATE, "AttendanceSession", pk, {"tinh_lai_tam": True, "nang": nang}
-        )
-        return Response({**_phien_payload(phien), "so_luot_nang_hang": nang})
 
 
 class RoomTokenView(APIView):
@@ -364,31 +374,61 @@ class EvidenceView(APIView):
         return _jpeg(data)
 
 
-# ------------------------------------------------------------------ duyệt khuôn mặt (PĐT, GV)
+# ------------------------------------------------------------------ duyệt khuôn mặt (PĐT)
 
 
-class PendingFacesView(APIView):
-    permission_classes = [IsGiaoVienOrPdt]
+def _mau_ngan(m):
+    return {
+        "id": m.id,
+        "trang_thai": m.trang_thai,
+        "ly_do": m.ly_do,
+        "tao_luc": m.tao_luc,
+        "ngay_duyet": m.ngay_duyet,
+        "nguoi_duyet": full_name(m.nguoi_duyet) if m.nguoi_duyet else "",
+    }
 
-    @extend_schema(responses=None)
+
+class FacesView(APIView):
+    """PĐT: danh sách mẫu theo trạng thái (`trang_thai`, mặc định chờ duyệt), tìm `q` theo MSSV / họ tên;
+    mỗi mẫu kèm ngành, khóa và các lần đăng ký trước của SV."""
+
+    permission_classes = [IsPhongDaoTao]  # chỉ PĐT duyệt khuôn mặt
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("trang_thai", str, enum=TrangThaiMau.values),
+            OpenApiParameter("q", str),
+        ],
+        responses=None,
+    )
     def get(self, request):
-        return Response(
-            [
+        tt = request.query_params.get("trang_thai", TrangThaiMau.CHO_DUYET)
+        if tt not in TrangThaiMau.values:
+            raise serializers.ValidationError({"trang_thai": ["Trạng thái không hợp lệ."]})
+        out = []
+        for m, lich in tdd.danh_sach_mau(tt, request.query_params.get("q", "").strip()):
+            hs = m.sinh_vien.sinh_vien
+            out.append(
                 {
-                    "id": m.id,
+                    **_mau_ngan(m),
                     "sinh_vien": m.sinh_vien_id,
-                    "ma_sv": m.sinh_vien.sinh_vien.ma_sv,
-                    "ho_ten": m.sinh_vien.sinh_vien.ho_ten,
+                    "ma_sv": hs.ma_sv,
+                    "ho_ten": hs.ho_ten,
+                    "nganh": hs.nganh.ten_nganh,
+                    "khoa_nhap_hoc": hs.khoa_nhap_hoc,
                     "so_anh": m.so_anh,
-                    "tao_luc": m.tao_luc,
+                    "lan_thu": next(i for i, x in enumerate(lich, 1) if x.id == m.id),
+                    "co_mau_khac_da_duyet": any(
+                        x.trang_thai == TrangThaiMau.DUYET and x.id != m.id for x in lich
+                    ),
+                    "lich_su": [_mau_ngan(x) for x in reversed(lich) if x.id != m.id],
                 }
-                for m in tdd.mau_xem_duoc(request.user).filter(trang_thai=TrangThaiMau.CHO_DUYET)
-            ]
-        )
+            )
+        return Response(out)
 
 
 class FacePhotoView(APIView):
-    permission_classes = [IsGiaoVienOrPdt]
+    permission_classes = [IsPhongDaoTao]  # chỉ PĐT duyệt khuôn mặt
 
     @extend_schema(responses=None)
     def get(self, request, pk):
@@ -398,8 +438,30 @@ class FacePhotoView(APIView):
         return _jpeg(data)
 
 
+class ThuHoiMatSerializer(serializers.Serializer):
+    ly_do = serializers.CharField(max_length=255, allow_blank=True, default="")
+
+
+class FaceRevokeView(APIView):
+    permission_classes = [IsPhongDaoTao]
+
+    @extend_schema(request=ThuHoiMatSerializer, responses=None)
+    def post(self, request, pk):
+        s = ThuHoiMatSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        m = tdd.pdt_thu_hoi_mat(request.user, pk, s.validated_data["ly_do"].strip())
+        write_audit(
+            request,
+            HanhDong.UPDATE,
+            "FaceTemplate",
+            m.id,
+            {"trang_thai": m.trang_thai, "ly_do": m.ly_do},
+        )
+        return Response({"id": m.id, "trang_thai": m.trang_thai})
+
+
 class FaceReviewView(APIView):
-    permission_classes = [IsGiaoVienOrPdt]
+    permission_classes = [IsPhongDaoTao]  # chỉ PĐT duyệt khuôn mặt
 
     @extend_schema(request=DuyetMatSerializer, responses=None)
     def post(self, request, pk):

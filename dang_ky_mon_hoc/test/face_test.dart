@@ -117,17 +117,37 @@ void main() {
     });
   });
 
-  group('GV / PĐT — duyệt khuôn mặt', () {
-    Map<String, Handler> routes() => {
-      'GET /attendance/faces/pending/': (_) => reply(200, [
+  group('PĐT — duyệt khuôn mặt', () {
+    Map<String, dynamic> mau({String tt = 'CHO_DUYET'}) => {
+      'id': 5,
+      'trang_thai': tt,
+      'ly_do': '',
+      'tao_luc': '2027-01-12T08:00:00+07:00',
+      'ngay_duyet': null,
+      'nguoi_duyet': '',
+      'sinh_vien': 21,
+      'ma_sv': 'SV2023014',
+      'ho_ten': 'Trần Hoàng Nam',
+      'nganh': 'Công nghệ thông tin',
+      'khoa_nhap_hoc': 'K2023',
+      'so_anh': 3,
+      'lan_thu': 2,
+      'co_mau_khac_da_duyet': false,
+      'lich_su': [
         {
-          'id': 5,
-          'sinh_vien': 21,
-          'ma_sv': 'SV2023014',
-          'ho_ten': 'Trần Hoàng Nam',
-          'so_anh': 3,
-          'tao_luc': '2027-01-12T08:00:00+07:00',
+          'id': 4,
+          'trang_thai': 'TU_CHOI',
+          'ly_do': 'Ảnh tối',
+          'tao_luc': '2027-01-10T08:00:00+07:00',
+          'ngay_duyet': '2027-01-11T08:00:00+07:00',
+          'nguoi_duyet': 'Nguyễn Thị Phương Anh',
         },
+      ],
+    };
+
+    Map<String, Handler> routes() => {
+      'GET /attendance/faces/': (o) => reply(200, [
+        mau(tt: o.queryParameters['trang_thai'] as String? ?? 'CHO_DUYET'),
       ]),
       'GET /attendance/faces/5/photos/': (_) => ResponseBody.fromBytes(
         _png,
@@ -138,52 +158,78 @@ void main() {
       ),
       'POST /attendance/faces/5/review/': (_) =>
           reply(200, {'id': 5, 'trang_thai': 'TU_CHOI'}),
+      'POST /attendance/faces/5/thu-hoi/': (_) =>
+          reply(200, {'id': 5, 'trang_thai': 'THU_HOI'}),
     };
 
-    testWidgets('PĐT xem 3 ảnh và từ chối kèm lý do', (t) async {
+    testWidgets(
+      'xem thông tin, lịch sử, 3 ảnh và từ chối bằng lý do chọn nhanh',
+      (t) async {
+        final api = pdtApi(routes());
+        await openPdt(t, api, '/pdt/faces');
+        expect(find.text('Trần Hoàng Nam · SV2023014'), findsOneWidget);
+        expect(
+          find.textContaining('Công nghệ thông tin · Khóa K2023'),
+          findsOneWidget,
+        );
+        expect(find.text('Lần đăng ký thứ 2'), findsOneWidget);
+        expect(find.text('Các lần đăng ký khác (1)'), findsOneWidget);
+        expect(find.byType(Image), findsNWidgets(3));
+        expect(api.queries['GET /attendance/faces/5/photos/'], {
+          'i': 2,
+        }); // gọi đủ 3 ảnh, lần cuối i = 2
+
+        await t.tap(find.widgetWithText(OutlinedButton, 'Từ chối'));
+        await t.pumpAndSettle();
+        await tapText(t, 'Ảnh mờ'); // lý do chọn nhanh
+        await t.tap(find.text('Từ chối').last); // nút trong hộp thoại
+        await t.pumpAndSettle();
+        expect(api.bodies['POST /attendance/faces/5/review/'], {
+          'duyet': false,
+          'ly_do': 'Ảnh mờ',
+        });
+      },
+    );
+
+    testWidgets('duyệt', (t) async {
       final api = pdtApi(routes());
       await openPdt(t, api, '/pdt/faces');
-      expect(find.text('Trần Hoàng Nam · SV2023014'), findsOneWidget);
-      expect(find.byType(Image), findsNWidgets(3));
-      expect(api.queries['GET /attendance/faces/5/photos/'], {
-        'i': 2,
-      }); // gọi đủ 3 ảnh, lần cuối i = 2
-
-      await tapText(t, 'Từ chối');
-      await t.enterText(find.byType(TextField).last, 'Ảnh tối');
-      await t.pump();
-      await tapText(t, 'Từ chối', index: 1);
-      expect(api.bodies['POST /attendance/faces/5/review/'], {
-        'duyet': false,
-        'ly_do': 'Ảnh tối',
-      });
-    });
-
-    testWidgets('GV duyệt', (t) async {
-      final api = FakeAdapter({
-        'GET /profiles/me/': (_) => reply(
-          200,
-          userJson('GIAO_VIEN', name: 'Trần Minh Quân', username: 'gv001'),
-        ),
-        ...routes(),
-      });
-      await openPdt(t, api, '/teacher/faces');
-      await tapText(t, 'Duyệt');
+      await t.tap(find.widgetWithText(FilledButton, 'Duyệt'));
+      await t.pumpAndSettle();
       expect(api.bodies['POST /attendance/faces/5/review/'], {
         'duyet': true,
         'ly_do': '',
       });
     });
 
-    testWidgets('không có mẫu chờ duyệt', (t) async {
-      final api = pdtApi({
-        'GET /attendance/faces/pending/': (_) => reply(200, []),
-      });
+    testWidgets('tab Đã duyệt → thu hồi kèm lý do; tìm theo MSSV', (t) async {
+      final api = pdtApi(routes());
       await openPdt(t, api, '/pdt/faces');
-      expect(
-        find.text('Không có khuôn mặt nào đang chờ duyệt.'),
-        findsOneWidget,
-      );
+      await t.tap(find.widgetWithText(ChoiceChip, 'Đã duyệt'));
+      await t.pumpAndSettle();
+      expect(api.queries['GET /attendance/faces/'], {'trang_thai': 'DUYET'});
+      await t.tap(find.widgetWithText(OutlinedButton, 'Thu hồi'));
+      await t.pumpAndSettle();
+      await tapText(t, 'Không phải sinh viên này');
+      await t.tap(find.text('Thu hồi').last);
+      await t.pumpAndSettle();
+      expect(api.bodies['POST /attendance/faces/5/thu-hoi/'], {
+        'ly_do': 'Không phải sinh viên này',
+      });
+
+      await t.enterText(find.byType(TextField).first, 'SV2023');
+      await t.pump(const Duration(milliseconds: 500));
+      await t.pumpAndSettle();
+      expect(api.queries['GET /attendance/faces/'], {
+        'trang_thai': 'DUYET',
+        'q': 'SV2023',
+      });
+    });
+
+    testWidgets('không có mẫu chờ duyệt', (t) async {
+      final api = pdtApi({'GET /attendance/faces/': (_) => reply(200, [])});
+      await openPdt(t, api, '/pdt/faces');
+      expect(find.text('Không có mẫu nào chờ duyệt.'), findsOneWidget);
     });
   });
 }

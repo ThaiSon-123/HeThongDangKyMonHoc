@@ -4,16 +4,19 @@ Luồng: SV đồng ý dữ liệu → đăng ký mặt → PĐT/GV duyệt. GV 
 gửi khung hình + GPS (+ mã phòng) → 6 bước kiểm tra → kết quả chỉ nâng hạng: vắng < đáng ngờ < có mặt.
 """
 
+import json
 import secrets
 from datetime import timedelta
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from django.http import Http404
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.attendance import crypto, geo, room_token
+from apps.attendance.face import checks
 from apps.attendance.face.runtime import get_engine, infer
 from apps.attendance.face.types import FaceCfg
 from apps.attendance.face.verify import build_template, verify_checkin
@@ -31,7 +34,6 @@ from apps.attendance.models import (
     TrangThaiSession,
 )
 from apps.attendance.services import kiem_tra_gv_lop, sinh_vien_dang_ky
-from apps.auth.models import Role
 from apps.config.models import SystemConfig
 from apps.registration.models import Registration, TrangThaiDangKy
 from apps.training.models import TrangThaiLop
@@ -39,9 +41,10 @@ from core.exceptions import Codes, business_error
 
 # Mã lý do trả cho SV (app map sang câu tiếng Việt). Không trả điểm số thô để SV không dò được ngưỡng.
 LY_DO = {
-    "MA_PHONG_SAI": "Mã phòng không đúng hoặc đã hết hạn, hãy quét lại.",
+    "MA_PHONG_SAI": "Chưa xác nhận được bạn đang trong phòng học: hãy lại gần bàn giảng viên rồi đọc lại mã ESP32 (hoặc gõ mã giảng viên đọc).",
     "GPS_KEM": "GPS chưa đủ chính xác, hãy bật Wi-Fi và thử lại gần cửa sổ.",
-    "QUA_XA": "Bạn đang ở xa vị trí lớp học.",
+    "QUA_XA": "Bạn đang ở ngoài khuôn viên trường.",
+    "CHUA_CO_KHUON_VIEN": "Trường chưa cấu hình khuôn viên. Hãy báo giảng viên.",
     "KHONG_THAY_MAT": "Không thấy khuôn mặt trong khung hình.",
     "NHIEU_MAT": "Chỉ một người trong khung hình.",
     "THIEU_SANG": "Thiếu sáng.",
@@ -149,6 +152,11 @@ def trang_thai_mat(sv):
         kq["trang_thai"], kq["dang_cho_cap_nhat"] = "CHO_DUYET", False
     elif TrangThaiMau.TU_CHOI in theo:
         kq["trang_thai"], kq["ly_do"] = "TU_CHOI", theo[TrangThaiMau.TU_CHOI].ly_do
+    if kq["trang_thai"] in ("CHUA_CO", "TU_CHOI"):
+        # PĐT thu hồi mẫu (có lý do) mới nhất → báo SV như bị từ chối để đăng ký lại.
+        moi = FaceTemplate.objects.filter(sinh_vien=sv).first()
+        if moi and moi.trang_thai == TrangThaiMau.THU_HOI and moi.ly_do:
+            kq["trang_thai"], kq["ly_do"] = "TU_CHOI", f"Phòng đào tạo thu hồi mẫu: {moi.ly_do}"
     return kq
 
 
@@ -181,18 +189,68 @@ def dang_ky_mat(sv, anh):
     return m
 
 
-def _sv_cua_gv(gv):
-    return Registration.objects.filter(
-        lop_hoc_phan__giao_vien__user=gv, trang_thai=TrangThaiDangKy.DA_DANG_KY
-    ).values("sinh_vien_id")
-
-
 def mau_xem_duoc(nguoi):
-    """PĐT: mọi mẫu; GV: mẫu của SV đang học lớp mình."""
-    qs = FaceTemplate.objects.select_related("sinh_vien__sinh_vien")
-    if nguoi.role == Role.GIAO_VIEN:
-        qs = qs.filter(sinh_vien_id__in=_sv_cua_gv(nguoi))
-    return qs
+    """Chỉ PĐT duyệt khuôn mặt (quyền chặn ở view), thấy mọi mẫu."""
+    return FaceTemplate.objects.select_related("sinh_vien__sinh_vien")
+
+
+GOI_Y_KHUNG = {
+    None: "Tốt lắm, giữ yên…",
+    "KHONG_THAY_MAT": "Chưa thấy khuôn mặt, hãy đưa mặt vào giữa khung.",
+    "NHIEU_MAT": "Chỉ để một người trong khung.",
+    "LAI_GAN": "Lại gần camera hơn một chút.",
+    "THIEU_SANG": "Thiếu sáng, hãy ra chỗ sáng hơn.",
+    "ANH_MO": "Ảnh bị mờ, giữ máy yên.",
+    "NHIN_THANG": "Nhìn thẳng vào camera.",
+    "QUAY_TRAI": "Quay đầu sang trái thêm.",
+    "QUAY_PHAI": "Quay đầu sang phải thêm.",
+}
+
+
+def kiem_tra_khung(anh, tu_the):
+    """Quét real time: chỉ dò mặt + chất lượng + tư thế (không nhận diện, không chống giả), không lưu ảnh."""
+    a = infer(get_engine().analyze, anh, embed=False, spoof=False)
+    ma = checks.live_hint(a, _cfg(), tu_the)
+    return {"ok": ma is None, "ma": ma, "thong_bao": GOI_Y_KHUNG[ma]}
+
+
+def danh_sach_mau(trang_thai, q=""):
+    """PĐT: mẫu theo trạng thái (chờ duyệt: cũ nhất trước; còn lại: mới nhất trước), tìm theo MSSV / họ tên.
+    Trả `[(mẫu, [mọi mẫu của SV đó, cũ → mới])]`."""
+    qs = FaceTemplate.objects.filter(trang_thai=trang_thai).select_related(
+        "sinh_vien__sinh_vien__nganh", "nguoi_duyet"
+    )
+    if q:
+        qs = qs.filter(
+            Q(sinh_vien__sinh_vien__ma_sv__icontains=q)
+            | Q(sinh_vien__sinh_vien__ho_ten__icontains=q)
+        )
+    # ponytail: tối đa 200 dòng, đủ cho một đợt duyệt; cần phân trang khi lịch sử lớn hơn.
+    ds = list(qs.order_by("id" if trang_thai == TrangThaiMau.CHO_DUYET else "-id")[:200])
+    lich = {}
+    for m in FaceTemplate.objects.filter(sinh_vien_id__in={m.sinh_vien_id for m in ds}).order_by(
+        "id"
+    ):
+        lich.setdefault(m.sinh_vien_id, []).append(m)
+    return [(m, lich[m.sinh_vien_id]) for m in ds]
+
+
+@transaction.atomic
+def pdt_thu_hoi_mat(nguoi, mau_id, ly_do):
+    """PĐT thu hồi mẫu đã duyệt (vd ảnh không đúng người): SV phải đăng ký lại mới tự điểm danh được."""
+    m = FaceTemplate.objects.select_for_update().filter(pk=mau_id).first()
+    if m is None:
+        raise Http404
+    if m.trang_thai != TrangThaiMau.DUYET:
+        raise _loi(
+            Codes.TRANG_THAI_KHONG_HOP_LE, "Chỉ thu hồi được mẫu đang ở trạng thái đã duyệt."
+        )
+    if not ly_do:
+        raise ValidationError({"ly_do": ["Thu hồi phải ghi lý do."]})
+    m.trang_thai, m.embedding, m.ly_do = TrangThaiMau.THU_HOI, None, ly_do
+    m.nguoi_duyet, m.ngay_duyet = nguoi, timezone.now()
+    m.save(update_fields=["trang_thai", "embedding", "ly_do", "nguoi_duyet", "ngay_duyet"])
+    return m
 
 
 def anh_dang_ky(nguoi, mau_id, i):
@@ -247,8 +305,14 @@ def _kiem_tra_hom_nay(s, now):
         raise _loi(Codes.TRANG_THAI_KHONG_HOP_LE, "Chỉ mở tự điểm danh cho buổi học hôm nay.")
 
 
-def r0_mac_dinh():
-    return SystemConfig.get_int("ban_kinh_diem_danh_m", 20)
+def khuon_vien():
+    """Đa giác khuôn viên do PĐT vẽ: `[(lat, lng), ...]`; chưa vẽ → None."""
+    raw = SystemConfig.objects.filter(khoa="khuon_vien").values_list("gia_tri", flat=True).first()
+    return [tuple(p) for p in json.loads(raw)] if raw else None
+
+
+def sai_lech_khuon_vien_m():
+    return SystemConfig.get_int("sai_lech_khuon_vien_m", 30)
 
 
 def thoi_han_mac_dinh():
@@ -256,7 +320,7 @@ def thoi_han_mac_dinh():
 
 
 @transaction.atomic
-def mo_phien(gv, session_id, mau_gps, thoi_han, r0, kiem_tra_phong, now=None):
+def mo_phien(gv, session_id, thoi_han, kiem_tra_phong, now=None):
     now = now or timezone.now()
     s = _phien_gv(gv, session_id, khoa=True)
     _kiem_tra_hom_nay(s, now)
@@ -265,14 +329,11 @@ def mo_phien(gv, session_id, mau_gps, thoi_han, r0, kiem_tra_phong, now=None):
             Codes.TRANG_THAI_KHONG_HOP_LE,
             "Buổi này đã mở tự điểm danh; dùng Mở lại nếu phiên đã đóng.",
         )
-    g = settings.GPS
-    fix = geo.aggregate(_mau(mau_gps), g["max_acc_gv_m"], g["min_mau_gv"], g["max_span_s"])
-    if fix is None:
+    if khuon_vien() is None:
         raise _loi(
             Codes.TRANG_THAI_KHONG_HOP_LE,
-            f"Chưa đủ {g['min_mau_gv']} mẫu GPS có sai số ≤ {g['max_acc_gv_m']} m. "
-            "Hãy đứng yên, bật Wi-Fi hoặc ra gần cửa sổ.",
-            "GPS_KEM",
+            "Phòng đào tạo chưa vẽ khuôn viên trường nên chưa mở được tự điểm danh.",
+            "CHUA_CO_KHUON_VIEN",
         )
     s.mo_luc, s.het_han_luc, s.dong_luc, s.nguoi_mo = (
         now,
@@ -280,9 +341,7 @@ def mo_phien(gv, session_id, mau_gps, thoi_han, r0, kiem_tra_phong, now=None):
         None,
         gv,
     )
-    s.tam_lat, s.tam_lng, s.tam_sai_so_m = fix.lat, fix.lng, fix.acc
-    s.tam_goc_lat, s.tam_goc_lng = fix.lat, fix.lng
-    s.ban_kinh_m, s.kiem_tra_phong = r0, kiem_tra_phong
+    s.kiem_tra_phong = kiem_tra_phong
     s.ma_phong_bi_mat = secrets.token_bytes(32)
     s.trang_thai = TrangThaiSession.DA_DIEM_DANH
     s.save()
@@ -306,7 +365,7 @@ def mo_phien(gv, session_id, mau_gps, thoi_han, r0, kiem_tra_phong, now=None):
 
 @transaction.atomic
 def mo_lai_phien(gv, session_id, thoi_han, now=None):
-    """Mở lại phiên đã đóng / hết hạn trong ngày: giữ tâm, bán kính, mã phòng, kết quả và số lượt."""
+    """Mở lại phiên đã đóng / hết hạn trong ngày: giữ mã phòng, kết quả và số lượt."""
     now = now or timezone.now()
     s = _phien_gv(gv, session_id, khoa=True)
     _kiem_tra_hom_nay(s, now)
@@ -472,8 +531,9 @@ def phien_dang_mo_cua_sv(sv, now=None):
 
 
 @transaction.atomic
-def xin_thu_thach(sv, session_id, now=None):
-    """Mỗi lần xin = 1 lượt, kể cả khi không gửi lên (chống xin liên tục để chọn hành động dễ)."""
+def xin_thu_thach(sv, session_id, ma_phong="", now=None):
+    """Mỗi lần xin = 1 lượt, kể cả khi không gửi lên (chống xin liên tục để chọn hành động dễ).
+    Phiên bắt mã phòng: kiểm tra "trong phòng" (mã ESP32) **trước**; sai mã thì không cấp, không tính lượt."""
     now = now or timezone.now()
     s = _phien_sv(sv, session_id, now)
     AttendanceSession.objects.select_for_update().filter(pk=s.pk).first()  # xếp hàng theo phiên
@@ -492,6 +552,14 @@ def xin_thu_thach(sv, session_id, now=None):
             "Bạn đã dùng hết lượt điểm danh của phiên này. Hãy báo giảng viên để điểm danh thủ công.",
             "HET_LUOT",
         )
+    if s.kiem_tra_phong and not room_token.verify_room_code(
+        ma_phong,
+        bytes(s.ma_phong_bi_mat),
+        s.id,
+        now.timestamp(),
+        _tdd("room_token_window_s"),
+    ):
+        raise _loi(Codes.TRANG_THAI_KHONG_HOP_LE, LY_DO["MA_PHONG_SAI"], "MA_PHONG_SAI")
     c = Challenge.objects.create(
         session=s,
         sinh_vien=sv,
@@ -524,9 +592,7 @@ def _co(face_status, vi_tri, mau, nhay_luot_truoc, cung_may):
     return co
 
 
-def diem_danh(
-    sv, session_id, khung, nonce, mau_gps, ma_phong_gui, device_id, nen_tang, ip, now=None
-):
+def diem_danh(sv, session_id, khung, nonce, mau_gps, device_id, nen_tang, ip, now=None):
     now = now or timezone.now()
     # Bước 1–2 không đạt thì không ghi lượt (giống bản gốc).
     s = _phien_sv(sv, session_id, now)
@@ -574,23 +640,18 @@ def diem_danh(
             "luot_con_lai": max(_tdd("so_luot_toi_da") - _so_luot_da_dung(s, sv), 0),
         }
 
-    # Bước 3: mã phòng.
-    if s.kiem_tra_phong and not room_token.verify_room_code(
-        ma_phong_gui,
-        bytes(s.ma_phong_bi_mat),
-        s.id,
-        now.timestamp(),
-        _tdd("room_token_window_s"),
-    ):
-        return xong(3, "MA_PHONG_SAI")
+    # Bước 3 (mã phòng) đã kiểm tra lúc cấp thử thách: có nonce hợp lệ nghĩa là đã ở trong phòng.
 
-    # Bước 4: vị trí; xa quá 2r thì dừng, không chạy mô hình.
+    # Bước 4: vị trí so với khuôn viên; xa quá 2 lần sai lệch cho phép thì dừng, không chạy mô hình.
     g = settings.GPS
     fix = geo.aggregate(mau, g["max_acc_sv_m"], g["min_mau_sv"], g["max_span_s"])
     if fix is None:
         return xong(4, "GPS_KEM")
-    r = geo.adaptive_radius(s.ban_kinh_m, s.tam_sai_so_m, fix.acc)
-    d = geo.haversine_m(s.tam_lat, s.tam_lng, fix.lat, fix.lng)
+    vien = khuon_vien()
+    if vien is None:  # PĐT xóa khuôn viên giữa phiên
+        return xong(4, "CHUA_CO_KHUON_VIEN")
+    r = sai_lech_khuon_vien_m()
+    d = geo.distance_to_polygon_m(fix.lat, fix.lng, vien)
     luot.lat, luot.lng, luot.sai_so_m, luot.d_m, luot.r_m = fix.lat, fix.lng, fix.acc, d, r
     vi_tri = geo.classify(d, r)
     if vi_tri == "far":
@@ -626,23 +687,7 @@ def diem_danh(
     return xong()
 
 
-# ============================================================== GV theo dõi + tính lại tâm
-
-
-def _vi_tri_da_qua_mat(s):
-    """Vị trí mới nhất của mỗi SV có lượt đã qua khuôn mặt (có mặt / đáng ngờ)."""
-    pos = {}
-    for luot in CheckinAttempt.objects.filter(
-        session=s, ket_qua__in=[KetQuaLuot.CO_MAT, KetQuaLuot.DANG_NGO], lat__isnull=False
-    ).order_by("id"):
-        pos[luot.sinh_vien_id] = (luot.lat, luot.lng)
-    return list(pos.values())
-
-
-def goi_y_tinh_lai_tam(s):
-    if s.tam_lat is None:
-        return False
-    return geo.suggest_recenter((s.tam_lat, s.tam_lng), _vi_tri_da_qua_mat(s), s.ban_kinh_m)
+# ============================================================== GV theo dõi
 
 
 def danh_sach_phien(gv, session_id, now=None):
@@ -693,7 +738,6 @@ def danh_sach_phien(gv, session_id, now=None):
         "session": s,
         "dang_mo": s.dang_mo_tu_diem_danh(now),
         "dem": dem,
-        "goi_y_tinh_lai_tam": goi_y_tinh_lai_tam(s),
         "rows": rows,
     }
 
@@ -721,29 +765,3 @@ def luot_cua_sv_trong_phien(gv, session_id, sv_id):
         _luot_payload(x)
         for x in CheckinAttempt.objects.filter(session=s, sinh_vien_id=sv_id).order_by("-id")
     ]
-
-
-@transaction.atomic
-def tinh_lai_tam(gv, session_id):
-    """Tâm mới = trung vị vị trí SV đã qua khuôn mặt; chấm lại lượt đáng ngờ, chỉ nâng hạng."""
-    s = _phien_gv(gv, session_id, khoa=True)
-    if not goi_y_tinh_lai_tam(s):
-        raise _loi(Codes.TRANG_THAI_KHONG_HOP_LE, "Chưa thấy dấu hiệu tâm phiên bị lệch.")
-    s.tam_lat, s.tam_lng = geo.recenter((s.tam_lat, s.tam_lng), _vi_tri_da_qua_mat(s))
-    s.save(update_fields=["tam_lat", "tam_lng"])
-    nang = 0
-    for luot in CheckinAttempt.objects.filter(
-        session=s, ket_qua=KetQuaLuot.DANG_NGO, lat__isnull=False
-    ):
-        d = geo.haversine_m(s.tam_lat, s.tam_lng, luot.lat, luot.lng)
-        co = [c for c in luot.co if c != "LECH_NHE"]
-        if geo.classify(d, luot.r_m) == "drift":
-            co.append("LECH_NHE")
-        luot.d_m, luot.co = d, co
-        if not co:
-            luot.ket_qua = KetQuaLuot.CO_MAT
-            nang += 1
-        luot.save(update_fields=["d_m", "co", "ket_qua"])
-        if not co:
-            _nang_hang(s, luot.sinh_vien_id, KetQuaLuot.CO_MAT, luot)
-    return s, nang

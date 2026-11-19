@@ -23,6 +23,38 @@ def quality_reason(a: FrameAnalysis, cfg: FaceCfg) -> str | None:
     return None
 
 
+# Tư thế khi quét real time → (hướng: 0 thẳng, -1 trái, 1 phải; phần ngưỡng quay cần đạt).
+POSES = {
+    "thang": (0, 0.0),
+    "hoi_trai": (-1, 0.5),  # đăng ký: quay nhẹ
+    "hoi_phai": (1, 0.5),
+    "turn_left": (-1, 1.0),  # hành động thử thách: quay đủ như action_done
+    "turn_right": (1, 1.0),
+}
+
+
+def live_hint(a: FrameAnalysis, cfg: FaceCfg, pose: str) -> str | None:
+    """Lời nhắc cho một khung lúc quét real time, hoặc None khi khung đạt (vòng tròn xanh).
+    Cùng ngưỡng với lúc chấm thật: đạt ở đây thì khung không bị loại vì chất lượng / tư thế."""
+    if a.face_count == 0 or a.yaw_proxy is None:
+        return "KHONG_THAY_MAT"
+    if a.face_count > 1:
+        return "NHIEU_MAT"
+    if a.face_width_px < cfg.min_face_px:
+        return "LAI_GAN"
+    if a.brightness < cfg.min_brightness:
+        return "THIEU_SANG"
+    if a.sharpness < cfg.min_sharpness:
+        return "ANH_MO"
+    huong, phan = POSES[pose]
+    t = cfg.yaw_threshold
+    if huong == 0:
+        return None if abs(a.yaw_proxy) <= t / 2 else "NHIN_THANG"
+    if a.yaw_proxy * huong * cfg.yaw_sign >= t * phan:
+        return None
+    return "QUAY_TRAI" if huong < 0 else "QUAY_PHAI"
+
+
 def action_done(yaws: list[float | None], action: str, cfg: FaceCfg) -> bool:
     """Đạt khi có một khung nhìn thẳng (|yaw| ≤ T/2) rồi sau đó một khung quay đúng hướng ≥ T.
 

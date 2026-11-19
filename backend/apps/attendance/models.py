@@ -35,13 +35,6 @@ class AttendanceSession(models.Model):
         on_delete=models.SET_NULL,
         related_name="phien_tu_diem_danh_da_mo",
     )
-    # Tâm phiên = trung vị GPS của GV lúc mở; tâm gốc giữ lại khi GV tính lại tâm.
-    tam_lat = models.FloatField(null=True, blank=True)
-    tam_lng = models.FloatField(null=True, blank=True)
-    tam_sai_so_m = models.FloatField(null=True, blank=True)
-    tam_goc_lat = models.FloatField(null=True, blank=True)
-    tam_goc_lng = models.FloatField(null=True, blank=True)
-    ban_kinh_m = models.PositiveSmallIntegerField(null=True, blank=True)  # r₀
     kiem_tra_phong = models.BooleanField(default=False)
     ma_phong_bi_mat = models.BinaryField(null=True, blank=True)
 

@@ -1,58 +1,48 @@
 # Kế hoạch: GPS theo khuôn viên trường và xác nhận "trong phòng" bằng ESP32 (BLE)
 
-> Trạng thái: **bản nháp ý tưởng, chưa làm.** Ghi lại các trao đổi ngày 14–15/11/2026.
+> Trạng thái: **đã làm** (19/11/2026): GPS khuôn viên (mục 3) và ESP32 (mục 4). Ghi lại các trao đổi ngày 14–19/11/2026.
 > Liên quan: `docs/ke-hoach-diem-danh-khuon-mat-gps.md` (KH), `docs/checklist_diemdanh.md`, `docs/ke-hoach-gop-diem-danh.md`.
 > Những chỗ ghi "chưa kiểm chứng" là điều chưa thử trong dự án, cần thử trước khi dựa vào.
 
 ---
 
-## 1. Vấn đề
+## 1. Vấn đề (cách cũ, đã bỏ)
 
-Cách xác nhận vị trí hiện tại: tâm = GPS của giảng viên lúc mở phiên, bán kính `r = r₀ + σ_gv + min(σ_sv, 30)`.
+Cách cũ: tâm = GPS của giảng viên lúc mở phiên, bán kính `r = r₀ + σ_gv + min(σ_sv, 30)`.
 
-- GPS trong phòng kín rất kém (đã nằm trong KH §15). Laptop không có chip GPS, định vị bằng Wi-Fi hoặc IP, sai số 30–1000 m, nên test trên laptop không đại diện cho điện thoại thật.
-- Ngưỡng hiện tại: giảng viên cần ≥ 5 mẫu sai số ≤ 20 m, sinh viên ≥ 3 mẫu sai số ≤ 30 m. Laptop không đạt nên báo "Chưa đủ 5 mẫu GPS có sai số ≤ 20 m".
-- Tạm thời để test: `backend/config/settings/dev.py` đọc `GPS_MAX_ACC_GV_M` và `GPS_MAX_ACC_SV_M` từ `.env` (đang đặt 500 m trên máy dev). Mặc định vẫn là 20 và 30 m, prod không dùng file này. Tác dụng phụ: bán kính chấp nhận phình ra rất lớn nên không thử được "quá xa".
+- GPS trong phòng kín rất kém (KH §15). Laptop không có chip GPS, định vị bằng Wi-Fi hoặc IP, sai số 30–1000 m.
+- Giảng viên phải đứng lấy ≥ 5 mẫu GPS sai số ≤ 20 m mới mở được phiên; trên laptop gần như không đạt.
 
-## 2. Hướng giải quyết: hai lớp xác nhận tách nhau
+## 2. Hướng đã chọn: hai lớp xác nhận tách nhau
 
 | Lớp | Xác nhận | Công cụ |
 |---|---|---|
-| Ở **trường** | Sinh viên đang trong khuôn viên | GPS + đa giác khuôn viên (mục 3) |
-| Trong **phòng** | Sinh viên đang gần giảng viên | Bluetooth ESP32 (mục 4) |
+| Ở **trường** | Sinh viên đang trong khuôn viên | GPS + đa giác khuôn viên (mục 3), **mọi phiên** |
+| Trong **phòng** | Sinh viên đang gần giảng viên | Bluetooth ESP32 (mục 4), giảng viên **bật/tắt khi mở phiên** ("Bắt mã phòng") |
 
-Hai lớp độc lập, chọn theo từng phiên. Khuôn mặt và chống giả mạo vẫn chạy ở mọi chế độ.
+Khuôn mặt và chống giả mạo vẫn chạy ở mọi phiên. **Đã bỏ hẳn** kiểu "quanh vị trí giảng viên": không còn lấy GPS giảng viên, bán kính r₀, "Tính lại tâm" (quyết định 19/11).
 
-## 3. GPS: 3 chế độ cho mỗi phiên và đa giác khuôn viên
+## 3. GPS theo khuôn viên trường
 
-### 3.1 Chọn chế độ khi giảng viên mở phiên
-1. **Quanh vị trí giảng viên:** như hiện tại (mặc định, không ảnh hưởng phần đang chạy).
-2. **Trong khuôn viên trường:** dùng đa giác do quản trị vẽ.
-3. **Không kiểm tra GPS.**
+### 3.1 Mở phiên
+Giảng viên chỉ chọn thời hạn và "Bắt mã phòng"; không cần đứng lấy GPS. Chưa vẽ khuôn viên thì server chặn mở phiên (`CHUA_CO_KHUON_VIEN`).
 
-Với chế độ 2 và 3: giảng viên không cần đứng lấy GPS 10 giây; khối "tâm" và nút "Tính lại tâm" ẩn đi; màn sinh viên bỏ qua bước lấy GPS nếu phiên không kiểm tra.
+### 3.2 Vẽ khuôn viên (Phòng đào tạo, màn Quy chế, nhóm Điểm danh)
+- Bản đồ `flutter_map` + OpenStreetMap (cần internet): chạm để thêm góc, chạm vào góc để xóa, Hoàn tác, Xóa hết. Chưa có kéo để chỉnh góc.
+- Lưu trong `SystemConfig`: `khuon_vien` = JSON `[[vĩ độ, kinh độ], ...]` (3–100 góc, rỗng = chưa vẽ) và `sai_lech_khuon_vien_m` (mặc định 30, 0–500).
 
-### 3.2 Vẽ khuôn viên (cấu hình toàn hệ thống)
-- Màn bản đồ: chạm để thêm điểm, kéo để chỉnh, hoàn tác, xóa.
-- Ô **"Sai lệch cho phép (m)"** do người quản trị đặt, mặc định đề xuất 30 m.
-- Lưu vào cấu hình hệ thống (`SystemConfig`), không cần sửa code mỗi lần đổi.
-
-### 3.3 Cách kiểm tra phía server
-- Tính khoảng cách `d` từ vị trí sinh viên đến đa giác (0 nếu nằm trong).
-- Dùng lại `geo.classify(d, sai_lech)` và bảng quyết định sẵn có: `d ≤ sai_lech` → đạt; `≤ 2×sai_lech` → lệch nhẹ (đáng ngờ); lớn hơn → không đạt.
-- Cổng chất lượng mẫu (`aggregate`, `max_acc_sv_m`) giữ nguyên. Cờ vị trí giả và bước nhảy vẫn áp dụng.
+### 3.3 Kiểm tra phía server
+- `geo.distance_to_polygon_m`: khoảng cách `d` từ vị trí sinh viên đến đa giác (0 nếu nằm trong, đa giác lõm vẫn đúng).
+- `geo.classify(d, sai_lech)`: `d ≤ sai_lech` → đạt; `≤ 2×sai_lech` → đáng ngờ (cờ "Sát mép khuôn viên"); lớn hơn → `QUA_XA` ("Ngoài khuôn viên").
+- Cổng chất lượng mẫu (`aggregate`, `max_acc_sv_m`), cờ vị trí giả và bước nhảy giữ nguyên.
 
 ### 3.4 Dữ liệu
-- Thêm cột "chế độ GPS" cho `AttendanceSession` (migration nhỏ).
-- Cấu hình mới: đa giác (danh sách tọa độ) và sai lệch cho phép.
+- Migration `attendance 0006`: bỏ `tam_lat`, `tam_lng`, `tam_sai_so_m`, `tam_goc_lat`, `tam_goc_lng`, `ban_kinh_m` của `AttendanceSession`.
+- Migration `config 0002`: `SystemConfig.gia_tri` dài tối đa 4000 ký tự (đủ cho đa giác).
+- Bỏ endpoint `POST sessions/{id}/tinh-lai-tam/` và khóa cấu hình `ban_kinh_diem_danh_m`.
 
-### 3.5 Các quyết định còn mở (mặc định đề xuất)
-| # | Câu hỏi | Mặc định |
-|---|---|---|
-| 1 | Thư viện bản đồ | `flutter_map` + OpenStreetMap (cần internet, web và Android). Phương án khác: nhập tay danh sách tọa độ |
-| 2 | Ai được vẽ | Admin và Phòng đào tạo |
-| 3 | Số vùng | Một đa giác, thêm nhiều vùng khi trường có nhiều cơ sở |
-| 4 | Chọn "Trong khuôn viên" mà chưa vẽ | Chặn mở phiên và báo giảng viên |
+### 3.5 Còn mở
+- Một đa giác cho cả trường; thêm nhiều vùng khi trường có nhiều cơ sở.
 
 ## 4. ESP32 và Bluetooth: xác nhận sinh viên đang trong phòng
 
@@ -92,6 +82,17 @@ Trình duyệt cấm trang web tự quét Bluetooth khi vừa vào trang; luôn 
 - Phạm vi chỉnh bằng công suất phát ESP32 và ngưỡng tín hiệu (RSSI) ở app. Ngưỡng ở app chỉ là kiểm tra phía máy sinh viên nên có thể bị giả.
 - Mã vẫn có thể bị chuyển tiếp (người trong phòng đọc rồi nhắn cho bạn ngoài phòng). Khuôn mặt vẫn chặn việc điểm danh hộ.
 
+### 4.5.0 Đã thử trên phần cứng (18/11/2026)
+Firmware: `firmware/esp32_beacon/esp32_beacon.ino` (ESP32-S3, cổng UART/CH343, Arduino IDE 2.3.6, gói esp32 của Espressif).
+- Gửi mã qua serial → ESP32 trả `OK <mã>`: **đạt**.
+- Quảng bá tên `DD-<mã>`, nRF Connect (Android) thấy ngay, khoảng -47 dBm khi đặt sát: **đạt**.
+- Kết nối GATT, đọc đặc tính ra đúng mã: **đạt**.
+- Đổi mã → tên và giá trị đổi theo; nhiều máy kết nối: **đạt** (chưa đo số máy tối đa).
+- **Chưa đo** bảng RSSI theo khoảng cách (cuối phòng, hành lang) → chưa chọn ngưỡng và công suất phát.
+- Web Bluetooth trên **Chrome Windows** (`localhost`), trang thử `firmware/esp32_beacon/thu_web_bluetooth.html`: hộp chọn lọc theo UUID chỉ hiện ESP32, bấm Pair rồi đọc ra đúng mã, kết nối + đọc mất khoảng 1,8 giây: **đạt**.
+- Web Serial (19/11): trang giảng viên (khối "Mã phòng", `lib/core/serial/`) bấm "Kết nối ESP32", chọn cổng COM của CH343 (Chrome ghi là "USB Single Serial"), ESP32 phát `DD-<mã đang hiện>`, đổi theo mỗi khi mã đổi (30 giây): **đạt**.
+- **Chưa thử** Web Bluetooth trên **Chrome Android** (cần HTTPS hoặc cờ `unsafely-treat-insecure-origin-as-secure`).
+
 ### 4.5.1 Phần cần viết khi làm
 - Firmware ESP32 (Arduino): máy chủ GATT, nhận mã qua serial, phát mã, chỉnh công suất.
 - Web (giảng viên): kết nối Web Serial và đẩy `room-token` mỗi lần mã đổi.
@@ -126,7 +127,7 @@ Cấu hình VPS:
 - Dùng cấu hình **prod**. Prod bắt buộc có `DATA_KEY`, liệt kê rõ `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`. `DATA_KEY` cần sao lưu riêng, mất là sinh viên phải đăng ký lại khuôn mặt.
 - Model `.onnx` **không nằm trong git** (`face_detection_yunet_2023mar.onnx`, `w600k_r50.onnx`, `MiniFASNetV2.onnx`): copy 3 file vào `backend/face_models/` trước khi build image.
 - RAM: checklist khuyến nghị VPS từ 4 GB (mỗi worker gunicorn nạp model khoảng 0,5 GB). **Chưa đo thực tế.**
-- Dòng `GPS_MAX_ACC_*` trong `.env` chỉ dùng cho dev. Prod để ngưỡng thật (20 và 30 m) hoặc dùng GPS đa giác ở mục 3.
+- Dòng `GPS_MAX_ACC_SV_M` trong `.env` chỉ dùng cho dev (laptop). Prod để ngưỡng thật 30 m. Nhớ vẽ khuôn viên trước khi giảng viên mở phiên.
 
 Hạn chế của bản web so với app Android:
 - Không phát hiện được vị trí giả (`is_mocked` luôn `false`).
@@ -136,13 +137,12 @@ Hạn chế của bản web so với app Android:
 
 ## 6. Thứ tự làm đề xuất
 
-1. **GPS 3 chế độ và đa giác khuôn viên** (mục 3): không cần phần cứng, test được ngay. Thứ tự: backend và test, màn chọn chế độ khi mở phiên, màn vẽ bản đồ.
-2. **BLE với ESP32** (mục 4): làm sau khi board về. Việc: firmware, Web Serial ở trang giảng viên, đọc BLE phía sinh viên.
+1. ~~GPS khuôn viên~~ (mục 3): **đã làm** 19/11.
+2. ~~BLE với ESP32 trên web~~ (mục 4): **đã làm** firmware, Web Serial ở trang giảng viên, nút "Đọc mã từ ESP32" phía sinh viên (web). Còn: quét ngầm trong app Android.
 3. **Chính sách web và triển khai VPS** (mục 5): chốt trước khi cho sinh viên dùng thật.
 
 ## 7. Câu hỏi còn mở
 
-- Mục 3.5: bốn quyết định về bản đồ, người vẽ, số vùng, và trường hợp chưa vẽ.
 - Trong lớp có iPhone không? Nếu có, nhóm này dùng gõ tay mã phòng (hoặc cách khác, chưa thiết kế).
 - Chấp nhận một lần bấm chọn thiết bị trên web, hay yêu cầu hoàn toàn tự động (phải dùng app Android thay cho web)?
 - Chính sách điểm danh trên web (checklist, điểm 6).

@@ -153,9 +153,7 @@ FACE = {
     "min_face_px": 100,
 }
 GPS = {
-    "max_acc_gv_m": 20,
     "max_acc_sv_m": 30,
-    "min_mau_gv": 5,
     "min_mau_sv": 3,
     "max_span_s": 20,
     "max_speed_mps": 30,

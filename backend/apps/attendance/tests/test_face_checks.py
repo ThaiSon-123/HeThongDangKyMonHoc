@@ -3,9 +3,15 @@ from dataclasses import replace
 import numpy as np
 import pytest
 
-from apps.attendance.face.checks import action_done, face_status, match_scores, quality_reason
+from apps.attendance.face.checks import (
+    action_done,
+    face_status,
+    live_hint,
+    match_scores,
+    quality_reason,
+)
 from apps.attendance.tests.face_fakes import CFG as cfg
-from apps.attendance.tests.face_fakes import E0, fa, vec
+from apps.attendance.tests.face_fakes import E0, NO_FACE, fa, vec
 
 
 def test_quality_reasons():
@@ -64,3 +70,24 @@ def test_face_status_thresholds():
 
 def test_vec_helper_is_unit():
     assert np.linalg.norm(vec(0.3)) == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize(
+    ("khung", "tu_the", "ma"),
+    [
+        (NO_FACE, "thang", "KHONG_THAY_MAT"),
+        (fa(face_count=2), "thang", "NHIEU_MAT"),
+        (fa(face_width_px=80), "thang", "LAI_GAN"),
+        (fa(brightness=40), "thang", "THIEU_SANG"),
+        (fa(sharpness=10), "thang", "ANH_MO"),
+        (fa(yaw_proxy=0.2), "thang", "NHIN_THANG"),
+        (fa(yaw_proxy=0.1), "thang", None),
+        (fa(yaw_proxy=-0.13), "hoi_trai", None),  # quay nhẹ: ≥ T/2
+        (fa(yaw_proxy=-0.05), "hoi_trai", "QUAY_TRAI"),
+        (fa(yaw_proxy=0.2), "turn_right", "QUAY_PHAI"),  # hành động: phải ≥ T
+        (fa(yaw_proxy=0.3), "turn_right", None),
+        (fa(yaw_proxy=0.3), "turn_left", "QUAY_TRAI"),  # sai hướng
+    ],
+)
+def test_live_hint(khung, tu_the, ma):
+    assert live_hint(khung, cfg, tu_the) == ma

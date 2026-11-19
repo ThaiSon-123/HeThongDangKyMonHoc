@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thử Web Bluetooth</title>
+<!-- Trang thử §4.4: Chrome Android đọc mã phòng từ ESP32 qua GATT. Không dùng trong app. -->
+<button id="b" style="font-size:20px;padding:14px;width:100%">Kiểm tra có trong phòng</button>
+<pre id="o" style="font-size:16px;white-space:pre-wrap"></pre>
+<script>
+  const S = '8f1c0001-5b7e-4c2a-9d3e-6a1f2b3c4d5e', C = '8f1c0002-5b7e-4c2a-9d3e-6a1f2b3c4d5e';
+  const o = document.getElementById('o');
+  const log = (t) => (o.textContent += t + '\n');
+  log('navigator.bluetooth: ' + (navigator.bluetooth ? 'có' : 'KHÔNG CÓ'));
+  log('isSecureContext: ' + isSecureContext);
+  document.getElementById('b').onclick = async () => {
+    try {
+      const d = await navigator.bluetooth.requestDevice({ filters: [{ services: [S] }] });
+      const t0 = performance.now();
+      const g = await d.gatt.connect();
+      const v = await (await (await g.getPrimaryService(S)).getCharacteristic(C)).readValue();
+      log(`${d.name} → mã: ${new TextDecoder().decode(v)} (${Math.round(performance.now() - t0)} ms)`);
+      g.disconnect();
+    } catch (e) {
+      log('Lỗi: ' + e.name + ': ' + e.message);
+    }
+  };
+</script>

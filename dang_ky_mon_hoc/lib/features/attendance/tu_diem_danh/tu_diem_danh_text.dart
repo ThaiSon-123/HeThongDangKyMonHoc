@@ -5,7 +5,7 @@ import '../../../shared/widgets/status_chip.dart';
 
 /// Cờ của một lượt (server `CheckinAttempt.co`) → chữ cho GV.
 const coText = {
-  'LECH_NHE': 'Lệch vị trí',
+  'LECH_NHE': 'Sát mép khuôn viên',
   'SAT_NGUONG': 'Mặt sát ngưỡng',
   'VI_TRI_GIA': 'Vị trí giả',
   'BUOC_NHAY': 'Vị trí nhảy bất thường',
@@ -16,7 +16,8 @@ const coText = {
 const lyDoText = {
   'MA_PHONG_SAI': 'Sai mã phòng',
   'GPS_KEM': 'GPS kém',
-  'QUA_XA': 'Ở xa lớp',
+  'QUA_XA': 'Ngoài khuôn viên',
+  'CHUA_CO_KHUON_VIEN': 'Chưa vẽ khuôn viên',
   'KHONG_THAY_MAT': 'Không thấy mặt',
   'NHIEU_MAT': 'Nhiều người',
   'THIEU_SANG': 'Thiếu sáng',

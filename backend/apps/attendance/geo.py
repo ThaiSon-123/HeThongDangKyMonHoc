@@ -1,4 +1,4 @@
-"""Hàm vị trí thuần (KH §5): gộp mẫu, bán kính thích ứng, bước nhảy, tâm lệch."""
+"""Hàm vị trí thuần: gộp mẫu, khoảng cách tới khuôn viên, bước nhảy (docs/ke-hoach-gps-khuon-vien-va-esp32.md §3)."""
 
 import math
 from dataclasses import dataclass
@@ -55,8 +55,19 @@ def aggregate(
     )
 
 
-def adaptive_radius(r0: float, sigma_gv: float, sigma_sv: float) -> float:
-    return r0 + sigma_gv + sigma_sv
+def distance_to_polygon_m(lat: float, lng: float, polygon: list[tuple[float, float]]) -> float:
+    """Khoảng cách (m) từ điểm tới đa giác khuôn viên; 0 nếu nằm trong. Chiếu phẳng quanh điểm (sai số
+    không đáng kể ở cỡ khuôn viên vài km)."""
+    k = math.radians(1) * EARTH_R
+    pts = [((g - lng) * k * math.cos(math.radians(lat)), (a - lat) * k) for a, g in polygon]
+    inside, best = False, math.inf
+    for (x1, y1), (x2, y2) in zip(pts, pts[1:] + pts[:1], strict=True):
+        if (y1 > 0) != (y2 > 0) and 0 < x1 - y1 * (x2 - x1) / (y2 - y1):
+            inside = not inside  # tia từ điểm (gốc tọa độ) sang phải cắt cạnh
+        dx, dy = x2 - x1, y2 - y1
+        t = max(0.0, min(1.0, -(x1 * dx + y1 * dy) / (dx * dx + dy * dy or 1)))
+        best = min(best, math.hypot(x1 + t * dx, y1 + t * dy))
+    return 0.0 if inside else best
 
 
 def classify(d: float, r: float) -> Literal["ok", "drift", "far"]:
@@ -81,36 +92,3 @@ def has_jump(samples: list[Sample], max_speed: float) -> bool:
 def jump_from_previous(prev: Fix, prev_t: float, cur: Fix, cur_t: float, max_speed: float) -> bool:
     """Lượt này cách lượt trước trong cùng phiên quá xa so với thời gian server ghi nhận (giây)."""
     return _too_fast(haversine_m(prev.lat, prev.lng, cur.lat, cur.lng), cur_t - prev_t, max_speed)
-
-
-# ---- Tâm lệch (mục 4.5) ----
-
-
-def _bearing(center: tuple[float, float], p: tuple[float, float]) -> float:
-    """Hướng (radian) từ tâm tới điểm trên mặt phẳng xấp xỉ cục bộ."""
-    dx = (p[1] - center[1]) * math.cos(math.radians(center[0]))
-    dy = p[0] - center[0]
-    return math.atan2(dy, dx)
-
-
-def suggest_recenter(
-    center: tuple[float, float], positions: list[tuple[float, float]], r0: float
-) -> bool:
-    """Gợi ý tính lại tâm: ≥ 5 vị trí, trung vị khoảng cách > r0 và > 70 % hướng nằm trong ±45° quanh hướng trung bình."""
-    if len(positions) < 5:
-        return False
-    if median(haversine_m(*center, *p) for p in positions) <= r0:
-        return False
-    angles = [_bearing(center, p) for p in positions]
-    mean = math.atan2(sum(math.sin(a) for a in angles), sum(math.cos(a) for a in angles))
-    near = sum(1 for a in angles if abs(math.remainder(a - mean, math.tau)) <= math.pi / 4)
-    return near / len(angles) > 0.7
-
-
-def recenter(
-    center: tuple[float, float], positions: list[tuple[float, float]]
-) -> tuple[float, float]:
-    """Tâm mới = trung vị vị trí các sinh viên đã qua khuôn mặt; không có vị trí thì giữ tâm cũ."""
-    if not positions:
-        return center
-    return median(p[0] for p in positions), median(p[1] for p in positions)

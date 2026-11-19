@@ -89,7 +89,8 @@ def test_doc_cau_hinh_chia_theo_vai_tro(admin, pdt):
     assert list(items) == [
         "max_absent_pct",
         "so_ngay_xin_sua_diem_danh",
-        "ban_kinh_diem_danh_m",
+        "khuon_vien",
+        "sai_lech_khuon_vien_m",
         "so_phut_mo_diem_danh",
         "so_ngay_cho_phep_nhap_diem",
     ]
@@ -142,6 +143,9 @@ def test_patch_cau_hinh_luu_dung_va_ghi_audit(pdt):
         ("max_absent_pct", "abc"),
         ("so_ngay_cho_phep_nhap_diem", -5),
         ("backup_retention_days", 0),
+        ("khuon_vien", "[[10.98, 106.67], [10.99, 106.68]]"),  # chưa đủ 3 góc
+        ("khuon_vien", "[[91, 106.67], [10.99, 106.68], [10.98, 106.69]]"),  # vĩ độ sai
+        ("khuon_vien", "khong phai json"),
         ("ck_ngan_hang", "Vietcombank"),  # đã bỏ thanh toán chuyển khoản
         ("khong_co_khoa_nay", 1),
     ],
@@ -158,6 +162,17 @@ def test_patch_cau_hinh_gia_tri_sai_bi_tu_choi(admin, pdt, khoa, gia_tri):
     res = api.patch(url, {khoa: gia_tri}, format="json")
     assert res.status_code == 400
     assert khoa in res.data
+
+
+def test_patch_khuon_vien_luu_gon_va_xoa_duoc(pdt):
+    vien = "[[10.98, 106.67], [10.99, 106.68], [10.98, 106.69]]"
+    assert pdt.patch("/api/pdt/config/", {"khuon_vien": vien}, format="json").status_code == 200
+    assert (
+        SystemConfig.objects.get(khoa="khuon_vien").gia_tri
+        == "[[10.98,106.67],[10.99,106.68],[10.98,106.69]]"
+    )
+    assert pdt.patch("/api/pdt/config/", {"khuon_vien": ""}, format="json").status_code == 200
+    assert SystemConfig.objects.get(khoa="khuon_vien").gia_tri == ""
 
 
 def test_patch_co_mot_khoa_sai_thi_khong_luu_khoa_nao(admin):

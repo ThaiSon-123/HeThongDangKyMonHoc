@@ -1,5 +1,7 @@
 """Tự điểm danh khuôn mặt + GPS (KH §7, checklist Đợt 2). Engine khuôn mặt giả, không cần model."""
 
+import json
+import math
 import secrets
 from datetime import timedelta
 from types import SimpleNamespace
@@ -22,6 +24,7 @@ from apps.attendance.models import (
 from apps.attendance.tests.face_fakes import E0, FakeEngine, fa, vec
 from apps.audit.models import AuditLog
 from apps.auth.models import Role
+from apps.config.models import SystemConfig
 from apps.registration.models import Registration
 from apps.training.models import TrangThaiLop
 from core.factories import ClassSectionFactory, StudentProfileFactory, UserFactory
@@ -29,6 +32,11 @@ from core.factories import ClassSectionFactory, StudentProfileFactory, UserFacto
 pytestmark = pytest.mark.django_db
 M = 1 / 111_195  # ~1 m theo vĩ độ
 TAM = (10.98, 106.67)
+L = M / math.cos(math.radians(TAM[0]))  # ~1 m theo kinh độ
+# Khuôn viên: hình vuông cạnh 100 m quanh TAM; sai lệch cho phép mặc định 30 m.
+KHUON_VIEN = [
+    [TAM[0] + a * 50 * M, TAM[1] + b * 50 * L] for a, b in ((-1, -1), (-1, 1), (1, 1), (1, -1))
+]
 TURN_LEFT = [0.0, -0.1, -0.3, -0.3]
 
 
@@ -45,6 +53,11 @@ def moi_truong(tmp_path, settings, monkeypatch):
     eng = FakeEngine({})
     monkeypatch.setattr(tdd, "get_engine", lambda: eng)
     return eng
+
+
+@pytest.fixture(autouse=True)
+def khuon_vien():
+    SystemConfig.objects.create(khoa="khuon_vien", gia_tri=json.dumps(KHUON_VIEN))
 
 
 @pytest.fixture
@@ -102,7 +115,7 @@ def url(s, tail):
 
 
 def mo(gv, s, **kw):
-    return gv.post(url(s, "mo-phien"), {"mau_gps": gps(), **kw}, format="json")
+    return gv.post(url(s, "mo-phien"), kw, format="json")
 
 
 def thu_thach(c, s):
@@ -148,8 +161,8 @@ def test_mo_phien_tao_vang_ca_lop_va_khong_de_co_phep(gv, lop):
         sinh_vien=svs[0],
         trang_thai="VANG_CO_PHEP",
     )
-    r = mo(gv, s, r0=30, kiem_tra_phong=True)
-    assert r.status_code == 200 and r.data["dang_mo"] and r.data["ban_kinh_m"] == 30
+    r = mo(gv, s, kiem_tra_phong=True)
+    assert r.status_code == 200 and r.data["dang_mo"] and r.data["kiem_tra_phong"]
     tt = dict(
         Attendance.objects.filter(attendance_session=s).values_list("sinh_vien", "trang_thai")
     )
@@ -159,15 +172,17 @@ def test_mo_phien_tao_vang_ca_lop_va_khong_de_co_phep(gv, lop):
         svs[2].id: "VANG_KHONG_PHEP",
     }
     s.refresh_from_db()
-    assert s.trang_thai == "DA_DIEM_DANH" and s.tam_lat == pytest.approx(TAM[0])
+    assert s.trang_thai == "DA_DIEM_DANH"
 
 
-def test_mo_phien_gv_khac_lop_va_gps_kem(login_as, gv, lop):
+def test_mo_phien_gv_khac_lop_va_chua_co_khuon_vien(login_as, gv, lop):
     _, s, _ = lop
     khac = login_as(UserFactory(role=Role.GIAO_VIEN))
     assert mo(khac, s).status_code == 403
-    r = gv.post(url(s, "mo-phien"), {"mau_gps": gps(n=4)}, format="json")
-    assert r.status_code == 409 and r.data["error"]["details"]["ly_do"] == "GPS_KEM"
+    SystemConfig.objects.filter(khoa="khuon_vien").update(gia_tri="")
+    r = mo(gv, s)
+    assert r.status_code == 409 and r.data["error"]["details"]["ly_do"] == "CHUA_CO_KHUON_VIEN"
+    SystemConfig.objects.filter(khoa="khuon_vien").update(gia_tri=json.dumps(KHUON_VIEN))
     assert mo(gv, s).status_code == 200
     assert mo(gv, s).status_code == 409  # không mở chồng
 
@@ -187,8 +202,6 @@ def test_dong_va_mo_lai_giu_ket_qua_va_so_luot(login_as, engine, gv, phien_mo):
     r = gv.post(url(s, "mo-lai"), {"thoi_han": 5}, format="json")
     assert r.status_code == 200 and r.data["dang_mo"]
     assert gv.post(url(s, "mo-lai")).status_code == 409  # đang mở
-    s.refresh_from_db()
-    assert s.tam_lat == pytest.approx(TAM[0])
     assert Attendance.objects.get(attendance_session=s, sinh_vien=svs[0]).trang_thai == "CO_MAT"
     assert Challenge.objects.filter(session=s, sinh_vien=svs[0]).count() == 1
 
@@ -261,23 +274,29 @@ def _ly_do(r):
     return r.data["ket_qua"], r.data["ly_do"]["ma"], CheckinAttempt.objects.first().buoc_dung
 
 
-def test_ma_phong(login_as, engine, gv, lop):
+def test_ma_phong_kiem_tra_truoc_khi_cap_thu_thach(login_as, engine, gv, lop):
     _, s, svs = lop
     mo(gv, s, kiem_tra_phong=True)
     mau_duyet(svs[0])
-    mau_duyet(svs[1])
-    r = diem_danh(login_as, engine, s, svs[0], ma_phong="AAAAAAAA")
-    assert _ly_do(r) == ("KHONG_DAT", "MA_PHONG_SAI", 3)
+    c = login_as(svs[0])
+    # Không ở trong phòng (thiếu / sai mã): dừng ngay, không cấp thử thách, không tính lượt.
+    for body in ({}, {"ma_phong": "AAAAAAAA"}):
+        r = c.post(url(s, "challenge"), body, format="json")
+        assert r.status_code == 409 and r.data["error"]["details"]["ly_do"] == "MA_PHONG_SAI"
+    assert not Challenge.objects.exists()
     ma = gv.get(url(s, "room-token")).data["ma"]
-    assert diem_danh(login_as, engine, s, svs[1], ma_phong=ma.lower()).data["ket_qua"] == "CO_MAT"
+    r = c.post(url(s, "challenge"), {"ma_phong": ma.lower()}, format="json")
+    assert r.status_code == 201 and r.data["luot_con_lai"] == 4
+    res = gui(c, s, r.data["nonce"], khung_dat(engine))
+    assert res.data["ket_qua"] == "CO_MAT"
 
 
 def test_gps_kem_va_qua_xa(login_as, engine, phien_mo):
     s, svs = phien_mo
     r = diem_danh(login_as, engine, s, svs[0], mau=gps(n=3, acc=50))
     assert _ly_do(r) == ("KHONG_DAT", "GPS_KEM", 4)
-    # r = 20 + 5 + 5 = 30 m; cách 100 m > 2r
-    r = diem_danh(login_as, engine, s, svs[1], mau=gps(n=3, dlat=100 * M))
+    # ngoài cạnh khuôn viên 100 m > 2 × 30 m
+    r = diem_danh(login_as, engine, s, svs[1], mau=gps(n=3, dlat=150 * M))
     assert _ly_do(r) == ("KHONG_DAT", "QUA_XA", 4)
     assert engine.results.keys().isdisjoint(k for k, *_ in engine.calls)  # không chạy mô hình
 
@@ -303,7 +322,9 @@ def test_anh_gia_va_khong_khop(login_as, engine, phien_mo):
 
 def test_lech_nhe_la_dang_ngo_co_anh_bang_chung(login_as, engine, gv, phien_mo):
     s, svs = phien_mo
-    r = diem_danh(login_as, engine, s, svs[0], mau=gps(n=3, dlat=45 * M))  # r=30 < 45 ≤ 60
+    r = diem_danh(
+        login_as, engine, s, svs[0], mau=gps(n=3, dlat=95 * M)
+    )  # ngoài 45 m: 30 < 45 ≤ 60
     assert r.data["ket_qua"] == "DANG_NGO" and r.data["dang_ngo"]
     luot = CheckinAttempt.objects.get()
     assert luot.co == ["LECH_NHE"] and luot.anh_bang_chung
@@ -446,7 +467,7 @@ def test_danh_sach_buoi_co_co_phien_va_so_dang_ngo(login_as, engine, gv, lop):
 
 def test_gv_duyet_luot_dang_ngo(login_as, engine, gv, phien_mo):
     s, svs = phien_mo
-    diem_danh(login_as, engine, s, svs[0], mau=gps(n=3, dlat=45 * M))
+    diem_danh(login_as, engine, s, svs[0], mau=gps(n=3, dlat=95 * M))
     luot = CheckinAttempt.objects.get()
     assert (
         gv.post(f"/api/attendance/attempts/{luot.id}/quyet/", {"co_mat": True}).status_code == 200
@@ -477,30 +498,6 @@ def test_sv_khong_goi_duoc_api_gv(login_as, phien_mo):
     assert c.post(url(s, "dong-phien")).status_code == 403
 
 
-# ------------------------------------------------------------------ tính lại tâm
-
-
-def test_tinh_lai_tam_chi_nang_hang(login_as, engine, gv, lop):
-    lop_, s, _ = lop
-    svs = [StudentProfileFactory().user for _ in range(5)]
-    for u in svs:
-        Registration.objects.create(sinh_vien=u, lop_hoc_phan=lop_)
-        mau_duyet(u)
-    mo(gv, s)
-    assert gv.post(url(s, "tinh-lai-tam")).status_code == 409  # chưa lệch
-    for u in svs:  # cả lớp lệch ~45 m về phía bắc: đều "lệch nhẹ"
-        assert (
-            diem_danh(login_as, engine, s, u, mau=gps(n=3, dlat=45 * M)).data["ket_qua"]
-            == "DANG_NGO"
-        )
-    assert gv.get(url(s, "tu-diem-danh")).data["goi_y_tinh_lai_tam"] is True
-    r = gv.post(url(s, "tinh-lai-tam"))
-    assert r.status_code == 200 and r.data["so_luot_nang_hang"] == 5
-    assert Attendance.objects.filter(attendance_session=s, trang_thai="CO_MAT").count() == 5
-    s.refresh_from_db()
-    assert s.tam_goc_lat == pytest.approx(TAM[0]) and s.tam_lat == pytest.approx(TAM[0] + 45 * M)
-
-
 # ------------------------------------------------------------------ đồng ý + đăng ký + duyệt mặt
 
 
@@ -517,19 +514,34 @@ def test_dang_ky_va_duyet_mat(login_as, engine, gv, lop, tmp_path):
     raw = (tmp_path / m.thu_muc_anh / "0.jpg").read_bytes()
     assert b"k0" not in raw  # ảnh trên đĩa đã mã hóa
 
-    khac = login_as(UserFactory(role=Role.GIAO_VIEN))
-    assert khac.get("/api/attendance/faces/pending/").data == []
-    assert khac.post(f"/api/attendance/faces/{m.id}/review/", {"duyet": True}).status_code == 403
-    assert gv.get("/api/attendance/faces/pending/").data[0]["id"] == m.id
-    photo = gv.get(f"/api/attendance/faces/{m.id}/photos/?i=0")
+    # Chỉ PĐT duyệt; GV (kể cả GV của lớp) không xem, không duyệt được.
+    assert gv.get("/api/attendance/faces/").status_code == 403
+    assert gv.post(f"/api/attendance/faces/{m.id}/review/", {"duyet": True}).status_code == 403
+    pdt = login_as(UserFactory(role=Role.PHONG_DAO_TAO))
+    assert pdt.get("/api/attendance/faces/").data[0]["id"] == m.id
+    photo = pdt.get(f"/api/attendance/faces/{m.id}/photos/?i=0")
     assert photo.status_code == 200 and photo.content == b"k0"
-    assert gv.post(f"/api/attendance/faces/{m.id}/review/", {"duyet": False}).status_code == 400
-    assert gv.post(f"/api/attendance/faces/{m.id}/review/", {"duyet": True}).status_code == 200
+    assert pdt.post(f"/api/attendance/faces/{m.id}/review/", {"duyet": False}).status_code == 400
+    assert pdt.post(f"/api/attendance/faces/{m.id}/review/", {"duyet": True}).status_code == 200
     m.refresh_from_db()
     assert m.trang_thai == "DUYET" and m.thu_muc_anh == "" and m.embedding is not None
     assert not (tmp_path / "dang_ky" / str(m.id)).exists()  # duyệt xong xóa ảnh
     assert c.get("/api/attendance/face/me/").data["trang_thai"] == "DUYET"
     assert AuditLog.objects.filter(doi_tuong="FaceTemplate").count() >= 3
+
+
+def test_kiem_tra_khung_real_time(login_as, engine, lop):
+    _, _, svs = lop
+    c = login_as(svs[0])
+    u = "/api/attendance/face/kiem-tra-khung/"
+    ok, xa = khung(engine, fa(), fa(face_width_px=60), prefix="live")
+    r = c.post(u, {"anh": ok, "tu_the": "thang"})
+    assert r.status_code == 200 and r.data["ok"] and r.data["ma"] is None
+    r = c.post(u, {"anh": xa, "tu_the": "thang"})
+    assert (r.data["ok"], r.data["ma"]) == (False, "LAI_GAN") and "Lại gần" in r.data["thong_bao"]
+    assert c.post(u, {"anh": ok, "tu_the": "nhay"}).status_code == 400
+    assert engine.calls[-1][1:] == (False, False)  # chỉ dò mặt: không embedding, không chống giả
+    assert not FaceTemplate.objects.exists()  # không lưu gì
 
 
 def test_dang_ky_anh_loi_tra_ly_do_tung_anh(login_as, engine, lop):
@@ -542,6 +554,42 @@ def test_dang_ky_anh_loi_tra_ly_do_tung_anh(login_as, engine, lop):
     assert r.data["anh"] == [
         "Ảnh 2: Ảnh bị mờ, hãy giữ máy chắc tay. Ảnh 3: Không xác nhận được người thật."
     ]
+
+
+def test_pdt_loc_tim_lich_su_va_thu_hoi(login_as, lop):
+    _, _, svs = lop
+    pdt = login_as(UserFactory(role=Role.PHONG_DAO_TAO))
+    hs = svs[0].sinh_vien
+    cu = FaceTemplate.objects.create(
+        sinh_vien=svs[0], ten_mo_hinh="x", trang_thai=TrangThaiMau.TU_CHOI, ly_do="Ảnh tối"
+    )
+    moi = FaceTemplate.objects.create(sinh_vien=svs[0], ten_mo_hinh="x", so_anh=3)
+    FaceTemplate.objects.create(sinh_vien=svs[1], ten_mo_hinh="x", so_anh=3)
+
+    ds = pdt.get("/api/attendance/faces/").data  # mặc định: chờ duyệt, cũ nhất trước
+    assert [x["id"] for x in ds][0] == moi.id and len(ds) == 2
+    x = ds[0]
+    assert (x["ma_sv"], x["nganh"], x["lan_thu"]) == (hs.ma_sv, hs.nganh.ten_nganh, 2)
+    assert x["lich_su"] == [
+        {**x["lich_su"][0], "id": cu.id, "trang_thai": "TU_CHOI", "ly_do": "Ảnh tối"}
+    ]
+    assert [x["id"] for x in pdt.get("/api/attendance/faces/", {"q": hs.ma_sv}).data] == [moi.id]
+    assert pdt.get("/api/attendance/faces/", {"trang_thai": "SAI"}).status_code == 400
+
+    # Thu hồi: chỉ mẫu đã duyệt, phải có lý do; SV thấy lý do để đăng ký lại.
+    url_th = f"/api/attendance/faces/{moi.id}/thu-hoi/"
+    assert pdt.post(url_th, {"ly_do": "Sai người"}).status_code == 409  # còn chờ duyệt
+    FaceTemplate.objects.filter(pk=moi.id).update(trang_thai=TrangThaiMau.DUYET, embedding=b"1")
+    assert [x["id"] for x in pdt.get("/api/attendance/faces/", {"trang_thai": "DUYET"}).data] == [
+        moi.id
+    ]
+    assert pdt.post(url_th, {"ly_do": ""}).status_code == 400
+    assert pdt.post(url_th, {"ly_do": "Sai người"}).data["trang_thai"] == "THU_HOI"
+    moi.refresh_from_db()
+    assert moi.embedding is None and moi.nguoi_duyet.role == Role.PHONG_DAO_TAO
+    me = login_as(svs[0]).get("/api/attendance/face/me/").data
+    assert (me["trang_thai"], me["ly_do"]) == ("TU_CHOI", "Phòng đào tạo thu hồi mẫu: Sai người")
+    assert AuditLog.objects.filter(doi_tuong="FaceTemplate", doi_tuong_id=str(moi.id)).exists()
 
 
 def test_pdt_tu_choi_va_sv_xoa_mat(login_as, lop):
