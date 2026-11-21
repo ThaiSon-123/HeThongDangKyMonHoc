@@ -27,7 +27,12 @@ def load(name: str) -> bytes:
 
 @pytest.fixture(scope="module")
 def engine():
-    needed = ["face_detection_yunet_2023mar.onnx", "w600k_r50.onnx", "MiniFASNetV2.onnx"]
+    needed = [
+        "face_detection_yunet_2023mar.onnx",
+        "w600k_r50.onnx",
+        "MiniFASNetV2.onnx",
+        "MiniFASNetV1SE.onnx",
+    ]
     if not all((MODELS / f).exists() for f in needed):
         pytest.skip("thiếu file mô hình .onnx")
     from apps.attendance.face.onnx_engine import OnnxFaceEngine

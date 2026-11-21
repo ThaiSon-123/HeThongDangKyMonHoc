@@ -62,6 +62,7 @@ Cả 3 mô hình đều chạy trên **CPU** ở dạng **ONNX**, lấy từ pro
 | 1 | **YuNet** (`face_detection_yunet_2023mar.onnx`) | Phát hiện khuôn mặt + 5 điểm mốc (2 mắt, mũi, 2 mép miệng) | Ảnh → khung mặt + 5 điểm + độ tin cậy | 0,23 MB | OpenCV Zoo, MIT |
 | 2 | **ArcFace ResNet-50** (`w600k_r50.onnx`) | Trích **embedding 512 chiều** đặc trưng khuôn mặt | Mặt căn chỉnh 112×112 RGB → vector 512 số (chuẩn hóa L2) | 175 MB | InsightFace `buffalo_l` v0.7, **chỉ dùng phi thương mại** (đồ án được phép) |
 | 3 | **MiniFASNetV2** (`MiniFASNetV2.onnx`) | **Chống giả mạo**: phân biệt người thật / ảnh in / màn hình | Vùng cắt 2,7× khung mặt, 80×80 BGR → xác suất "người thật" | 1,7 MB | Silent-Face-Anti-Spoofing (Minivision), Apache-2.0 |
+| 3b | **MiniFASNetV1SE** (`MiniFASNetV1SE.onnx`) | Chống giả mạo, mô hình thứ hai (21/11/2026): điểm = trung bình V2 và V1SE như Silent-Face gốc | Vùng cắt 4,0× khung mặt, 80×80 BGR | 1,7 MB | Silent-Face-Anti-Spoofing, Apache-2.0 |
 
 **Bản nhẹ để dự phòng:** MobileFaceNet `w600k_mbf.onnx` (13 MB). Nếu đổi sang bản này phải đo lại ngưỡng, và sinh viên phải đăng ký lại khuôn mặt. Mỗi mẫu lưu tên mô hình; mẫu của mô hình cũ bị từ chối ở bước thử thách với lý do "cần đăng ký lại khuôn mặt" (không tính lượt), và app hiện trạng thái này ở màn Khuôn mặt của tôi.
 
@@ -75,6 +76,7 @@ Lấy từ `D:\DiemDanhKhuonMat_GPS\experiments\spike.md`.
 | Anti-spoofing, mặt thật | thấp nhất **0,95** |
 | Anti-spoofing, ảnh in / màn hình | ≈ **0,00** |
 | Anti-spoofing, video trên điện thoại | cao nhất **0,68** (dưới ngưỡng 0,8; thử thách quay đầu chặn thêm) |
+| Hai mô hình (V2 + V1SE) | **chưa đo lại** trên mặt thật / video; ngưỡng 0,8 giữ nguyên, cần đo trước khi dùng thật |
 | Cosine cùng người, nhìn thẳng | 0,91–0,93 |
 | Cosine khác người | ≈ 0,03 |
 

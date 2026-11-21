@@ -1,4 +1,5 @@
-"""Engine khuôn mặt ONNX chạy CPU (đặc tả mục 5.1): YuNet → căn chỉnh 112×112 → ArcFace; MiniFASNetV2 chống giả mạo.
+"""Engine khuôn mặt ONNX chạy CPU (đặc tả mục 5.1): YuNet → căn chỉnh 112×112 → ArcFace; chống giả mạo bằng
+MiniFASNetV2 + MiniFASNetV1SE (trung bình hai mô hình như Silent-Face gốc).
 
 Không bao giờ ném lỗi vì ảnh hỏng: ảnh không giải mã được trả face_count = 0.
 """
@@ -26,7 +27,8 @@ ARCFACE_DST = np.array(
 )
 MAX_SIDE = 1280  # ảnh lớn hơn được thu nhỏ trước khi phát hiện (đặc tả mục 5.2)
 MAX_PIXELS = 40_000_000  # chặn ảnh "bom" kích thước khổng lồ
-SPOOF_SCALE = 2.7  # MiniFASNetV2: vùng cắt = 2,7 lần khung mặt
+# (file, tỉ lệ vùng cắt so với khung mặt) — theo tên trọng số gốc 2.7_80x80_MiniFASNetV2, 4_0_0_80x80_MiniFASNetV1SE.
+SPOOF_MODELS = (("MiniFASNetV2.onnx", 2.7), ("MiniFASNetV1SE.onnx", 4.0))
 
 
 class OnnxFaceEngine:
@@ -34,7 +36,7 @@ class OnnxFaceEngine:
         self,
         models_dir: str | Path,
         embed_model: str = "w600k_r50.onnx",
-        spoof_model: str = "MiniFASNetV2.onnx",
+        spoof_models: tuple[tuple[str, float], ...] = SPOOF_MODELS,
         det_model: str = "face_detection_yunet_2023mar.onnx",
         det_score: float = 0.8,
         threads: int = 2,
@@ -44,7 +46,10 @@ class OnnxFaceEngine:
         opts.intra_op_num_threads = threads
         cpu = ["CPUExecutionProvider"]
         self.embed = ort.InferenceSession(str(d / embed_model), opts, providers=cpu)
-        self.spoof = ort.InferenceSession(str(d / spoof_model), opts, providers=cpu)
+        self.spoof = [
+            (ort.InferenceSession(str(d / f), opts, providers=cpu), scale)
+            for f, scale in spoof_models
+        ]
         self._det_path = str(d / det_model)
         self._det_score = det_score
         self._local = (
@@ -114,11 +119,15 @@ class OnnxFaceEngine:
         return v / max(float(np.linalg.norm(v)), 1e-12)
 
     def _spoof(self, img: np.ndarray, box: tuple[float, float, float, float]) -> float:
-        crop = crop_scaled(img, box, SPOOF_SCALE, 80)
-        x = np.transpose(crop.astype(np.float32), (2, 0, 1))[None]  # BGR, 0–255, NCHW
-        logits = self.spoof.run(None, {self.spoof.get_inputs()[0].name: x})[0]
-        e = np.exp(logits - logits.max(axis=1, keepdims=True))
-        return float((e / e.sum(axis=1, keepdims=True))[0, 1])  # lớp 1 = người thật
+        """Xác suất "người thật" = trung bình các mô hình, mỗi mô hình cắt theo tỉ lệ của nó."""
+        diem = []
+        for sess, scale in self.spoof:
+            crop = crop_scaled(img, box, scale, 80)
+            x = np.transpose(crop.astype(np.float32), (2, 0, 1))[None]  # BGR, 0–255, NCHW
+            logits = sess.run(None, {sess.get_inputs()[0].name: x})[0]
+            e = np.exp(logits - logits.max(axis=1, keepdims=True))
+            diem.append(float((e / e.sum(axis=1, keepdims=True))[0, 1]))  # lớp 1 = người thật
+        return float(np.mean(diem))
 
 
 def decode(jpeg: bytes) -> np.ndarray | None:
