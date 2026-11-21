@@ -6,6 +6,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../core/serial/esp32_ble.dart';
+
+/// Đọc mã phòng ESP32 qua Bluetooth. `tuDong`: quét ngầm được (app Android); false thì phải đợi
+/// sinh viên bấm (web). Thay được trong test.
+typedef DocEsp32 = ({bool hoTro, bool tuDong, Future<String?> Function() doc});
+
+final docEsp32Provider = Provider<DocEsp32>(
+  (ref) =>
+      (hoTro: Esp32Ble.hoTro, tuDong: Esp32Ble.tuDong, doc: Esp32Ble.docMa),
+);
+
 /// Lỗi GPS hiện thẳng cho người dùng (chưa cấp quyền, tắt định vị…).
 class GpsLoi implements Exception {
   const GpsLoi(this.message);

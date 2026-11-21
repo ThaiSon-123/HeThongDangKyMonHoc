@@ -64,7 +64,12 @@ class MoLaiSerializer(serializers.Serializer):
 
 
 class ThuThachSerializer(serializers.Serializer):
-    ma_phong = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    ma_phong = serializers.CharField(max_length=20, required=False, allow_blank=True)  # mã QR
+    ma_bluetooth = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
+
+class KiemTraViTriSerializer(serializers.Serializer):
+    mau_gps = serializers.ListField(child=MauGpsSerializer(), max_length=100, allow_empty=True)
 
 
 class CheckinSerializer(serializers.Serializer):
@@ -202,8 +207,30 @@ class ChallengeView(APIView):
     def post(self, request, pk):
         s = ThuThachSerializer(data=request.data)
         s.is_valid(raise_exception=True)
+        d = s.validated_data
         return Response(
-            tdd.xin_thu_thach(request.user, pk, s.validated_data.get("ma_phong", "")), status=201
+            tdd.xin_thu_thach(
+                request.user,
+                pk,
+                d.get("ma_phong", ""),
+                ma_bluetooth=d.get("ma_bluetooth", ""),
+            ),
+            status=201,
+        )
+
+
+class KiemTraViTriView(APIView):
+    """GPS trước khi quét mặt (chỉ báo, không tính lượt)."""
+
+    permission_classes = [IsSinhVien]
+    throttle_classes = [DiemDanhThrottle]
+
+    @extend_schema(request=KiemTraViTriSerializer, responses=None)
+    def post(self, request, pk):
+        s = KiemTraViTriSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        return Response(
+            tdd.kiem_tra_vi_tri(request.user, pk, [dict(x) for x in s.validated_data["mau_gps"]])
         )
 
 

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/api/api_failure.dart';
 import '../../../core/auth/auth_provider.dart';
@@ -591,8 +592,8 @@ class _GvBuoiPanelState extends ConsumerState<GvBuoiPanel> {
   }
 }
 
-/// Mã phòng đang hiệu lực (đổi mỗi 30 giây) và đẩy xuống ESP32 qua Web Serial để phát BLE
-/// (docs/ke-hoach-gps-khuon-vien-va-esp32.md §4.2). Không cắm ESP32 thì GV đọc mã cho lớp gõ tay.
+/// Mã phòng đổi mỗi 30 giây, hai kênh (docs/superpowers/specs/2026-11-21-qr-bluetooth-trong-phong-design.md):
+/// mã QR hiện trên màn (QR + chữ để SV gõ), mã Bluetooth chỉ đẩy xuống ESP32 qua Web Serial để phát BLE.
 class _MaPhong extends ConsumerStatefulWidget {
   const _MaPhong({super.key, required this.path});
 
@@ -604,7 +605,8 @@ class _MaPhong extends ConsumerStatefulWidget {
 
 class _MaPhongState extends ConsumerState<_MaPhong> {
   final _esp = Esp32Serial();
-  String? _ma;
+  String? _ma; // mã QR
+  String? _maBle; // mã Bluetooth: không hiện trên màn
   String? _loi;
   Timer? _doiMa; // lấy mã mới khi mã cũ hết hạn
   Timer? _guiLai;
@@ -638,6 +640,7 @@ class _MaPhongState extends ConsumerState<_MaPhong> {
       if (!mounted) return;
       setState(() {
         _ma = d.str('ma');
+        _maBle = d['ma_ble'] as String?;
         _loi = null;
       });
       _gui();
@@ -650,7 +653,7 @@ class _MaPhongState extends ConsumerState<_MaPhong> {
   }
 
   Future<void> _gui() async {
-    final ma = _ma;
+    final ma = _maBle;
     if (ma == null || !_esp.daKetNoi) return;
     try {
       await _esp.gui(ma);
@@ -693,15 +696,31 @@ class _MaPhongState extends ConsumerState<_MaPhong> {
         runSpacing: 12,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          SelectableText(
-            ma == null || ma.length != 8
-                ? (ma ?? '—')
-                : '${ma.substring(0, 4)} ${ma.substring(4)}',
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 4,
+          if (ma != null)
+            Container(
+              color: Colors.white, // QR cần nền trắng kể cả giao diện tối
+              padding: const EdgeInsets.all(8),
+              child: QrImageView(key: ValueKey(ma), data: ma, size: 220),
             ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Quét QR hoặc gõ mã:',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              SelectableText(
+                ma == null || ma.length != 8
+                    ? (ma ?? '—')
+                    : '${ma.substring(0, 4)} ${ma.substring(4)}',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 4,
+                ),
+              ),
+            ],
           ),
           if (Esp32Serial.hoTro)
             if (_esp.daKetNoi)
@@ -810,9 +829,10 @@ class _MoPhienState extends ConsumerState<_MoPhien> {
                 contentPadding: EdgeInsets.zero,
                 value: _qr,
                 onChanged: (v) => setState(() => _qr = v),
-                title: const Text('Bắt mã phòng (ESP32)'),
+                title: const Text('Bắt mã phòng (QR + Bluetooth)'),
                 subtitle: const Text(
-                  'Mã đổi mỗi 30 giây; sinh viên đọc từ ESP32 (cắm vào máy này) hoặc gõ tay mã hiện trên màn.',
+                  'Sinh viên quét QR (hoặc gõ mã) trên màn chiếu, rồi điện thoại dò ESP32 cắm vào máy này qua Bluetooth. '
+                  'Không xác nhận được Bluetooth thì lượt chờ bạn duyệt.',
                 ),
               ),
             ],

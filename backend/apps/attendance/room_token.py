@@ -1,4 +1,7 @@
-"""Mã phòng xoay vòng kiểu TOTP (đặc tả mục 7.2): không lưu từng mã, nhận cửa sổ hiện tại và cửa sổ ngay trước."""
+"""Mã phòng xoay vòng kiểu TOTP (đặc tả mục 7.2): không lưu từng mã, nhận cửa sổ hiện tại và cửa sổ ngay trước.
+
+Hai kênh cùng bí mật phiên: `qr` (hiện trên màn GV) và `ble` (chỉ ESP32 phát) — mã kênh này không qua kênh kia.
+"""
 
 import base64
 import hashlib
@@ -9,13 +12,16 @@ def _window(t: float, window_s: int) -> int:
     return int(t // window_s)
 
 
-def _code(secret: bytes, session_id: int, window: int) -> str:
-    digest = hmac.new(secret, f"{session_id}|{window}".encode(), hashlib.sha256).digest()
+def _code(secret: bytes, session_id: int, window: int, kenh: str = "qr") -> str:
+    nhan = f"{session_id}|{window}" if kenh == "qr" else f"{kenh}|{session_id}|{window}"
+    digest = hmac.new(secret, nhan.encode(), hashlib.sha256).digest()
     return base64.b32encode(digest).decode()[:8]
 
 
-def room_code(secret: bytes, session_id: int, t: float, window_s: int = 30) -> str:
-    return _code(secret, session_id, _window(t, window_s))
+def room_code(
+    secret: bytes, session_id: int, t: float, window_s: int = 30, kenh: str = "qr"
+) -> str:
+    return _code(secret, session_id, _window(t, window_s), kenh)
 
 
 def window_end(t: float, window_s: int = 30) -> float:
@@ -24,7 +30,7 @@ def window_end(t: float, window_s: int = 30) -> float:
 
 
 def verify_room_code(
-    code: object, secret: bytes, session_id: int, now: float, window_s: int = 30
+    code: object, secret: bytes, session_id: int, now: float, window_s: int = 30, kenh: str = "qr"
 ) -> bool:
     if not isinstance(code, str):
         return False
@@ -33,5 +39,5 @@ def verify_room_code(
         return False
     w = _window(now, window_s)
     # So cả hai cửa sổ (không dừng sớm) để thời gian trả lời không lộ cửa sổ nào khớp.
-    ok = [hmac.compare_digest(given, _code(secret, session_id, x)) for x in (w, w - 1)]
+    ok = [hmac.compare_digest(given, _code(secret, session_id, x, kenh)) for x in (w, w - 1)]
     return any(ok)

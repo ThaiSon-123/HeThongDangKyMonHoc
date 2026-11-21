@@ -268,6 +268,8 @@ class Challenge(models.Model):
     hanh_dong = models.CharField(max_length=20, choices=HanhDongThuThach.choices)
     het_han_luc = models.DateTimeField()
     da_dung = models.BooleanField(default=False)
+    # Phiên bắt mã phòng: SV có gửi đúng mã Bluetooth (ESP32) không; không thì lượt thành đáng ngờ.
+    co_bluetooth = models.BooleanField(default=False)
     tao_luc = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -284,11 +284,49 @@ def test_ma_phong_kiem_tra_truoc_khi_cap_thu_thach(login_as, engine, gv, lop):
         r = c.post(url(s, "challenge"), body, format="json")
         assert r.status_code == 409 and r.data["error"]["details"]["ly_do"] == "MA_PHONG_SAI"
     assert not Challenge.objects.exists()
-    ma = gv.get(url(s, "room-token")).data["ma"]
-    r = c.post(url(s, "challenge"), {"ma_phong": ma.lower()}, format="json")
-    assert r.status_code == 201 and r.data["luot_con_lai"] == 4
+    tk = gv.get(url(s, "room-token")).data
+    r = c.post(
+        url(s, "challenge"), {"ma_phong": tk["ma"].lower(), "ma_bluetooth": tk["ma_ble"]}, format="json"
+    )
+    assert r.status_code == 201 and r.data["luot_con_lai"] == 4 and r.data["co_bluetooth"] is True
     res = gui(c, s, r.data["nonce"], khung_dat(engine))
     assert res.data["ket_qua"] == "CO_MAT"
+
+
+def test_thieu_bluetooth_thanh_dang_ngo(login_as, engine, gv, lop):
+    _, s, svs = lop
+    mo(gv, s, kiem_tra_phong=True)
+    mau_duyet(svs[0])
+    c = login_as(svs[0])
+    tk = gv.get(url(s, "room-token")).data
+    assert tk["ma"] != tk["ma_ble"]
+    # Không có Bluetooth (iPhone / không dò được): vẫn cấp thử thách, chuỗi rỗng = không gửi.
+    r = c.post(url(s, "challenge"), {"ma_phong": tk["ma"], "ma_bluetooth": ""}, format="json")
+    assert r.status_code == 201 and r.data["co_bluetooth"] is False
+    res = gui(c, s, r.data["nonce"], khung_dat(engine))
+    assert res.data["ket_qua"] == "DANG_NGO" and res.data["dang_ngo"] is True
+    assert "KHONG_BLUETOOTH" in CheckinAttempt.objects.get().co
+
+
+def test_ma_bluetooth_sai_hoac_dan_nham_kenh(login_as, gv, lop):
+    _, s, svs = lop
+    mo(gv, s, kiem_tra_phong=True)
+    mau_duyet(svs[0])
+    c = login_as(svs[0])
+    tk = gv.get(url(s, "room-token")).data
+    r = c.post(url(s, "challenge"), {"ma_phong": tk["ma"], "ma_bluetooth": "AAAAAAAA"}, format="json")
+    assert r.status_code == 409 and r.data["error"]["details"]["ly_do"] == "MA_BLUETOOTH_SAI"
+    # Mã Bluetooth không dùng thay mã QR được (và ngược lại).
+    r = c.post(url(s, "challenge"), {"ma_phong": tk["ma_ble"], "ma_bluetooth": tk["ma"]}, format="json")
+    assert r.status_code == 409 and r.data["error"]["details"]["ly_do"] == "MA_PHONG_SAI"
+    assert not Challenge.objects.exists()
+
+
+def test_phien_tat_ma_phong_khong_gan_co_bluetooth(login_as, engine, phien_mo):
+    s, svs = phien_mo
+    r = diem_danh(login_as, engine, s, svs[0])
+    assert r.data["ket_qua"] == "CO_MAT"
+    assert CheckinAttempt.objects.get().co == []
 
 
 def test_gps_kem_va_qua_xa(login_as, engine, phien_mo):
@@ -299,6 +337,43 @@ def test_gps_kem_va_qua_xa(login_as, engine, phien_mo):
     r = diem_danh(login_as, engine, s, svs[1], mau=gps(n=3, dlat=150 * M))
     assert _ly_do(r) == ("KHONG_DAT", "QUA_XA", 4)
     assert engine.results.keys().isdisjoint(k for k, *_ in engine.calls)  # không chạy mô hình
+
+
+def kiem_tra_vi_tri(c, s, mau):
+    return c.post(url(s, "kiem-tra-vi-tri"), {"mau_gps": mau}, format="json")
+
+
+def test_kiem_tra_vi_tri_truoc_khi_quet_mat_khong_tinh_luot(login_as, phien_mo):
+    s, svs = phien_mo
+    c = login_as(svs[0])
+    r = kiem_tra_vi_tri(c, s, gps(n=3))
+    assert r.status_code == 200 and r.data == {
+        "dat": True,
+        "ma": None,
+        "thong_bao": "Bạn đang trong khuôn viên trường.",
+    }
+    r = kiem_tra_vi_tri(c, s, gps(n=3, dlat=90 * M))  # ngoài cạnh 40 m (30–60 m): vẫn đạt, báo sát ranh giới
+    assert r.data["dat"] is True and "sát ranh giới" in r.data["thong_bao"]
+    r = kiem_tra_vi_tri(c, s, gps(n=3, dlat=150 * M))  # ngoài cạnh 100 m
+    assert r.data["dat"] is False and r.data["ma"] == "QUA_XA"
+    assert "cách khoảng 100 m" in r.data["thong_bao"]
+    r = kiem_tra_vi_tri(c, s, gps(n=3, acc=50))
+    assert r.data["dat"] is False and r.data["ma"] == "GPS_KEM"
+    assert kiem_tra_vi_tri(c, s, []).data["ma"] == "GPS_KEM"
+    # Chỉ để báo: không cấp thử thách, không ghi lượt, không đổi điểm danh.
+    assert not Challenge.objects.exists() and not CheckinAttempt.objects.exists()
+    assert Attendance.objects.get(attendance_session=s, sinh_vien=svs[0]).trang_thai == "VANG_KHONG_PHEP"
+
+
+def test_kiem_tra_vi_tri_phien_tat_gps_ngoai_lop_va_phien_dong(login_as, gv, lop):
+    _, s, svs = lop
+    mo(gv, s, kiem_tra_gps=False)
+    r = kiem_tra_vi_tri(login_as(svs[0]), s, [])
+    assert r.status_code == 200 and r.data["dat"] is True
+    assert kiem_tra_vi_tri(login_as(StudentProfileFactory().user), s, []).status_code == 403
+    gv.post(url(s, "dong-phien"))
+    r = kiem_tra_vi_tri(login_as(svs[0]), s, [])
+    assert r.status_code == 409 and r.data["error"]["details"]["ly_do"] == "PHIEN_DONG"
 
 
 def test_anh_gia_va_khong_khop(login_as, engine, phien_mo):

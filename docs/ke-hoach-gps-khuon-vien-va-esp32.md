@@ -36,6 +36,12 @@ Giảng viên chỉ chọn thời hạn và "Bắt mã phòng"; không cần đ�
 - `geo.classify(d, sai_lech)`: `d ≤ sai_lech` → đạt; `≤ 2×sai_lech` → đáng ngờ (cờ "Sát mép khuôn viên"); lớn hơn → `QUA_XA` ("Ngoài khuôn viên").
 - Cổng chất lượng mẫu (`aggregate`, `max_acc_sv_m`), cờ vị trí giả và bước nhảy giữ nguyên.
 
+### 3.3.1 Thứ tự các bước phía sinh viên (21/11/2026)
+Luồng app: **GPS (nếu bật) → trong phòng qua ESP32 (nếu bật) → thử thách → quét mặt**. Mỗi bước hiện ✓/✗ kèm thông báo ngay; không đạt thì dừng, chưa mở camera.
+- GPS: app lấy mẫu rồi gọi `POST sessions/{id}/kiem-tra-vi-tri/` (`{"mau_gps": [...]}` → `{"dat", "ma", "thong_bao"}`): "đang trong khuôn viên", "sát ranh giới" (vẫn đạt, có thể chờ GV xác nhận), "ngoài khuôn viên (cách khoảng N m)", "GPS kém". **Không tính lượt, không ghi gì.**
+- Bước này chỉ để báo sớm: lúc gửi lượt (`checkin`) server vẫn chấm lại bước 4 với chính các mẫu đó, nên bỏ qua bước kiểm tra cũng không lách được.
+- Lượt chỉ bị tính khi xin thử thách, tức là sau khi qua GPS và ESP32, ngay trước khi mở camera.
+
 ### 3.4 Dữ liệu
 - Migration `attendance 0006`: bỏ `tam_lat`, `tam_lng`, `tam_sai_so_m`, `tam_goc_lat`, `tam_goc_lng`, `ban_kinh_m` của `AttendanceSession`.
 - Migration `config 0002`: `SystemConfig.gia_tri` dài tối đa 4000 ký tự (đủ cho đa giác).
@@ -60,13 +66,20 @@ Tâm lúc này là chiếc ESP32 trên bàn giảng viên: không cần GPS gi�
 
 Ưu điểm: ESP32 không cần Wi-Fi, không giữ bí mật, không cần đồng bộ giờ; cắm máy nào cũng dùng được.
 
+### 4.2.1 Hai mã: QR + Bluetooth (21/11/2026)
+Thiết kế: `docs/superpowers/specs/2026-11-21-qr-bluetooth-trong-phong-design.md`.
+- Server sinh **hai mã** cùng bí mật phiên, cùng cửa sổ 30 giây: **mã QR** (hiện QR + chữ trên màn GV) và **mã Bluetooth** (nhãn `ble` trong HMAC, chỉ đẩy xuống ESP32, không hiện trên màn). `room-token/` trả `ma` + `ma_ble`.
+- SV: GPS → quét QR (`mobile_scanner`) hoặc gõ mã → app dò ESP32 (Android tự động, web bấm chọn) → `challenge/` gửi `ma_phong` + `ma_bluetooth`.
+- Thiếu mã Bluetooth (iPhone, không dò được) vẫn được cấp thử thách nhưng lượt gắn cờ `KHONG_BLUETOOTH` → **đáng ngờ**, GV duyệt. Mã Bluetooth gửi mà sai → `MA_BLUETOOTH_SAI`, không tính lượt.
+- Firmware không đổi. Vẫn có thể nhắn **cả hai** mã cho người ngoài phòng trong 30–60 giây; khó hơn nhiều so với một mã.
+
 ### 4.3 Vì sao phải dùng mã đổi liên tục
 "Có trong phạm vi" do máy sinh viên tự báo nên có thể bị giả. Server chỉ tin mã đổi mỗi 30 giây mà ESP32 phát. Việc chỉ thấy ESP32 là chưa đủ.
 
 ### 4.4 Luồng trên từng nền tảng
 | Nền tảng | Cách hoạt động |
 |---|---|
-| **App Android** | Quét ngầm hoàn toàn tự động, không hiện hộp chọn. Bấm Bắt đầu, thấy ESP32 thì sang bước quét mặt |
+| **App Android** | **Đã làm (21/11):** quét ngầm bằng `flutter_blue_plus` (`lib/core/serial/esp32_ble_io.dart`), lấy mã từ tên quảng bá `DD-<mã>`, không kết nối, không hộp chọn. Bluetooth tắt thì Android hỏi bật; quét 8 giây, không thấy thì báo và cho "Dò lại" hoặc gõ tay. **Chưa thử trên máy thật** |
 | **Web, Chrome/Edge Android** | Web Bluetooth, **không tự quét**. Sinh viên bấm "Kiểm tra có trong phòng", chọn ESP32 trong hộp chọn của trình duyệt, trang đọc mã rồi tự điền vào `ma_phong` và chuyển sang quét mặt |
 | **Safari iPhone, Firefox** | **Không hỗ trợ Web Bluetooth.** Gõ tay mã phòng như hiện nay |
 
@@ -138,7 +151,7 @@ Hạn chế của bản web so với app Android:
 ## 6. Thứ tự làm đề xuất
 
 1. ~~GPS khuôn viên~~ (mục 3): **đã làm** 19/11.
-2. ~~BLE với ESP32 trên web~~ (mục 4): **đã làm** firmware, Web Serial ở trang giảng viên, nút "Đọc mã từ ESP32" phía sinh viên (web). Còn: quét ngầm trong app Android.
+2. ~~BLE với ESP32 trên web~~ (mục 4): **đã làm** firmware, Web Serial ở trang giảng viên, nút "Kiểm tra trong phòng (chọn ESP32)" phía sinh viên (web), quét ngầm trong app Android (21/11, chưa thử máy thật). Chưa có ngưỡng RSSI: phạm vi hiện chỉ do công suất phát ESP32 (mục 4.5.0, chưa đo).
 3. **Chính sách web và triển khai VPS** (mục 5): chốt trước khi cho sinh viên dùng thật.
 
 ## 7. Câu hỏi còn mở

@@ -4,6 +4,7 @@ Luồng: SV đồng ý dữ liệu → đăng ký mặt → PĐT/GV duyệt. GV 
 gửi khung hình + GPS (+ mã phòng) → 6 bước kiểm tra → kết quả chỉ nâng hạng: vắng < đáng ngờ < có mặt.
 """
 
+import functools
 import json
 import secrets
 from datetime import timedelta
@@ -41,7 +42,8 @@ from core.exceptions import Codes, business_error
 
 # Mã lý do trả cho SV (app map sang câu tiếng Việt). Không trả điểm số thô để SV không dò được ngưỡng.
 LY_DO = {
-    "MA_PHONG_SAI": "Chưa xác nhận được bạn đang trong phòng học: hãy lại gần bàn giảng viên rồi đọc lại mã ESP32 (hoặc gõ mã giảng viên đọc).",
+    "MA_PHONG_SAI": "Mã QR không đúng hoặc đã hết hạn: hãy quét lại QR trên màn chiếu (hoặc gõ mã hiện dưới QR).",
+    "MA_BLUETOOTH_SAI": "Mã Bluetooth không đúng hoặc đã hết hạn: hãy lại gần bàn giảng viên rồi dò lại.",
     "GPS_KEM": "GPS chưa đủ chính xác, hãy bật Wi-Fi và thử lại gần cửa sổ.",
     "QUA_XA": "Bạn đang ở ngoài khuôn viên trường.",
     "CHUA_CO_KHUON_VIEN": "Trường chưa cấu hình khuôn viên. Hãy báo giảng viên.",
@@ -395,9 +397,10 @@ def ma_phong(gv, session_id, now=None):
     t = (now or timezone.now()).timestamp()
     if not s.kiem_tra_phong or not s.dang_mo_tu_diem_danh():
         raise _loi(Codes.TRANG_THAI_KHONG_HOP_LE, "Phiên không mở hoặc không bật mã phòng.")
-    w = _tdd("room_token_window_s")
+    w, bi_mat = _tdd("room_token_window_s"), bytes(s.ma_phong_bi_mat)
     return {
-        "ma": room_token.room_code(bytes(s.ma_phong_bi_mat), s.id, t, w),
+        "ma": room_token.room_code(bi_mat, s.id, t, w),  # QR + chữ trên màn GV
+        "ma_ble": room_token.room_code(bi_mat, s.id, t, w, kenh="ble"),  # chỉ đẩy xuống ESP32
         "het_han_sau_giay": round(room_token.window_end(t, w) - t, 1),
     }
 
@@ -532,9 +535,10 @@ def phien_dang_mo_cua_sv(sv, now=None):
 
 
 @transaction.atomic
-def xin_thu_thach(sv, session_id, ma_phong="", now=None):
+def xin_thu_thach(sv, session_id, ma_phong="", now=None, ma_bluetooth=""):
     """Mỗi lần xin = 1 lượt, kể cả khi không gửi lên (chống xin liên tục để chọn hành động dễ).
-    Phiên bắt mã phòng: kiểm tra "trong phòng" (mã ESP32) **trước**; sai mã thì không cấp, không tính lượt."""
+    Phiên bắt mã phòng: kiểm tra "trong phòng" **trước** — mã QR bắt buộc; mã Bluetooth (ESP32) có gửi thì
+    phải đúng, không gửi (iPhone / không dò được) thì vẫn cấp nhưng lượt sẽ đáng ngờ. Sai mã: không tính lượt."""
     now = now or timezone.now()
     s = _phien_sv(sv, session_id, now)
     AttendanceSession.objects.select_for_update().filter(pk=s.pk).first()  # xếp hàng theo phiên
@@ -553,20 +557,30 @@ def xin_thu_thach(sv, session_id, ma_phong="", now=None):
             "Bạn đã dùng hết lượt điểm danh của phiên này. Hãy báo giảng viên để điểm danh thủ công.",
             "HET_LUOT",
         )
-    if s.kiem_tra_phong and not room_token.verify_room_code(
-        ma_phong,
-        bytes(s.ma_phong_bi_mat),
-        s.id,
-        now.timestamp(),
-        _tdd("room_token_window_s"),
-    ):
-        raise _loi(Codes.TRANG_THAI_KHONG_HOP_LE, LY_DO["MA_PHONG_SAI"], "MA_PHONG_SAI")
+    co_bluetooth = False
+    if s.kiem_tra_phong:
+        ma = functools.partial(
+            room_token.verify_room_code,
+            secret=bytes(s.ma_phong_bi_mat),
+            session_id=s.id,
+            now=now.timestamp(),
+            window_s=_tdd("room_token_window_s"),
+        )
+        if not ma(ma_phong):
+            raise _loi(Codes.TRANG_THAI_KHONG_HOP_LE, LY_DO["MA_PHONG_SAI"], "MA_PHONG_SAI")
+        if ma_bluetooth:
+            if not ma(ma_bluetooth, kenh="ble"):
+                raise _loi(
+                    Codes.TRANG_THAI_KHONG_HOP_LE, LY_DO["MA_BLUETOOTH_SAI"], "MA_BLUETOOTH_SAI"
+                )
+            co_bluetooth = True
     c = Challenge.objects.create(
         session=s,
         sinh_vien=sv,
         nonce=secrets.token_urlsafe(24),
         hanh_dong=secrets.choice(HanhDongThuThach.values),
         het_han_luc=now + timedelta(seconds=_tdd("challenge_ttl_s")),
+        co_bluetooth=co_bluetooth,
     )
     return {
         "nonce": c.nonce,
@@ -575,7 +589,44 @@ def xin_thu_thach(sv, session_id, ma_phong="", now=None):
         "luot_con_lai": toi_da - da_dung - 1,
         "kiem_tra_phong": s.kiem_tra_phong,
         "kiem_tra_gps": s.kiem_tra_gps,
+        "co_bluetooth": co_bluetooth,
     }
+
+
+def _cham_vi_tri(mau):
+    """Bước 4: `(fix, d, r, vi_tri, ly_do)`; `ly_do` khác rỗng là không đạt. `d` None khi chưa tính được."""
+    g = settings.GPS
+    fix = geo.aggregate(mau, g["max_acc_sv_m"], g["min_mau_sv"], g["max_span_s"])
+    if fix is None:
+        return None, None, None, None, "GPS_KEM"
+    vien = khuon_vien()
+    if vien is None:  # PĐT xóa khuôn viên giữa phiên
+        return fix, None, None, None, "CHUA_CO_KHUON_VIEN"
+    r = sai_lech_khuon_vien_m()
+    d = geo.distance_to_polygon_m(fix.lat, fix.lng, vien)
+    vi_tri = geo.classify(d, r)
+    return fix, d, r, vi_tri, "QUA_XA" if vi_tri == "far" else ""
+
+
+_VI_TRI_DAT = {
+    "ok": "Bạn đang trong khuôn viên trường.",
+    "drift": "Bạn đang ở sát ranh giới khuôn viên: vẫn điểm danh được nhưng có thể phải chờ giảng viên xác nhận.",
+}
+
+
+def kiem_tra_vi_tri(sv, session_id, mau_gps, now=None):
+    """Kiểm tra GPS trước khi quét mặt, chỉ để báo SV: không tính lượt, không ghi gì. Lúc gửi lượt
+    server vẫn chấm lại bước 4 nên bỏ qua bước này cũng không lách được."""
+    s = _phien_sv(sv, session_id, now or timezone.now())
+    if not s.kiem_tra_gps:
+        return {"dat": True, "ma": None, "thong_bao": "Phiên này không kiểm tra vị trí."}
+    _, d, _, vi_tri, ly_do = _cham_vi_tri(_mau(mau_gps))
+    if ly_do == "QUA_XA":
+        thong_bao = f"Bạn đang ở ngoài khuôn viên trường (cách khoảng {round(d)} m)."
+        return {"dat": False, "ma": ly_do, "thong_bao": thong_bao}
+    if ly_do:
+        return {"dat": False, "ma": ly_do, "thong_bao": LY_DO[ly_do]}
+    return {"dat": True, "ma": None, "thong_bao": _VI_TRI_DAT[vi_tri]}
 
 
 def _co(face_status, vi_tri, mau, nhay_luot_truoc, cung_may):
@@ -648,18 +699,11 @@ def diem_danh(sv, session_id, khung, nonce, mau_gps, device_id, nen_tang, ip, no
     # Phiên tắt GPS: bỏ qua cả bước, không dùng mẫu GPS (có thể rỗng) cho cờ.
     g = settings.GPS
     if s.kiem_tra_gps:
-        fix = geo.aggregate(mau, g["max_acc_sv_m"], g["min_mau_sv"], g["max_span_s"])
-        if fix is None:
-            return xong(4, "GPS_KEM")
-        vien = khuon_vien()
-        if vien is None:  # PĐT xóa khuôn viên giữa phiên
-            return xong(4, "CHUA_CO_KHUON_VIEN")
-        r = sai_lech_khuon_vien_m()
-        d = geo.distance_to_polygon_m(fix.lat, fix.lng, vien)
-        luot.lat, luot.lng, luot.sai_so_m, luot.d_m, luot.r_m = fix.lat, fix.lng, fix.acc, d, r
-        vi_tri = geo.classify(d, r)
-        if vi_tri == "far":
-            return xong(4, "QUA_XA")
+        fix, d, r, vi_tri, ly_do = _cham_vi_tri(mau)
+        if d is not None:
+            luot.lat, luot.lng, luot.sai_so_m, luot.d_m, luot.r_m = fix.lat, fix.lng, fix.acc, d, r
+        if ly_do:
+            return xong(4, ly_do)
     else:
         fix, vi_tri, mau = None, "ok", []
 
@@ -691,6 +735,8 @@ def diem_danh(sv, session_id, khung, nonce, mau_gps, device_id, nen_tang, ip, no
         CheckinAttempt.objects.filter(session=s, device_id=device_id).exclude(sinh_vien=sv).exists()
     )
     luot.co = _co(face.status, vi_tri, mau, nhay, cung_may)
+    if s.kiem_tra_phong and not ch.co_bluetooth:
+        luot.co.append("KHONG_BLUETOOTH")
     luot.ket_qua = KetQuaLuot.DANG_NGO if luot.co else KetQuaLuot.CO_MAT
     return xong()
 

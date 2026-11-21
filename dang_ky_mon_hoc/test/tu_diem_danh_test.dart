@@ -1,11 +1,15 @@
 import 'dart:typed_data';
 
 import 'package:dang_ky_mon_hoc/features/attendance/face/face_capture.dart';
+import 'package:dang_ky_mon_hoc/features/attendance/face/quet_mat_ui.dart';
+import 'package:dang_ky_mon_hoc/features/attendance/tu_diem_danh/quet_qr.dart';
 import 'package:dang_ky_mon_hoc/features/attendance/tu_diem_danh/thiet_bi.dart';
 import 'package:dang_ky_mon_hoc/features/registration/timetable_screen.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import 'helpers/fake_api.dart';
 import 'attendance_test.dart' show lopGv;
@@ -13,7 +17,8 @@ import 'helpers/pdt_helpers.dart';
 
 final _now = DateTime(2027, 1, 13, 8, 0);
 
-final _overrides = [
+/// Đồng hồ + GPS giả (chưa có camera) — test nào tự giả camera thì dùng danh sách này.
+final _overridesKhongCamera = [
   clockProvider.overrideWithValue(() => _now),
   layMauGpsProvider.overrideWithValue((giay, onMau) async {
     final ds = [
@@ -29,11 +34,18 @@ final _overrides = [
     ds.forEach(onMau);
     return ds;
   }),
-  faceBurstProvider.overrideWithValue(
-    (context, chuoi) async => [
+];
+
+final _overrides = [
+  ..._overridesKhongCamera,
+  // Camera giả: trả 6 khung và gửi luôn như màn camera thật (kết quả hiện trên màn camera bị bỏ qua).
+  faceBurstProvider.overrideWithValue((context, chuoi, {hetHan, gui}) async {
+    final khung = [
       for (var i = 0; i < 6; i++) Uint8List.fromList([i]),
-    ],
-  ),
+    ];
+    await gui?.call(khung);
+    return khung;
+  }),
 ];
 
 /// Màn có Timer đếm ngược mỗi giây → không dùng pumpAndSettle (không bao giờ "yên").
@@ -206,6 +218,28 @@ void main() {
       },
     );
 
+    testWidgets('phiên bắt mã phòng: hiện QR mã QR, không lộ mã Bluetooth', (
+      t,
+    ) async {
+      final api = gv({
+        'GET /attendance/sessions/11/tu-diem-danh/': (_) => reply(200, {
+          ...live(),
+          'session': {...phienJson(), 'kiem_tra_phong': true},
+        }),
+        'GET /attendance/sessions/11/room-token/': (_) => reply(200, {
+          'ma': 'K7Q2M9XA',
+          'ma_ble': 'B1E2C3D4',
+          'het_han_sau_giay': 20,
+        }),
+      });
+      await moGv(t, api);
+      expect(find.byType(QrImageView), findsOneWidget);
+      final qr = t.widget<QrImageView>(find.byType(QrImageView));
+      expect(qr.key, const ValueKey('K7Q2M9XA'));
+      expect(find.text('K7Q2 M9XA'), findsOneWidget);
+      expect(find.textContaining('B1E2'), findsNothing);
+    });
+
     testWidgets('danh sách: đếm, cờ, SV chưa có mẫu mặt', (t) async {
       final api = gv({
         'GET /attendance/sessions/11/tu-diem-danh/': (_) => reply(200, live()),
@@ -333,6 +367,14 @@ void main() {
       'kiem_tra_phong': qr,
     };
 
+    final viTriDat = <String, Handler>{
+      'POST /attendance/sessions/11/kiem-tra-vi-tri/': (_) => reply(200, {
+        'dat': true,
+        'ma': null,
+        'thong_bao': 'Bạn đang trong khuôn viên trường.',
+      }),
+    };
+
     Future<void> moSvScreen(WidgetTester t, FakeAdapter api) =>
         openPdt(t, api, '/student/checkin', overrides: _overrides);
 
@@ -351,6 +393,7 @@ void main() {
         'GET /attendance/open-sessions/': (_) => reply(200, [moSv()]),
         'GET /attendance/my/': (_) => reply(200, myJson()),
         'GET /attendance/requests/': (_) => reply(200, pageOf([])),
+        ...viTriDat,
         'POST /attendance/sessions/11/challenge/': (_) =>
             reply(201, thuThach()),
       });
@@ -422,98 +465,181 @@ void main() {
       );
     });
 
-    testWidgets('đủ bước: thử thách → GPS → chụp → có mặt', (t) async {
-      final api = svApi({
-        'GET /attendance/open-sessions/': (_) => reply(200, [moSv()]),
-        'POST /attendance/sessions/11/challenge/': (_) =>
-            reply(201, thuThach()),
-        'POST /attendance/sessions/11/checkin/': (_) => reply(200, {
-          'ket_qua': 'CO_MAT',
-          'trang_thai': 'CO_MAT',
-          'dang_ngo': false,
-          'ly_do': null,
-          'luot_con_lai': 4,
-        }),
-      });
-      await moSvScreen(t, api);
-      await bam(t, 'Điểm danh');
-      await bam(t, 'Điểm danh');
-      final body =
-          api.bodies['POST /attendance/sessions/11/checkin/'] as FormData;
-      final f = Map.fromEntries(body.fields);
-      expect(f['nonce'], 'n1');
-      expect(f['mau_gps'], contains('"lat":10.98'));
-      expect(f['nen_tang'], 'android');
-      expect(f['device_id'], hasLength(32));
-      expect(body.files.length, 6);
-      expect(find.text('Đã ghi nhận có mặt.'), findsOneWidget);
-    });
-
-    testWidgets('phiên tắt GPS → bỏ bước vị trí (mau_gps rỗng dù máy có GPS), có mặt', (t) async {
-      final api = svApi({
-        'GET /attendance/open-sessions/': (_) =>
-            reply(200, [moSv(gps: false)]),
-        'POST /attendance/sessions/11/challenge/': (_) =>
-            reply(201, thuThach()),
-        'POST /attendance/sessions/11/checkin/': (_) => reply(200, {
-          'ket_qua': 'CO_MAT',
-          'trang_thai': 'CO_MAT',
-          'dang_ngo': false,
-          'ly_do': null,
-          'luot_con_lai': 4,
-        }),
-      });
-      await moSvScreen(t, api);
-      await bam(t, 'Điểm danh');
-      await bam(t, 'Điểm danh');
-      final body =
-          api.bodies['POST /attendance/sessions/11/checkin/'] as FormData;
-      final f = Map.fromEntries(body.fields);
-      expect(f['mau_gps'], '[]');
-      expect(find.text('Đã ghi nhận có mặt.'), findsOneWidget);
-    });
-
     testWidgets(
-      'phiên bật mã phòng → kiểm tra trong phòng trước khi xin thử thách',
+      'đủ bước: GPS (báo trong khuôn viên) → thử thách → chụp → có mặt',
       (t) async {
         final api = svApi({
-          'GET /attendance/open-sessions/': (_) => reply(200, [moSv(qr: true)]),
+          'GET /attendance/open-sessions/': (_) => reply(200, [moSv()]),
+          ...viTriDat,
           'POST /attendance/sessions/11/challenge/': (_) =>
-              reply(201, thuThach(qr: true)),
+              reply(201, thuThach()),
           'POST /attendance/sessions/11/checkin/': (_) => reply(200, {
-            'ket_qua': 'KHONG_DAT',
-            'trang_thai': 'VANG_KHONG_PHEP',
+            'ket_qua': 'CO_MAT',
+            'trang_thai': 'CO_MAT',
             'dang_ngo': false,
-            'ly_do': {
-              'ma': 'QUA_XA',
-              'thong_bao': 'Bạn đang ở ngoài khuôn viên trường.',
-            },
-            'luot_con_lai': 3,
+            'ly_do': null,
+            'luot_con_lai': 4,
           }),
         });
         await moSvScreen(t, api);
         await bam(t, 'Điểm danh');
         await bam(t, 'Điểm danh');
-        // Chưa có mã phòng thì chưa xin thử thách (chưa tính lượt). Test chạy trên VM: không có Web Bluetooth → gõ tay.
-        expect(
-          api.log.any(
-            (l) => l.startsWith('POST /attendance/sessions/11/challenge/'),
-          ),
-          isFalse,
+        final body =
+            api.bodies['POST /attendance/sessions/11/checkin/'] as FormData;
+        final f = Map.fromEntries(body.fields);
+        expect(f['nonce'], 'n1');
+        expect(f['mau_gps'], contains('"lat":10.98'));
+        expect(f['nen_tang'], 'android');
+        expect(f['device_id'], hasLength(32));
+        expect(body.files.length, 6);
+        expect(find.text('Đã ghi nhận có mặt.'), findsOneWidget);
+        // GPS được kiểm tra (gửi đúng mẫu) trước khi xin thử thách.
+        final viTri = api.log.indexWhere(
+          (l) => l.startsWith('POST /attendance/sessions/11/kiem-tra-vi-tri/'),
         );
+        final thu = api.log.indexWhere(
+          (l) => l.startsWith('POST /attendance/sessions/11/challenge/'),
+        );
+        expect(viTri, greaterThanOrEqualTo(0));
+        expect(viTri, lessThan(thu));
+        final mau =
+            (api.bodies['POST /attendance/sessions/11/kiem-tra-vi-tri/']
+                    as Map)['mau_gps']
+                as List;
+        expect(mau, hasLength(5));
+        expect(find.text('Bạn đang trong khuôn viên trường.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('màn camera nhận hạn thử thách và hiện kết quả gửi lượt', (
+      t,
+    ) async {
+      DateTime? hanNhan;
+      final ketQua = <KetQuaQuet>[];
+      var luot = 0;
+      final api = svApi({
+        'GET /attendance/open-sessions/': (_) => reply(200, [moSv()]),
+        ...viTriDat,
+        'POST /attendance/sessions/11/challenge/': (_) =>
+            reply(201, thuThach()),
+        'POST /attendance/sessions/11/checkin/': (_) => ++luot == 1
+            ? reply(200, {
+                'ket_qua': 'KHONG_DAT',
+                'trang_thai': 'VANG_KHONG_PHEP',
+                'dang_ngo': false,
+                'ly_do': {'ma': 'ANH_MO', 'thong_bao': 'Ảnh bị mờ.'},
+                'luot_con_lai': 3,
+              })
+            : apiError(409, 'TRANG_THAI_KHONG_HOP_LE', 'Thử thách hết hạn.'),
+      });
+      await openPdt(
+        t,
+        api,
+        '/student/checkin',
+        overrides: [
+          ..._overridesKhongCamera,
+          faceBurstProvider.overrideWithValue((
+            context,
+            chuoi, {
+            hetHan,
+            gui,
+          }) async {
+            hanNhan = hetHan;
+            final khung = [
+              Uint8List.fromList([1]),
+            ];
+            ketQua.add(await gui!(khung));
+            return khung;
+          }),
+        ],
+      );
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Điểm danh');
+      expect(hanNhan, DateTime.parse('2027-01-13T08:01:00+07:00'));
+      expect(ketQua.single, (
+        loai: LoaiKetQua.khongDat,
+        tieuDe: 'Chưa điểm danh được.',
+        chiTiet: 'Ảnh bị mờ.',
+      ));
+      expect(find.text('Chưa điểm danh được.'), findsOneWidget);
+
+      // Gửi lỗi: màn camera báo lỗi, về màn điểm danh hiện thông điệp server.
+      await bam(t, 'Thử lại');
+      expect(ketQua.last.tieuDe, 'Gửi lượt điểm danh thất bại.');
+      expect(ketQua.last.chiTiet, 'Thử thách hết hạn.');
+      expect(find.text('Thử thách hết hạn.'), findsOneWidget);
+    });
+
+    testWidgets(
+      'phiên tắt GPS → bỏ bước vị trí (mau_gps rỗng dù máy có GPS), có mặt',
+      (t) async {
+        final api = svApi({
+          'GET /attendance/open-sessions/': (_) =>
+              reply(200, [moSv(gps: false)]),
+          'POST /attendance/sessions/11/challenge/': (_) =>
+              reply(201, thuThach()),
+          'POST /attendance/sessions/11/checkin/': (_) => reply(200, {
+            'ket_qua': 'CO_MAT',
+            'trang_thai': 'CO_MAT',
+            'dang_ngo': false,
+            'ly_do': null,
+            'luot_con_lai': 4,
+          }),
+        });
+        await moSvScreen(t, api);
+        await bam(t, 'Điểm danh');
+        await bam(t, 'Điểm danh');
+        final body =
+            api.bodies['POST /attendance/sessions/11/checkin/'] as FormData;
+        final f = Map.fromEntries(body.fields);
+        expect(f['mau_gps'], '[]');
+        expect(find.text('Đã ghi nhận có mặt.'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'bắt mã phòng, máy không có Bluetooth: gõ mã QR → tiếp tục không Bluetooth',
+      (t) async {
+        final api = svApi({
+          'GET /attendance/open-sessions/': (_) => reply(200, [moSv(qr: true)]),
+          ...viTriDat,
+          'POST /attendance/sessions/11/challenge/': (_) =>
+              reply(201, thuThach(qr: true)),
+          'POST /attendance/sessions/11/checkin/': (_) => reply(200, {
+            'ket_qua': 'DANG_NGO',
+            'trang_thai': 'VANG_KHONG_PHEP',
+            'dang_ngo': true,
+            'ly_do': null,
+            'luot_con_lai': 3,
+          }),
+        });
+        await moSvScreen(t, api); // test chạy trên VM: không có Bluetooth
+        await bam(t, 'Điểm danh');
+        await bam(t, 'Điểm danh');
+        // Chưa có mã QR thì chưa xin thử thách (chưa tính lượt).
+        expect(api.log.any((l) => l.contains('/challenge/')), isFalse);
         await t.enterText(find.byType(TextField), 'k7q2 m9xa');
         await bam(t, 'Tiếp tục');
+        expect(find.text('Đã có mã QR.'), findsOneWidget);
+        expect(
+          find.text('Máy hoặc trình duyệt này không kiểm tra được Bluetooth.'),
+          findsOneWidget,
+        );
+        expect(api.log.any((l) => l.contains('/challenge/')), isFalse);
+        await bam(t, 'Tiếp tục không có Bluetooth');
         expect(api.bodies['POST /attendance/sessions/11/challenge/'], {
           'ma_phong': 'k7q2 m9xa',
         });
-        final body =
-            api.bodies['POST /attendance/sessions/11/checkin/'] as FormData;
-        expect(Map.fromEntries(body.fields).containsKey('ma_phong'), isFalse);
         expect(
-          find.text('Bạn đang ở ngoài khuôn viên trường.'),
+          find.text(
+            'Không xác nhận Bluetooth: lượt này sẽ chờ giảng viên duyệt.',
+          ),
           findsOneWidget,
         );
-        expect(find.text('Thử lại'), findsOneWidget);
+        expect(
+          find.text('Đã ghi nhận, chờ giảng viên xác nhận.'),
+          findsWidgets,
+        );
       },
     );
 
@@ -528,6 +654,7 @@ void main() {
     testWidgets('chưa có mẫu mặt → hiện thông điệp server', (t) async {
       final api = svApi({
         'GET /attendance/open-sessions/': (_) => reply(200, [moSv()]),
+        ...viTriDat,
         'POST /attendance/sessions/11/challenge/': (_) => apiError(
           409,
           'TRANG_THAI_KHONG_HOP_LE',
@@ -538,6 +665,217 @@ void main() {
       await bam(t, 'Điểm danh');
       await bam(t, 'Điểm danh');
       expect(find.textContaining('Hãy báo giảng viên'), findsOneWidget);
+    });
+
+    testWidgets('GPS ngoài khuôn viên → dừng trước quét mặt, chưa tính lượt', (
+      t,
+    ) async {
+      final api = svApi({
+        'GET /attendance/open-sessions/': (_) => reply(200, [moSv(qr: true)]),
+        'POST /attendance/sessions/11/kiem-tra-vi-tri/': (_) => reply(200, {
+          'dat': false,
+          'ma': 'QUA_XA',
+          'thong_bao':
+              'Bạn đang ở ngoài khuôn viên trường (cách khoảng 250 m).',
+        }),
+      });
+      await moSvScreen(t, api);
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Điểm danh');
+      expect(
+        find.text('Bạn đang ở ngoài khuôn viên trường (cách khoảng 250 m).'),
+        findsOneWidget,
+      );
+      expect(find.text('Chưa bị tính lượt.'), findsOneWidget);
+      expect(find.text('Thử lại'), findsOneWidget);
+      // Không sang bước QR, không xin thử thách.
+      expect(find.text('Quét QR'), findsNothing);
+      expect(
+        api.log.any(
+          (l) => l.contains('/challenge/') || l.contains('/checkin/'),
+        ),
+        isFalse,
+      );
+    });
+
+    /// Máy có Bluetooth (app Android: [tuDong], web: bấm chọn); [qr] = kết quả quét QR (null = hủy).
+    List<Override> esp({
+      required bool tuDong,
+      String? ma,
+      List<int>? dem,
+      String? qr = 'K7Q2M9XA',
+    }) => [
+      ..._overrides,
+      docEsp32Provider.overrideWithValue((
+        hoTro: true,
+        tuDong: tuDong,
+        doc: () async {
+          dem?.add(1);
+          return ma;
+        },
+      )),
+      quetQrProvider.overrideWithValue((_) async => qr),
+    ];
+
+    Map<String, Handler> coMat() => {
+      'POST /attendance/sessions/11/checkin/': (_) => reply(200, {
+        'ket_qua': 'CO_MAT',
+        'trang_thai': 'CO_MAT',
+        'dang_ngo': false,
+        'ly_do': null,
+        'luot_con_lai': 4,
+      }),
+    };
+
+    testWidgets(
+      'app Android: GPS → quét QR → tự dò Bluetooth → gửi đủ hai mã → có mặt',
+      (t) async {
+        final api = svApi({
+          'GET /attendance/open-sessions/': (_) => reply(200, [moSv(qr: true)]),
+          ...viTriDat,
+          'POST /attendance/sessions/11/challenge/': (_) =>
+              reply(201, thuThach(qr: true)),
+          ...coMat(),
+        });
+        await openPdt(
+          t,
+          api,
+          '/student/checkin',
+          overrides: esp(tuDong: true, ma: 'B1E2C3D4'),
+        );
+        await bam(t, 'Điểm danh');
+        await bam(t, 'Điểm danh');
+        expect(api.log.any((l) => l.contains('/challenge/')), isFalse);
+        await bam(t, 'Quét QR');
+        expect(api.bodies['POST /attendance/sessions/11/challenge/'], {
+          'ma_phong': 'K7Q2M9XA',
+          'ma_bluetooth': 'B1E2C3D4',
+        });
+        expect(find.text('Bạn đang trong khuôn viên trường.'), findsOneWidget);
+        expect(find.text('Mã QR hợp lệ.'), findsOneWidget);
+        expect(
+          find.text('Đã xác nhận bạn đang trong phòng học.'),
+          findsOneWidget,
+        );
+        expect(find.text('Khuôn mặt khớp với tài khoản.'), findsOneWidget);
+        expect(find.text('Đã ghi nhận có mặt.'), findsOneWidget);
+      },
+    );
+
+    testWidgets('hủy quét QR → ở lại bước QR, không gọi API', (t) async {
+      final dem = <int>[];
+      final api = svApi({
+        'GET /attendance/open-sessions/': (_) => reply(200, [moSv(qr: true)]),
+        ...viTriDat,
+      });
+      await openPdt(
+        t,
+        api,
+        '/student/checkin',
+        overrides: esp(tuDong: true, ma: 'B1E2C3D4', dem: dem, qr: null),
+      );
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Quét QR');
+      expect(find.text('Quét QR'), findsOneWidget);
+      expect(dem, isEmpty);
+      expect(api.log.any((l) => l.contains('/challenge/')), isFalse);
+    });
+
+    testWidgets(
+      'app Android: không thấy thiết bị → báo, dò lại, rồi tiếp tục không Bluetooth',
+      (t) async {
+        final dem = <int>[];
+        final api = svApi({
+          'GET /attendance/open-sessions/': (_) => reply(200, [moSv(qr: true)]),
+          ...viTriDat,
+          'POST /attendance/sessions/11/challenge/': (_) =>
+              reply(201, thuThach(qr: true)),
+          ...coMat(),
+        });
+        await openPdt(
+          t,
+          api,
+          '/student/checkin',
+          overrides: esp(tuDong: true, dem: dem),
+        );
+        await bam(t, 'Điểm danh');
+        await bam(t, 'Điểm danh');
+        await bam(t, 'Quét QR');
+        expect(
+          find.textContaining('Không thấy thiết bị của giảng viên'),
+          findsOneWidget,
+        );
+        expect(api.log.any((l) => l.contains('/challenge/')), isFalse);
+        expect(dem, hasLength(1));
+        await bam(t, 'Dò lại');
+        expect(dem, hasLength(2));
+        await bam(t, 'Tiếp tục không có Bluetooth');
+        expect(api.bodies['POST /attendance/sessions/11/challenge/'], {
+          'ma_phong': 'K7Q2M9XA',
+        });
+      },
+    );
+
+    testWidgets('web: sau QR đợi sinh viên bấm chọn thiết bị (không tự dò)', (
+      t,
+    ) async {
+      final dem = <int>[];
+      final api = svApi({
+        'GET /attendance/open-sessions/': (_) => reply(200, [moSv(qr: true)]),
+        ...viTriDat,
+        'POST /attendance/sessions/11/challenge/': (_) =>
+            reply(201, thuThach(qr: true)),
+        ...coMat(),
+      });
+      await openPdt(
+        t,
+        api,
+        '/student/checkin',
+        overrides: esp(tuDong: false, ma: 'B1E2C3D4', dem: dem),
+      );
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Quét QR');
+      expect(dem, isEmpty);
+      expect(api.log.any((l) => l.contains('/challenge/')), isFalse);
+      await bam(t, 'Kiểm tra Bluetooth (chọn thiết bị)');
+      expect(dem, hasLength(1));
+      expect(api.bodies['POST /attendance/sessions/11/challenge/'], {
+        'ma_phong': 'K7Q2M9XA',
+        'ma_bluetooth': 'B1E2C3D4',
+      });
+    });
+
+    testWidgets('server báo sai mã Bluetooth → ở lại bước Bluetooth', (
+      t,
+    ) async {
+      final api = svApi({
+        'GET /attendance/open-sessions/': (_) => reply(200, [moSv(qr: true)]),
+        ...viTriDat,
+        'POST /attendance/sessions/11/challenge/': (_) => reply(409, {
+          'error': {
+            'code': 'TRANG_THAI_KHONG_HOP_LE',
+            'message': 'Mã Bluetooth không đúng hoặc đã hết hạn.',
+            'details': {'ly_do': 'MA_BLUETOOTH_SAI'},
+          },
+        }),
+      });
+      await openPdt(
+        t,
+        api,
+        '/student/checkin',
+        overrides: esp(tuDong: true, ma: 'B1E2C3D4'),
+      );
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Điểm danh');
+      await bam(t, 'Quét QR');
+      expect(
+        find.text('Mã Bluetooth không đúng hoặc đã hết hạn.'),
+        findsOneWidget,
+      );
+      expect(find.text('Dò lại'), findsOneWidget);
+      expect(find.text('Đã có mã QR.'), findsOneWidget);
     });
   });
 }

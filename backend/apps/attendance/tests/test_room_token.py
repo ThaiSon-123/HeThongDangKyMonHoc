@@ -43,3 +43,11 @@ def test_case_and_spaces_tolerated():
 
 def test_window_end():
     assert window_end(990.0) == 1020.0 and window_end(1020.0) == 1050.0
+
+
+def test_hai_kenh_ma_khac_nhau():
+    qr, ble = room_code(K, 41, 1000.0), room_code(K, 41, 1000.0, kenh="ble")
+    assert qr != ble and len(ble) == 8
+    assert verify_room_code(ble, K, 41, 1000.0, kenh="ble")
+    assert not verify_room_code(ble, K, 41, 1000.0)
+    assert not verify_room_code(qr, K, 41, 1000.0, kenh="ble")

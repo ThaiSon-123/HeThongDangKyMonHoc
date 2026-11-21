@@ -1,12 +1,13 @@
-import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../training/training_api.dart';
+import 'quet_mat_ui.dart';
 
 /// Mở màn chụp đăng ký: mỗi phần tử [buoc] là (lời nhắc, mã tư thế: `thang` / `hoi_trai` / `hoi_phai`);
 /// trả ảnh JPEG theo thứ tự, `null` nếu hủy. Thay được trong test (camera không chạy trong widget test).
@@ -28,18 +29,26 @@ final faceCaptureProvider = Provider<FaceCapture>(
 );
 
 /// Chụp chuỗi khung lúc điểm danh: mỗi phần tử là (lời nhắc, số khung, mã tư thế: `thang` / `turn_left` /
-/// `turn_right`); chờ khung đạt rồi chụp tự động.
+/// `turn_right`); chờ khung đạt rồi chụp tự động. [hetHan]: hạn thử thách (đếm ngược trên màn). [gui]: gửi
+/// khung lên server ngay trên màn camera và hiện kết quả, sinh viên bấm "Xong" mới đóng.
 typedef FaceBurst = Future<List<Uint8List>?> Function(
   BuildContext context,
-  List<(String, int, String)> chuoi,
-);
+  List<(String, int, String)> chuoi, {
+  DateTime? hetHan,
+  GuiKhung? gui,
+});
 
 final faceBurstProvider = Provider<FaceBurst>(
   (ref) =>
-      (context, chuoi) =>
+      (context, chuoi, {hetHan, gui}) =>
           Navigator.of(context, rootNavigator: true).push<List<Uint8List>>(
             MaterialPageRoute(
-              builder: (_) => FaceCaptureScreen(buoc: const [], chuoi: chuoi),
+              builder: (_) => FaceCaptureScreen(
+                buoc: const [],
+                chuoi: chuoi,
+                hetHan: hetHan,
+                gui: gui,
+              ),
             ),
           ),
 );
@@ -71,12 +80,21 @@ class _DaDong implements Exception {}
 /// kèm lời nhắc. Khung đạt 2 lần liên tiếp thì tự chụp.
 /// - Đăng ký ([buoc]): tự chụp lần lượt từng tư thế, xem lại rồi mới dùng; có nút "Chụp ngay" dự phòng.
 /// - Điểm danh ([chuoi]): tự bắt đầu; mỗi bước chờ khung đạt (tối đa 12 giây để kịp hạn thử thách) rồi chụp
-///   đủ số khung, trả về ngay.
+///   đủ số khung; có [gui] thì gửi luôn và hiện kết quả trên màn này, không thì trả về ngay.
+/// Mũi tên chỉ hướng quay đầu, rung khi chụp; điểm danh có thêm "Bước i/n" và đếm ngược [hetHan].
 class FaceCaptureScreen extends ConsumerStatefulWidget {
-  const FaceCaptureScreen({super.key, required this.buoc, this.chuoi});
+  const FaceCaptureScreen({
+    super.key,
+    required this.buoc,
+    this.chuoi,
+    this.hetHan,
+    this.gui,
+  });
 
   final List<(String, String)> buoc;
   final List<(String, int, String)>? chuoi;
+  final DateTime? hetHan;
+  final GuiKhung? gui;
 
   @override
   ConsumerState<FaceCaptureScreen> createState() => _FaceCaptureScreenState();
@@ -86,6 +104,10 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
   CameraController? _cam;
   String? _loi;
   String? _loiNhac; // tư thế / hành động đang yêu cầu
+  String? _tuThe; // mã tư thế đang yêu cầu (mũi tên)
+  int _buocSo = 0; // bước đang chụp của chuỗi điểm danh (1-based)
+  bool _dangGui = false;
+  KetQuaQuet? _ketQua;
   String _goiY = 'Đang kiểm tra khuôn mặt…';
   Color _mau = Colors.white;
   bool _chupNgay = false;
@@ -152,6 +174,7 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
       final b = await _chup();
       if (_chupNgay) {
         _chupNgay = false;
+        HapticFeedback.mediumImpact();
         return b;
       }
       var (ok, goiY) = (false, '');
@@ -167,13 +190,17 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
         _mau = ok ? AppColors.success : AppColors.danger;
       });
       dat = ok ? dat + 1 : 0;
-      if (dat >= 2 || (han != null && dongHo.elapsed > han)) return b;
+      if (dat >= 2 || (han != null && dongHo.elapsed > han)) {
+        HapticFeedback.mediumImpact(); // rung khi chụp
+        return b;
+      }
       await Future<void>.delayed(const Duration(milliseconds: 250));
     }
   }
 
-  void _batDauBuoc(String loiNhac) => setState(() {
+  void _batDauBuoc(String loiNhac, String tuThe) => setState(() {
     _loiNhac = loiNhac;
+    _tuThe = tuThe;
     _mau = Colors.white;
     _goiY = 'Đang kiểm tra khuôn mặt…';
   });
@@ -183,7 +210,7 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
     try {
       while (_anh.length < widget.buoc.length) {
         final (loiNhac, tuThe) = widget.buoc[_anh.length];
-        _batDauBuoc(loiNhac);
+        _batDauBuoc(loiNhac, tuThe);
         final b = await _choKhungDat(tuThe);
         setState(() => _anh.add(b));
       }
@@ -201,7 +228,8 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
     setState(() => _dangQuet = true);
     try {
       for (final (loiNhac, soKhung, tuThe) in widget.chuoi!) {
-        _batDauBuoc(loiNhac);
+        _buocSo++;
+        _batDauBuoc(loiNhac, tuThe);
         _anh.add(await _choKhungDat(tuThe, han: const Duration(seconds: 12)));
         // Các khung sau cách nhau 0,4 giây để bắt trọn lúc giữ tư thế / quay đầu.
         for (var i = 1; i < soKhung; i++) {
@@ -209,7 +237,23 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
           _anh.add(await _chup());
         }
       }
-      if (mounted) Navigator.of(context).pop(List.of(_anh));
+      if (!mounted) return;
+      final gui = widget.gui;
+      if (gui == null) return _xong();
+      setState(() {
+        _dangGui = true;
+        _tuThe = null;
+        _mau = Colors.white;
+        _loiNhac = 'Đã chụp xong';
+        _goiY = 'Đang kiểm tra khuôn mặt…';
+      });
+      final kq = await gui(List.of(_anh));
+      if (mounted) {
+        setState(() {
+          _dangGui = false;
+          _ketQua = kq;
+        });
+      }
     } on _DaDong {
       return;
     } on CameraException catch (e) {
@@ -219,97 +263,130 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
     }
   }
 
+  void _xong() => Navigator.of(context).pop(List.of(_anh));
+
   @override
   Widget build(BuildContext context) {
     final xong = !_laChuoi && _anh.length >= widget.buoc.length;
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
+    final ketQua = _ketQua;
+    final hetHan = widget.hetHan;
+    // Đang gửi: chặn quay lại. Đã có kết quả: quay lại = "Xong" (lượt đã gửi, không phải hủy).
+    return PopScope(
+      canPop: !_dangGui && ketQua == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && ketQua != null) _xong();
+      },
+      child: Scaffold(
         backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text(
-          _laChuoi
-              ? 'Quét khuôn mặt'
-              : xong
-              ? 'Xem lại ảnh'
-              : 'Ảnh ${_anh.length + 1}/${widget.buoc.length}',
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          title: Text(
+            _laChuoi
+                ? 'Quét khuôn mặt'
+                : xong
+                ? 'Xem lại ảnh'
+                : 'Ảnh ${_anh.length + 1}/${widget.buoc.length}',
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: _loi != null
-            ? _ThongBao(_loi!)
-            : xong
-            ? _XemLai(
-                anh: _anh,
-                onChupLai: () {
-                  setState(_anh.clear);
-                  _quetDangKy();
-                },
-                onDung: () => Navigator.of(context).pop(List.of(_anh)),
-              )
-            : _cam == null
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  Expanded(
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Center(child: CameraPreview(_cam!)),
-                        IgnorePointer(
-                          child: TweenAnimationBuilder<Color?>(
-                            tween: ColorTween(end: _mau),
-                            duration: const Duration(milliseconds: 250),
-                            builder: (_, c, _) => CustomPaint(
-                              painter: _OvalPainter(c ?? Colors.white),
+        body: SafeArea(
+          child: _loi != null
+              ? _ThongBao(_loi!)
+              : ketQua != null
+              ? KetQuaQuetView(ketQua: ketQua, onXong: _xong)
+              : xong
+              ? _XemLai(
+                  anh: _anh,
+                  onChupLai: () {
+                    setState(_anh.clear);
+                    _quetDangKy();
+                  },
+                  onDung: () => Navigator.of(context).pop(List.of(_anh)),
+                )
+              : _cam == null
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Center(child: CameraPreview(_cam!)),
+                          IgnorePointer(
+                            child: TweenAnimationBuilder<Color?>(
+                              tween: ColorTween(end: _mau),
+                              duration: const Duration(milliseconds: 250),
+                              builder: (_, c, _) => CustomPaint(
+                                painter: _OvalPainter(c ?? Colors.white),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          IgnorePointer(child: HuongQuay(tuThe: _tuThe)),
+                          if (hetHan != null && !_dangGui)
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: DemNguoc(hetHan: hetHan),
+                            ),
+                          if (_dangGui)
+                            const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Text(
-                          _loiNhac ?? '',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 6),
-                        Semantics(
-                          liveRegion: true,
-                          child: Text(
-                            _goiY,
-                            style: TextStyle(
-                              color: _mau == Colors.white
-                                  ? Colors.white70
-                                  : _mau == AppColors.success
-                                  ? Colors.greenAccent
-                                  : Colors.redAccent,
-                              fontSize: 16,
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          if (_laChuoi && _buocSo > 0 && !_dangGui) ...[
+                            TienDoBuoc(
+                              buoc: _buocSo,
+                              tong: widget.chuoi!.length,
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          Text(
+                            _loiNhac ?? '',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                        ),
-                        if (!_laChuoi && _dangQuet) ...[
-                          const SizedBox(height: 12),
-                          AppButton(
-                            label: 'Chụp ngay',
-                            outlined: true,
-                            onPressed: () => _chupNgay = true,
+                          const SizedBox(height: 6),
+                          Semantics(
+                            liveRegion: true,
+                            child: Text(
+                              _goiY,
+                              style: TextStyle(
+                                color: _mau == Colors.white
+                                    ? Colors.white70
+                                    : _mau == AppColors.success
+                                    ? Colors.greenAccent
+                                    : Colors.redAccent,
+                                fontSize: 16,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
+                          if (!_laChuoi && _dangQuet) ...[
+                            const SizedBox(height: 12),
+                            AppButton(
+                              label: 'Chụp ngay',
+                              outlined: true,
+                              onPressed: () => _chupNgay = true,
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
     );
   }

@@ -103,6 +103,7 @@ urlpatterns = [
     path("attendance/faces/<int:pk>/review/", tdd.FaceReviewView.as_view()),
     path("attendance/open-sessions/", tdd.OpenSessionsView.as_view()),
     path("attendance/sessions/<int:pk>/challenge/", tdd.ChallengeView.as_view()),
+    path("attendance/sessions/<int:pk>/kiem-tra-vi-tri/", tdd.KiemTraViTriView.as_view()),
     path("attendance/sessions/<int:pk>/checkin/", tdd.CheckinView.as_view()),
     path("attendance/sessions/<int:pk>/mo-phien/", tdd.MoPhienView.as_view()),
     path("attendance/sessions/<int:pk>/mo-lai/", tdd.MoLaiView.as_view()),

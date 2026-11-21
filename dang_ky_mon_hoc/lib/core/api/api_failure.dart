@@ -10,6 +10,7 @@ class ApiFailure implements Exception {
     this.message,
     this.fields = const {},
     this.retryAfter,
+    this.lyDo,
   });
 
   final int? status;
@@ -19,6 +20,9 @@ class ApiFailure implements Exception {
   /// Lỗi theo từng ô nhập: tên field → thông điệp đầu tiên.
   final Map<String, String> fields;
   final int? retryAfter;
+
+  /// `details.ly_do` của lỗi nghiệp vụ (vd. `MA_PHONG_SAI`) để màn hình chọn bước báo lỗi.
+  final String? lyDo;
 
   bool get isNetwork => status == null;
   bool get isRateLimited => status == 429 || code == 'QUA_NHIEU_YEU_CAU';
@@ -31,6 +35,7 @@ class ApiFailure implements Exception {
     String? code;
     String? message;
     int? retryAfter;
+    String? lyDo;
     final fields = <String, String>{};
     if (data is Map) {
       final error = data['error'];
@@ -40,6 +45,9 @@ class ApiFailure implements Exception {
         final details = error['details'];
         if (details is Map && details['retry_after'] is num) {
           retryAfter = (details['retry_after'] as num).toInt();
+        }
+        if (details is Map && details['ly_do'] is String) {
+          lyDo = details['ly_do'] as String;
         }
       } else {
         for (final entry in data.entries) {
@@ -60,6 +68,7 @@ class ApiFailure implements Exception {
       message: message,
       fields: fields,
       retryAfter: retryAfter,
+      lyDo: lyDo,
     );
   }
 

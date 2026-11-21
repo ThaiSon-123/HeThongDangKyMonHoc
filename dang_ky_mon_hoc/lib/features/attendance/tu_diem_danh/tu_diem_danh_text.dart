@@ -10,11 +10,13 @@ const coText = {
   'VI_TRI_GIA': 'Vị trí giả',
   'BUOC_NHAY': 'Vị trí nhảy bất thường',
   'CUNG_MAY': 'Cùng máy với SV khác',
+  'KHONG_BLUETOOTH': 'Không xác nhận Bluetooth',
 };
 
 /// Mã lý do dừng (server `CheckinAttempt.ly_do`) → chữ cho GV.
 const lyDoText = {
   'MA_PHONG_SAI': 'Sai mã phòng',
+  'MA_BLUETOOTH_SAI': 'Sai mã Bluetooth',
   'GPS_KEM': 'GPS kém',
   'QUA_XA': 'Ngoài khuôn viên',
   'CHUA_CO_KHUON_VIEN': 'Chưa vẽ khuôn viên',

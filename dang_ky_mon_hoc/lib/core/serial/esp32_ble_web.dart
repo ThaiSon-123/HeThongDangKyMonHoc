@@ -33,6 +33,9 @@ extension type _Char._(JSObject _) implements JSObject {
 class Esp32Ble {
   static bool get hoTro => _bluetooth != null;
 
+  /// Trình duyệt không cho tự quét: luôn cần sinh viên bấm rồi chọn thiết bị.
+  static bool get tuDong => false;
+
   /// Trình duyệt hiện hộp chọn (chỉ liệt kê ESP32 của dự án); phải gọi từ thao tác bấm.
   /// Người dùng bấm Hủy → null; lỗi khác ném ra.
   static Future<String?> docMa() async {
