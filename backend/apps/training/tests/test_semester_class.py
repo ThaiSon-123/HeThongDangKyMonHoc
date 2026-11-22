@@ -556,3 +556,15 @@ def test_lich_phong_chua_co_bi_chan(pdt):
     res = pdt.post(SCH, {"lop_hoc_phan": ClassSectionFactory().id, "thu": 3, "tiet_bat_dau": 1,
                          "so_tiet_moi_buoi": 3, "phong": "KHONGCO"})
     assert res.status_code == 400 and "phong" in res.data
+
+
+def test_si_so_toi_da_khong_vuot_suc_chua_phong(pdt):
+    lop = ClassSectionFactory(si_so_toi_da=50)
+    RoomFactory(ma="NHO", suc_chua=30)
+    res = pdt.post(SCH, body_lich(lop, phong="NHO"))
+    assert res.status_code == 400 and "phong" in res.data
+    lich = ScheduleFactory(lop_hoc_phan=lop, phong=RoomFactory(ma="VUA", suc_chua=50))
+    assert pdt.patch(f"{CLS}{lop.id}/", {"si_so_toi_da": 51}).status_code == 400
+    assert pdt.patch(f"/api/rooms/{lich.phong.id}/", {"suc_chua": 49}).status_code == 400
+    assert pdt.patch(f"/api/rooms/{lich.phong.id}/", {"suc_chua": 80}).status_code == 200
+    assert pdt.patch(f"{CLS}{lop.id}/", {"si_so_toi_da": 70}).status_code == 200

@@ -310,6 +310,17 @@ class RoomSerializer(serializers.ModelSerializer):
     def validate_ma(self, value):
         return value.strip().upper()
 
+    def validate_suc_chua(self, value):
+        if self.instance:
+            lop = (
+                ClassSection.objects.filter(lich_hoc__phong=self.instance, si_so_toi_da__gt=value)
+                .values_list("ma_lop", flat=True)
+                .first()
+            )
+            if lop:
+                raise serializers.ValidationError(f"Lớp {lop} xếp ở phòng này có sĩ số tối đa lớn hơn.")
+        return value
+
 
 class _MaPhongField(serializers.SlugRelatedField):
     """Nhận mã phòng không phân biệt hoa/thường (mã lưu chữ hoa)."""
@@ -341,6 +352,11 @@ class ScheduleSerializer(serializers.ModelSerializer):
         if self.instance and lop != self.instance.lop_hoc_phan:
             raise serializers.ValidationError({"lop_hoc_phan": ["Không đổi lớp của lịch học."]})
         services.kiem_tra_sua_lop(lop)
+        phong = _gia_tri(self, attrs, "phong")
+        if phong.suc_chua < lop.si_so_toi_da:
+            raise serializers.ValidationError(
+                {"phong": [f"Phòng {phong.ma} chỉ chứa {phong.suc_chua}, lớp có sĩ số tối đa {lop.si_so_toi_da}."]}
+            )
         bat_dau = _gia_tri(self, attrs, "tiet_bat_dau")
         so_tiet = _gia_tri(self, attrs, "so_tiet_moi_buoi")
         ket_thuc = bat_dau + so_tiet - 1
@@ -450,6 +466,14 @@ class ClassSectionSerializer(serializers.ModelSerializer):
                     loi[ten] = ["Lớp đã có đăng ký, không đổi được."]
             if "si_so_toi_da" in attrs and attrs["si_so_toi_da"] < inst.si_so_hien_tai:
                 loi["si_so_toi_da"] = ["Sĩ số tối đa không được nhỏ hơn sĩ số hiện tại."]
+            elif "si_so_toi_da" in attrs and (
+                nho := inst.lich_hoc.filter(phong__suc_chua__lt=attrs["si_so_toi_da"])
+                .select_related("phong")
+                .first()
+            ):
+                loi["si_so_toi_da"] = [
+                    f"Phòng {nho.phong.ma} chỉ chứa {nho.phong.suc_chua}; đổi phòng trước khi tăng sĩ số."
+                ]
         hoc_ky = _gia_tri(self, attrs, "hoc_ky")
         bat_dau, ket_thuc = (
             _gia_tri(self, attrs, "ngay_bat_dau"),

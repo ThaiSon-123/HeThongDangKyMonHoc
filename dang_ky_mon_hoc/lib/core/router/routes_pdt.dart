@@ -14,6 +14,7 @@ import '../../features/training/majors_screen.dart';
 import '../../features/training/profiles_screen.dart';
 import '../../features/training/quy_che_screen.dart';
 import '../../features/training/registrations_screen.dart';
+import '../../features/training/rooms_screen.dart';
 import '../../features/training/semesters_screen.dart';
 import '../auth/auth_user.dart';
 import 'role_routes.dart';
@@ -45,6 +46,7 @@ const pdtRoutes = RoleRoutes(
       'Học kỳ & cửa sổ đăng ký',
       builder: SemestersScreen.new,
     ),
+    RouteDef('/pdt/rooms', 'Phòng học', builder: RoomsScreen.new),
     RouteDef('/pdt/classes', 'Lớp học phần & lịch', builder: ClassesScreen.new),
     RouteDef(
       '/pdt/registrations',
@@ -101,6 +103,7 @@ const pdtRoutes = RoleRoutes(
         Icons.menu_book_outlined,
       ),
       NavItem('Môn học', '/pdt/courses', Icons.class_outlined),
+      NavItem('Phòng học', '/pdt/rooms', Icons.meeting_room_outlined),
     ]),
     NavGroup('TỔ CHỨC ĐÀO TẠO', [
       NavItem('Học kỳ', '/pdt/semesters', Icons.event_outlined),
