@@ -300,7 +300,7 @@ def xung_dot_lich(hoc_ky_id, giao_vien_id, thu, tiet_bat_dau, tiet_ket_thuc, pho
     for lich in qs:
         if lich.tiet_ket_thuc < tiet_bat_dau:
             continue
-        if phong and lich.phong.casefold() == phong.casefold():
+        if phong and lich.phong_id == phong.ma:
             loi["phong"] = f"Phòng {phong} đã có lớp {lich.lop_hoc_phan.ma_lop} học giờ này."
         if lich.lop_hoc_phan.giao_vien_id == giao_vien_id:
             loi["giao_vien"] = f"Giáo viên đã dạy lớp {lich.lop_hoc_phan.ma_lop} giờ này."

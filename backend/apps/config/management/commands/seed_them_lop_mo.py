@@ -18,6 +18,7 @@ from apps.config.management.commands.seed_lop_hoc_phan import (
     PHONG_THUC_HANH,
     cac_buoi_hoc,
     giao,
+    tao_phong,
     ung_vien,
 )
 from apps.profiles.models import TeacherProfile
@@ -53,6 +54,7 @@ class Command(BaseCommand):
         if hk is None:
             raise CommandError("Không xác định được học kỳ.")
         so_lop = options["so_lop"]
+        tao_phong()
 
         lop_ky = list(
             ClassSection.objects.filter(hoc_ky=hk)
@@ -68,7 +70,7 @@ class Command(BaseCommand):
             buoi = [(s.thu, s.tiet_bat_dau, s.tiet_ket_thuc) for s in c.lich_hoc.all()]
             gv_ban[c.giao_vien_id].extend(buoi)
             for s in c.lich_hoc.all():
-                phong_ban[s.phong].append((s.thu, s.tiet_bat_dau, s.tiet_ket_thuc))
+                phong_ban[s.phong_id].append((s.thu, s.tiet_bat_dau, s.tiet_ket_thuc))
             tai[c.giao_vien_id] += 1
             gv_cua_mon[c.mon_hoc_id].add(c.giao_vien_id)
             khung_cua_mon[c.mon_hoc_id].add(tuple(sorted(buoi)))
@@ -130,7 +132,7 @@ class Command(BaseCommand):
                         thu=thu,
                         tiet_bat_dau=dau,
                         so_tiet_moi_buoi=cuoi - dau + 1,
-                        phong=phong,
+                        phong_id=phong,
                     )
                     for thu, dau, cuoi in buoi
                 )
@@ -188,7 +190,7 @@ class Command(BaseCommand):
         for s in Schedule.objects.filter(lop_hoc_phan__hoc_ky=hk).select_related("lop_hoc_phan"):
             buoi = (s.thu, s.tiet_bat_dau, s.tiet_ket_thuc)
             theo_gv[s.lop_hoc_phan.giao_vien_id].append((s.lop_hoc_phan.ma_lop, buoi))
-            theo_phong[s.phong].append((s.lop_hoc_phan.ma_lop, buoi))
+            theo_phong[s.phong_id].append((s.lop_hoc_phan.ma_lop, buoi))
         for ten, nhom in (("giảng viên", theo_gv), ("phòng", theo_phong)):
             for khoa, cac in nhom.items():
                 for i, (ma_a, a) in enumerate(cac):

@@ -33,6 +33,7 @@ from apps.training.models import (
     LoaiMon,
     Major,
     Prerequisite,
+    Room,
     Schedule,
     Semester,
     TrangThaiDung,
@@ -312,7 +313,10 @@ class Command(BaseCommand):
                     lop_hoc_phan=lop,
                     thu=thu,
                     tiet_bat_dau=tiet,
-                    defaults={"so_tiet_moi_buoi": so_tiet, "phong": phong},
+                    defaults={
+                        "so_tiet_moi_buoi": so_tiet,
+                        "phong": Room.objects.get_or_create(ma=phong, defaults={"suc_chua": 60})[0],
+                    },
                 )
 
         # --- HK hiện tại (MO): 4 lớp

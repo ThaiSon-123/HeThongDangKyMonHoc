@@ -22,6 +22,8 @@ from apps.registration.models import Registration
 from apps.training.models import (
     ClassSection,
     Course,
+    LoaiPhong,
+    Room,
     Schedule,
     Semester,
     TrangThaiHocKy,
@@ -36,6 +38,17 @@ THU = [2, 3, 4, 5, 6, 7]
 THU_TU_BUOI = [(0, 1, 2), (1, 0, 2), (0, 1, 2)]  # theo lớp: lớp 2 ưu tiên buổi chiều
 PHONG_LY_THUYET = [f"{toa}{tang}{p:02d}" for toa in "AB" for tang in range(1, 5) for p in range(1, 11)]
 PHONG_THUC_HANH = [f"LAB{n:02d}" for n in range(1, 31)]
+
+
+def tao_phong():
+    """Tạo các phòng PHONG_LY_THUYET / PHONG_THUC_HANH nếu chưa có (sức chứa theo sĩ số lớp tối đa)."""
+    Room.objects.bulk_create(
+        [Room(ma=m, suc_chua=60, loai=LoaiPhong.LY_THUYET) for m in PHONG_LY_THUYET]
+        + [Room(ma=m, suc_chua=40, loai=LoaiPhong.THUC_HANH) for m in PHONG_THUC_HANH],
+        ignore_conflicts=True,
+    )
+
+
 TEN_HK = re.compile(r"Học kỳ (\d) - Năm học (\d{4}) - (\d{4})")
 
 
@@ -182,7 +195,7 @@ def tao_lop_hoc_ky(hk, nhom_hk, mon, gv_theo_khoa):
                 thu=thu,
                 tiet_bat_dau=dau,
                 so_tiet_moi_buoi=cuoi - dau + 1,
-                phong=phong,
+                phong_id=phong,
             )
             for thu, dau, cuoi in buoi
         )
@@ -199,6 +212,7 @@ class Command(BaseCommand):
         if Registration.objects.exists():
             raise CommandError("Đã có đăng ký — không nạp lại lớp học phần để khỏi đổi lịch của sinh viên.")
         nhom = doc_nhom()
+        tao_phong()
         mon = {c.ma_mon: c for c in Course.objects.all()}
         gv_theo_khoa = defaultdict(list)
         for g in TeacherProfile.objects.order_by("id"):
@@ -224,7 +238,7 @@ class Command(BaseCommand):
             return (s.thu, s.tiet_bat_dau, s.tiet_ket_thuc)
 
         for hk, ds in theo_hk.items():
-            for ten, khoa_cua in (("giảng viên", lambda lop, s: lop.giao_vien_id), ("phòng", lambda lop, s: s.phong)):
+            for ten, khoa_cua in (("giảng viên", lambda lop, s: lop.giao_vien_id), ("phòng", lambda lop, s: s.phong_id)):
                 theo = defaultdict(list)
                 for lop, lich in ds:
                     for s in lich:

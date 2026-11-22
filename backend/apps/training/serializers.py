@@ -16,6 +16,7 @@ from apps.training.models import (
     Faculty,
     Major,
     Prerequisite,
+    Room,
     Schedule,
     Semester,
     TrangThaiDung,
@@ -301,9 +302,26 @@ class SemesterWindowSerializer(serializers.Serializer):
     cua_so_dk_ket_thuc = serializers.DateTimeField()
 
 
+class RoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Room
+        fields = ["id", "ma", "suc_chua", "loai"]
+
+    def validate_ma(self, value):
+        return value.strip().upper()
+
+
+class _MaPhongField(serializers.SlugRelatedField):
+    """Nhận mã phòng không phân biệt hoa/thường (mã lưu chữ hoa)."""
+
+    def to_internal_value(self, data):
+        return super().to_internal_value(str(data).strip().upper())
+
+
 class ScheduleSerializer(serializers.ModelSerializer):
     tiet_ket_thuc = serializers.IntegerField(read_only=True)
     buoi = serializers.CharField(read_only=True)
+    phong = _MaPhongField(slug_field="ma", queryset=Room.objects.all())
 
     class Meta:
         model = Schedule
@@ -317,9 +335,6 @@ class ScheduleSerializer(serializers.ModelSerializer):
             "buoi",
             "phong",
         ]
-
-    def validate_phong(self, value):
-        return value.strip()
 
     def validate(self, attrs):
         lop = _gia_tri(self, attrs, "lop_hoc_phan")

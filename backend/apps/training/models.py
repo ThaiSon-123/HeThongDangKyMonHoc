@@ -254,6 +254,27 @@ class Buoi(models.TextChoices):
     TOI = "TOI", "Tối"
 
 
+class LoaiPhong(models.TextChoices):
+    LY_THUYET = "LY_THUYET", "Lý thuyết"
+    THUC_HANH = "THUC_HANH", "Thực hành"
+
+
+class Room(models.Model):
+    """Phòng học — `ma` lưu chữ hoa, là khóa mà Schedule.phong trỏ tới."""
+
+    ma = models.CharField(max_length=30, unique=True)
+    suc_chua = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    loai = models.CharField(max_length=20, choices=LoaiPhong.choices, default=LoaiPhong.LY_THUYET)
+
+    class Meta:
+        verbose_name = "Phòng học"
+        verbose_name_plural = "Phòng học"
+        ordering = ["ma"]
+
+    def __str__(self):
+        return self.ma
+
+
 class Schedule(models.Model):
     lop_hoc_phan = models.ForeignKey(
         ClassSection, on_delete=models.CASCADE, related_name="lich_hoc"
@@ -264,7 +285,10 @@ class Schedule(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(15)]
     )
     so_tiet_moi_buoi = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
-    phong = models.CharField(max_length=30)
+    # to_field="ma" + giữ tên cột: API vẫn trả/nhận mã phòng dạng chuỗi như trước.
+    phong = models.ForeignKey(
+        Room, to_field="ma", db_column="phong", on_delete=models.PROTECT, related_name="lich_hoc"
+    )
 
     class Meta:
         verbose_name = "Lịch học"

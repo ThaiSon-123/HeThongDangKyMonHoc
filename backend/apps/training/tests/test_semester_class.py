@@ -22,6 +22,7 @@ from apps.training.services import chuyen_trang_thai_lop_hang_ngay
 from core.factories import (
     ClassSectionFactory,
     CourseFactory,
+    RoomFactory,
     ScheduleFactory,
     SemesterFactory,
     StudentProfileFactory,
@@ -211,6 +212,7 @@ def test_lop_da_dong_khong_sua_duoc(pdt):
     lop = lop_co_lich(trang_thai=TrangThaiLop.DA_DONG)
     res = pdt.patch(f"{CLS}{lop.id}/", {"si_so_toi_da": 10})
     assert res.status_code == 409
+    RoomFactory(ma="X")
     assert (
         pdt.post(
             f"{SCH}",
@@ -320,6 +322,7 @@ def test_gia_han_nhap_diem_ghi_audit(pdt):
 
 
 def body_lich(lop, **kw):
+    RoomFactory(ma=kw.get("phong", "B1").upper())
     return {
         "lop_hoc_phan": lop.id,
         "thu": 3,
@@ -537,3 +540,19 @@ def test_task_celery_goi_service():
     assert classes_transition_daily()[0] >= 1
     lop.refresh_from_db()
     assert lop.trang_thai == TrangThaiLop.DANG_HOC
+
+
+def test_phong_hoc_ma_viet_hoa_xoa_khi_chua_co_lich(pdt):
+    res = pdt.post("/api/rooms/", {"ma": " lab07 ", "suc_chua": 40, "loai": "THUC_HANH"})
+    assert res.status_code == 201 and res.data["ma"] == "LAB07"
+    assert pdt.post("/api/rooms/", {"ma": "LAB07", "suc_chua": 40}).status_code == 400  # trùng mã
+    lich = ScheduleFactory(phong="LAB07")
+    assert pdt.delete(f"/api/rooms/{res.data['id']}/").status_code == 409
+    lich.delete()
+    assert pdt.delete(f"/api/rooms/{res.data['id']}/").status_code == 204
+
+
+def test_lich_phong_chua_co_bi_chan(pdt):
+    res = pdt.post(SCH, {"lop_hoc_phan": ClassSectionFactory().id, "thu": 3, "tiet_bat_dau": 1,
+                         "so_tiet_moi_buoi": 3, "phong": "KHONGCO"})
+    assert res.status_code == 400 and "phong" in res.data

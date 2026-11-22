@@ -12,6 +12,7 @@ from apps.training.models import (
     Curriculum,
     Faculty,
     Major,
+    Room,
     Schedule,
     Semester,
 )
@@ -122,6 +123,15 @@ class ClassSectionFactory(factory.django.DjangoModelFactory):
     si_so_toi_da = 60
 
 
+class RoomFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Room
+        django_get_or_create = ("ma",)
+
+    ma = "A101"
+    suc_chua = 60
+
+
 class ScheduleFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Schedule
@@ -130,4 +140,10 @@ class ScheduleFactory(factory.django.DjangoModelFactory):
     thu = 2
     tiet_bat_dau = 1
     so_tiet_moi_buoi = 3
-    phong = "A101"
+    phong = factory.SubFactory(RoomFactory)
+
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        if isinstance(kwargs["phong"], str):  # test cũ truyền mã phòng: tạo phòng nếu chưa có
+            kwargs["phong"] = RoomFactory(ma=kwargs["phong"].upper())
+        return super()._create(model_class, *args, **kwargs)

@@ -15,6 +15,7 @@ from apps.registration.models import Registration
 from apps.training.models import Schedule, TrangThaiDon, TrangThaiLop
 from core.factories import (
     ClassSectionFactory,
+    RoomFactory,
     ScheduleFactory,
     StudentProfileFactory,
     TeacherProfileFactory,
@@ -135,6 +136,7 @@ def test_them_lich_qua_api_sinh_buoi_xoa_lich_cuoi_bi_chan(login_as):
         thu=(),
         hoc_ky=_hoc_ky_tuong_lai(),
     )
+    RoomFactory(ma="R1")
     ok = pdt.post(
         "/api/schedules/",
         {"lop_hoc_phan": lop.id, "thu": 3, "tiet_bat_dau": 1, "so_tiet_moi_buoi": 3, "phong": "R1"},

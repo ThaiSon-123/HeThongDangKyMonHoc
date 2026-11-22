@@ -40,6 +40,7 @@ router.register("prerequisites", training.PrerequisiteViewSet, basename="prerequ
 router.register("semesters", training.SemesterViewSet, basename="semester")
 router.register("class-sections", training.ClassSectionViewSet, basename="class-section")
 router.register("schedules", training.ScheduleViewSet, basename="schedule")
+router.register("rooms", training.RoomViewSet, basename="room")
 router.register("tuition/config", tuition.TuitionConfigViewSet, basename="tuition-config")
 router.register("tuition/pricing", tuition.PricingViewSet, basename="tuition-pricing")
 router.register("tuition/discounts", tuition.DiscountViewSet, basename="tuition-discount")

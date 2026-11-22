@@ -18,6 +18,7 @@ from apps.training.models import (
     Faculty,
     Major,
     Prerequisite,
+    Room,
     Schedule,
     Semester,
     TrangThaiDung,
@@ -33,6 +34,7 @@ from apps.training.serializers import (
     GradeDeadlineSerializer,
     MajorSerializer,
     PrerequisiteSerializer,
+    RoomSerializer,
     ScheduleSerializer,
     SemesterSerializer,
     SemesterWindowSerializer,
@@ -272,6 +274,20 @@ class ClassSectionViewSet(_CoXoaViewSet):
         return Response(self.get_serializer(lop).data)
 
 
+class RoomViewSet(_CoXoaViewSet):
+    audit_model = "Room"
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer
+    filterset_fields = ["loai"]
+    search_fields = ["ma"]
+    ordering_fields = ["id", "ma", "suc_chua"]
+
+    def perform_destroy(self, instance):
+        if instance.lich_hoc.exists():
+            raise business_error("TRANG_THAI_KHONG_HOP_LE", "Phòng đang có lịch học, không xóa được.")
+        super().perform_destroy(instance)
+
+
 def _mo_ta(lich):
     thu = "Chủ nhật" if lich.thu == 8 else f"Thứ {lich.thu}"
     return f"{thu}, tiết {lich.tiet_bat_dau}–{lich.tiet_ket_thuc}, phòng {lich.phong}"
@@ -282,7 +298,7 @@ class ScheduleViewSet(_CoXoaViewSet):
     queryset = Schedule.objects.select_related("lop_hoc_phan")
     serializer_class = ScheduleSerializer
     filterset_fields = ["lop_hoc_phan", "thu"]
-    search_fields = ["phong", "lop_hoc_phan__ma_lop"]
+    search_fields = ["phong__ma", "lop_hoc_phan__ma_lop"]
     ordering_fields = ["id", "thu", "tiet_bat_dau"]
 
     def perform_create(self, serializer):

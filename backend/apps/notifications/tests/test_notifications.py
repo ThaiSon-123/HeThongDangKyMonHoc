@@ -9,6 +9,7 @@ from apps.registration.models import Registration
 from apps.training.models import TrangThaiLop
 from core.factories import (
     ClassSectionFactory,
+    RoomFactory,
     ScheduleFactory,
     StudentProfileFactory,
     TeacherProfileFactory,
@@ -244,6 +245,7 @@ def test_pdt_doi_lich_lop_da_mo_bao_sv_va_gv_cua_lop(login_as):
     sv = StudentProfileFactory()
     Registration.objects.create(sinh_vien=sv.user, lop_hoc_phan=lop)
     Notification.objects.all().delete()
+    RoomFactory(ma="B2"), RoomFactory(ma="C3")
 
     assert pdt.patch(f"/api/schedules/{lich.id}/", {"phong": "B2"}).status_code == 200
     n = Notification.objects.get()
@@ -274,5 +276,6 @@ def test_lop_ke_hoach_doi_lich_khong_bao(login_as):
     pdt = login_as(UserFactory(role=Role.PHONG_DAO_TAO))
     lop = ClassSectionFactory()  # KE_HOACH
     lich = ScheduleFactory(lop_hoc_phan=lop)
+    RoomFactory(ma="Z9")
     assert pdt.patch(f"/api/schedules/{lich.id}/", {"phong": "Z9"}).status_code == 200
     assert Notification.objects.count() == 0
