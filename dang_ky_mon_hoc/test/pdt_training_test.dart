@@ -415,6 +415,12 @@ void main() {
         'GET /class-sections/': (_) => reply(200, pageOf([lop(tt: tt)])),
         'GET /class-sections/3/': (_) => reply(200, lop(tt: tt, lich: lichDs)),
         'GET /semesters/': (_) => reply(200, pageOf([hocKy()])),
+        'GET /rooms/': (_) => reply(
+          200,
+          pageOf([
+            {'id': 7, 'ma': 'A101', 'suc_chua': 60, 'loai': 'LY_THUYET'},
+          ]),
+        ),
         'GET /registrations/': (_) => reply(
           200,
           pageOf([
@@ -459,7 +465,11 @@ void main() {
       await tapText(t, 'Thêm buổi học');
       await tapText(t, 'Thứ 2');
       await tapText(t, 'Chủ nhật');
-      await enterField(t, 'Phòng', 'A101');
+      await enterField(t, 'Phòng', 'A1');
+      await t.pumpAndSettle();
+      await tapText(t, 'A101 · 60 chỗ', index: 0);
+      expect(api.queries['GET /rooms/'], containsPair('cho_lop', 3));
+      expect(api.queries['GET /rooms/'], containsPair('thu', 8));
       await tapText(t, 'Thêm lịch');
       expect(api.bodies['POST /schedules/'], {
         'thu': 8,

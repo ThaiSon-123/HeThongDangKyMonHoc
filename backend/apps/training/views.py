@@ -1,8 +1,9 @@
 """API dữ liệu đào tạo — chỉ PĐT (PDT-02..09, ma trận quyền mục 9)."""
 
 import django_filters
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -281,6 +282,42 @@ class RoomViewSet(_CoXoaViewSet):
     filterset_fields = ["loai"]
     search_fields = ["ma"]
     ordering_fields = ["id", "ma", "suc_chua"]
+
+    class _ChoLich(serializers.Serializer):
+        cho_lop = serializers.PrimaryKeyRelatedField(queryset=ClassSection.objects.all())
+        thu = serializers.IntegerField()
+        tiet_bat_dau = serializers.IntegerField()
+        so_tiet_moi_buoi = serializers.IntegerField(min_value=1)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("cho_lop", int, description="Chỉ phòng đủ chỗ cho lớp và còn trống giờ (kèm thu, tiết)"),
+            OpenApiParameter("thu", int),
+            OpenApiParameter("tiet_bat_dau", int),
+            OpenApiParameter("so_tiet_moi_buoi", int),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action != "list" or "cho_lop" not in self.request.query_params:
+            return qs
+        p = self._ChoLich(data=self.request.query_params)
+        p.is_valid(raise_exception=True)
+        lop, thu, bat_dau = (p.validated_data[k] for k in ("cho_lop", "thu", "tiet_bat_dau"))
+        ket_thuc = bat_dau + p.validated_data["so_tiet_moi_buoi"] - 1
+        # Cùng điều kiện giao tiết với services.xung_dot_lich.
+        ban = (
+            Schedule.objects.filter(
+                lop_hoc_phan__hoc_ky_id=lop.hoc_ky_id, thu=thu, tiet_bat_dau__lte=ket_thuc
+            )
+            .annotate(kt=F("tiet_bat_dau") + F("so_tiet_moi_buoi") - 1)
+            .filter(kt__gte=bat_dau)
+            .values("phong_id")
+        )
+        return qs.filter(suc_chua__gte=lop.si_so_toi_da).exclude(ma__in=ban)
 
     def perform_destroy(self, instance):
         if instance.lich_hoc.exists():

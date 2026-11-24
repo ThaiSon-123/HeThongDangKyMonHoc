@@ -106,9 +106,19 @@ class SelectSpec extends FieldSpec {
     this.dependsOn = const [],
     this.queryOf,
     this.hint = 'Gõ để tìm…',
+    this.valueOf,
+    this.queryOfValues,
   });
 
+  /// Như [queryOf] nhưng đọc giá trị các ô khác (vd thứ/tiết của lịch để lọc phòng trống).
+  /// Nhớ khai [dependsOn] các ô đó để đổi giá trị thì ô này bị xóa chọn.
+  final Map<String, Object?> Function(Map<String, Object?> values)?
+  queryOfValues;
+
   final String path;
+
+  /// Giá trị gửi lên từ lựa chọn; mặc định `id` (vd phòng học gửi `ma`).
+  final Object? Function(Json option)? valueOf;
   final String Function(Json option) labelOf;
   final List<String> dependsOn;
   final Map<String, Object?> Function(Map<String, Json?> selected)? queryOf;
@@ -194,7 +204,10 @@ class _EntityDialogState extends ConsumerState<_EntityDialog> {
           _values[s.key] = init[s.key];
         case SelectSpec():
           // Tạo mới có thể đặt sẵn lựa chọn qua initialSelected (vd chọn tài khoản từ chip).
-          _values[s.key] = init[s.key] ?? widget.initialSelected[s.key]?.id;
+          final sel = widget.initialSelected[s.key];
+          _values[s.key] =
+              init[s.key] ??
+              (sel == null ? null : (s.valueOf?.call(sel) ?? sel.id));
           _selected[s.key] = widget.initialSelected[s.key];
       }
     }
@@ -213,16 +226,22 @@ class _EntityDialogState extends ConsumerState<_EntityDialog> {
   void _onSelect(SelectSpec s, Json? option) {
     setState(() {
       _selected[s.key] = option;
-      _values[s.key] = option?.id;
+      _values[s.key] = option == null
+          ? null
+          : (s.valueOf?.call(option) ?? option.id);
       _errors.remove(s.key);
-      // Ô phụ thuộc vào ô này bị xóa chọn (lọc liên động).
-      for (final d in widget.specs.whereType<SelectSpec>()) {
-        if (d.dependsOn.contains(s.key)) {
-          _selected[d.key] = null;
-          _values[d.key] = null;
-        }
-      }
+      _clearDependents(s.key);
     });
+  }
+
+  /// Ô phụ thuộc vào ô [key] bị xóa chọn (lọc liên động).
+  void _clearDependents(String key) {
+    for (final d in widget.specs.whereType<SelectSpec>()) {
+      if (d.dependsOn.contains(key)) {
+        _selected[d.key] = null;
+        _values[d.key] = null;
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -307,7 +326,12 @@ class _EntityDialogState extends ConsumerState<_EntityDialog> {
           value: _values[s.key]!,
           options: s.options,
           helper: s.helper,
-          onChanged: locked ? null : (v) => setState(() => _values[s.key] = v),
+          onChanged: locked
+              ? null
+              : (v) => setState(() {
+                  _values[s.key] = v;
+                  _clearDependents(s.key);
+                }),
         );
       case DateSpec():
         return _PickerField(
@@ -336,7 +360,10 @@ class _EntityDialogState extends ConsumerState<_EntityDialog> {
           },
         );
       case SelectSpec():
-        final query = s.queryOf?.call(_selected) ?? const {};
+        final query = {
+          ...?s.queryOf?.call(_selected),
+          ...?s.queryOfValues?.call(_values),
+        };
         return ApiSelect(
           // Đổi bộ lọc / ô cha → dựng lại ô để xóa chữ đang gõ và tải gợi ý mới. Không gắn id của
           // chính ô: gõ vào ô đã chọn sẵn (bỏ chọn) mà dựng lại thì mất chữ vừa gõ.

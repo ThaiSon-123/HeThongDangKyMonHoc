@@ -568,3 +568,23 @@ def test_si_so_toi_da_khong_vuot_suc_chua_phong(pdt):
     assert pdt.patch(f"/api/rooms/{lich.phong.id}/", {"suc_chua": 49}).status_code == 400
     assert pdt.patch(f"/api/rooms/{lich.phong.id}/", {"suc_chua": 80}).status_code == 200
     assert pdt.patch(f"{CLS}{lop.id}/", {"si_so_toi_da": 70}).status_code == 200
+
+
+def test_goi_y_phong_chi_hien_phong_du_cho_va_con_trong(pdt):
+    hk = SemesterFactory()
+    lop = ClassSectionFactory(hoc_ky=hk, si_so_toi_da=50)
+    for ma, sc in (("NHO", 30), ("BAN", 60), ("RANH", 60)):
+        RoomFactory(ma=ma, suc_chua=sc)
+    # BAN có lớp khác cùng học kỳ học thứ 2 tiết 1–3
+    ScheduleFactory(lop_hoc_phan=ClassSectionFactory(hoc_ky=hk), phong="BAN")
+    ScheduleFactory(lop_hoc_phan=ClassSectionFactory(), phong="RANH")  # học kỳ khác: không tính
+
+    def ma(**q):
+        res = pdt.get("/api/rooms/", {"cho_lop": lop.id, "page_size": 100, **q})
+        assert res.status_code == 200
+        return {r["ma"] for r in res.data["results"]} & {"NHO", "BAN", "RANH"}
+
+    assert ma(thu=2, tiet_bat_dau=3, so_tiet_moi_buoi=2) == {"RANH"}  # tiết 3–4 giao 1–3
+    assert ma(thu=2, tiet_bat_dau=4, so_tiet_moi_buoi=2) == {"BAN", "RANH"}  # kề nhau: trống
+    assert ma(thu=3, tiet_bat_dau=1, so_tiet_moi_buoi=3) == {"BAN", "RANH"}
+    assert pdt.get("/api/rooms/", {"cho_lop": lop.id}).status_code == 400  # thiếu giờ

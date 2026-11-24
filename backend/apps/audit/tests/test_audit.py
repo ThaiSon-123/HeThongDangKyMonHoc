@@ -129,3 +129,16 @@ def test_moi_viewset_ghi_deu_co_audit():
             thieu.append(viewset.__name__)
     assert thieu == [], f"ViewSet ghi chưa có audit: {thieu}"
     assert inspect.isclass(AuditLogMixin)
+
+
+def test_moi_doi_tuong_dao_tao_pdt_ghi_deu_nam_trong_scope_training():
+    """Thêm ViewSet đào tạo mới mà quên SCOPE_TRAINING thì PĐT không xem được nhật ký của nó."""
+    from apps.audit.models import SCOPE_TRAINING
+    from apps.training import views
+
+    thieu = {
+        v.audit_model
+        for v in vars(views).values()
+        if isinstance(v, type) and getattr(v, "audit_model", None)
+    } - SCOPE_TRAINING
+    assert not thieu

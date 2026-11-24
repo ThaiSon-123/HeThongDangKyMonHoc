@@ -26,6 +26,7 @@ SCOPE_TRAINING = {
     "Semester",
     "ClassSection",
     "Schedule",
+    "Room",
     "Registration",
     "AttendanceSession",
     "Attendance",

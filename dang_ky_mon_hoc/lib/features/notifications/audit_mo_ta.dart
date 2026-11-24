@@ -13,6 +13,7 @@ const tenDoiTuong = {
   'Semester': 'Học kỳ',
   'ClassSection': 'Lớp học phần',
   'Schedule': 'Lịch học',
+  'Room': 'Phòng học',
   'Registration': 'Đăng ký',
   'AttendanceSession': 'Buổi điểm danh',
   'AttendanceRequest': 'Yêu cầu sửa điểm danh',

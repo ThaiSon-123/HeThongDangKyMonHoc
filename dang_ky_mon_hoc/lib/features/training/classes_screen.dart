@@ -428,11 +428,31 @@ class _ClassDetailDialogState extends ConsumerState<ClassDetailDialog> {
     for (var i = 1; i <= 15; i++) (i, 'Tiết $i'),
   ];
 
-  static final _lichSpecs = <FieldSpec>[
+  static String _phongLabel(Json p) =>
+      '${p.str('ma')} · ${p.num0('suc_chua')} chỗ';
+  static Object? _maPhong(Json p) => p.str('ma');
+
+  List<FieldSpec> get _lichSpecs => [
     ChoiceSpec('thu', 'Thứ', _thu, half: true),
     ChoiceSpec('tiet_bat_dau', 'Tiết bắt đầu', _tiet, half: true),
     ChoiceSpec('so_tiet_moi_buoi', 'Số tiết/buổi', _soTiet, half: true),
-    const TextSpec('phong', 'Phòng', half: true),
+    SelectSpec(
+      'phong',
+      'Phòng',
+      '/rooms/',
+      _phongLabel,
+      valueOf: _maPhong,
+      half: true,
+      hint: 'Gõ mã phòng…',
+      dependsOn: const ['thu', 'tiet_bat_dau', 'so_tiet_moi_buoi'],
+      queryOfValues: (v) => {
+        'cho_lop': widget.classId,
+        'thu': v['thu'],
+        'tiet_bat_dau': v['tiet_bat_dau'],
+        'so_tiet_moi_buoi': v['so_tiet_moi_buoi'],
+      },
+      helper: 'Chỉ hiện phòng đủ chỗ cho lớp và còn trống giờ này.',
+    ),
   ];
 
   Future<void> _addSchedule() async {
