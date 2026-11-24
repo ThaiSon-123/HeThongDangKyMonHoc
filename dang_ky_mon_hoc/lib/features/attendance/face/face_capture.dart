@@ -1,4 +1,3 @@
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -185,16 +184,17 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
             'Chưa kiểm tra được khung (mạng chậm?). Bạn có thể bấm Chụp ngay.';
       }
       if (!mounted) throw _DaDong();
+      dat = ok ? dat + 1 : 0;
       setState(() {
-        _goiY = goiY;
+        // Đạt lần đầu: nhắc giữ yên, chờ rồi chụp khung kế tiếp (đạt tiếp mới lấy).
+        _goiY = dat == 1 ? 'Giữ yên… sắp chụp' : goiY;
         _mau = ok ? AppColors.success : AppColors.danger;
       });
-      dat = ok ? dat + 1 : 0;
       if (dat >= 2 || (han != null && dongHo.elapsed > han)) {
         HapticFeedback.mediumImpact(); // rung khi chụp
         return b;
       }
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+      await Future<void>.delayed(Duration(milliseconds: dat == 1 ? 800 : 250));
     }
   }
 
@@ -294,96 +294,107 @@ class _FaceCaptureScreenState extends ConsumerState<FaceCaptureScreen> {
               ? _ThongBao(_loi!)
               : ketQua != null
               ? KetQuaQuetView(ketQua: ketQua, onXong: _xong)
-              : xong
-              ? _XemLai(
-                  anh: _anh,
-                  onChupLai: () {
-                    setState(_anh.clear);
-                    _quetDangKy();
-                  },
-                  onDung: () => Navigator.of(context).pop(List.of(_anh)),
-                )
               : _cam == null
               ? const Center(child: CircularProgressIndicator())
-              : Column(
+              // Màn xem lại phủ lên preview, không gỡ preview khỏi cây: trên web gỡ ra là video bị dừng,
+              // "Chụp lại" sẽ đơ camera.
+              : Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Expanded(
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Center(child: CameraPreview(_cam!)),
-                          IgnorePointer(
-                            child: TweenAnimationBuilder<Color?>(
-                              tween: ColorTween(end: _mau),
-                              duration: const Duration(milliseconds: 250),
-                              builder: (_, c, _) => CustomPaint(
-                                painter: _OvalPainter(c ?? Colors.white),
+                    Column(
+                      children: [
+                        Expanded(
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Center(child: CameraPreview(_cam!)),
+                              IgnorePointer(
+                                child: TweenAnimationBuilder<Color?>(
+                                  tween: ColorTween(end: _mau),
+                                  duration: const Duration(milliseconds: 250),
+                                  builder: (_, c, _) => CustomPaint(
+                                    painter: _OvalPainter(c ?? Colors.white),
+                                  ),
+                                ),
                               ),
-                            ),
+                              IgnorePointer(child: HuongQuay(tuThe: _tuThe)),
+                              if (hetHan != null && !_dangGui)
+                                Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: DemNguoc(hetHan: hetHan),
+                                ),
+                              if (_dangGui)
+                                const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                            ],
                           ),
-                          IgnorePointer(child: HuongQuay(tuThe: _tuThe)),
-                          if (hetHan != null && !_dangGui)
-                            Positioned(
-                              top: 12,
-                              right: 12,
-                              child: DemNguoc(hetHan: hetHan),
-                            ),
-                          if (_dangGui)
-                            const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              if (_laChuoi && _buocSo > 0 && !_dangGui) ...[
+                                TienDoBuoc(
+                                  buoc: _buocSo,
+                                  tong: widget.chuoi!.length,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              Text(
+                                _loiNhac ?? '',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            ),
-                        ],
-                      ),
+                              const SizedBox(height: 6),
+                              Semantics(
+                                liveRegion: true,
+                                child: Text(
+                                  _goiY,
+                                  style: TextStyle(
+                                    color: _mau == Colors.white
+                                        ? Colors.white70
+                                        : _mau == AppColors.success
+                                        ? Colors.greenAccent
+                                        : Colors.redAccent,
+                                    fontSize: 16,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              if (!_laChuoi && _dangQuet) ...[
+                                const SizedBox(height: 12),
+                                AppButton(
+                                  label: 'Chụp ngay',
+                                  outlined: true,
+                                  onPressed: () => _chupNgay = true,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          if (_laChuoi && _buocSo > 0 && !_dangGui) ...[
-                            TienDoBuoc(
-                              buoc: _buocSo,
-                              tong: widget.chuoi!.length,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                          Text(
-                            _loiNhac ?? '',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 6),
-                          Semantics(
-                            liveRegion: true,
-                            child: Text(
-                              _goiY,
-                              style: TextStyle(
-                                color: _mau == Colors.white
-                                    ? Colors.white70
-                                    : _mau == AppColors.success
-                                    ? Colors.greenAccent
-                                    : Colors.redAccent,
-                                fontSize: 16,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          if (!_laChuoi && _dangQuet) ...[
-                            const SizedBox(height: 12),
-                            AppButton(
-                              label: 'Chụp ngay',
-                              outlined: true,
-                              onPressed: () => _chupNgay = true,
-                            ),
-                          ],
-                        ],
+                    if (xong)
+                      ColoredBox(
+                        color: Colors.black,
+                        child: _XemLai(
+                          anh: _anh,
+                          onChupLai: () {
+                            setState(_anh.clear);
+                            _quetDangKy();
+                          },
+                          onDung: () =>
+                              Navigator.of(context).pop(List.of(_anh)),
+                        ),
                       ),
-                    ),
                   ],
                 ),
         ),
