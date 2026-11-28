@@ -39,16 +39,16 @@ Vì sao không train mạng CNN từ đầu: chỉ có 5 người, mạng sâu s
 
 | Nguồn | Vai trò | Ước lượng số ảnh |
 |---|---|---|
-| Video 5 người (P1–P5), 3 buổi | Các lớp cần nhận diện. Buổi 1–2 để train, buổi 3 để test | Khoảng 60–80 ảnh mỗi người mỗi buổi, tổng khoảng 1.000 ảnh |
-| LFW (bộ công khai) | Lớp `NGUOI_LA`, dạy mô hình từ chối người ngoài lớp | Khoảng 400 ảnh của khoảng 150 người |
-| Video giả mạo (tuỳ chọn) | Đánh giá MiniFASNetV2 chống ảnh và màn hình | Khoảng 30 ảnh mỗi kiểu mỗi người |
+| Video 5 người (P1–P5), 3 buổi | Các lớp cần nhận diện. Buổi 1–2 để train, buổi 3 để test | Thực tế: 52–155 ảnh mỗi người mỗi buổi, tổng 1.450 ảnh |
+| LFW (bộ công khai) | Lớp `NGUOI_LA`, dạy mô hình từ chối người ngoài lớp | Khoảng 200 ảnh của 150 người (nhiều người trong LFW chỉ có 1 ảnh) |
+| Video giả mạo (tuỳ chọn) | Đánh giá MiniFASNetV2 + MiniFASNetV1SE chống ảnh và màn hình | Khoảng 30 ảnh mỗi kiểu mỗi người |
 
 ### 0.3 Ai làm gì
 
 | Việc | Ai | Mục |
 |---|---|---|
 | Chuẩn bị, quay video, tải LFW, chép file | Bạn | 1–5 |
-| Viết notebook, chạy thử bằng dữ liệu giả lập | Claude | — |
+| Viết notebook, chạy thử trên dữ liệu đã thu | Claude | — |
 | Cài môi trường, chạy notebook với dữ liệu thật | Bạn | 6 |
 | Viết báo cáo Word | Bạn | 8–9 |
 
@@ -158,7 +158,7 @@ Quy tắc:
 
 ## 3. Quay video giả mạo (nên có)
 
-Dùng để đánh giá mô hình chống giả mạo MiniFASNetV2 mà hệ thống đang dùng. Mỗi người quay **3 clip, mỗi clip khoảng 10 giây** bằng camera trước điện thoại A:
+Dùng để đánh giá mô hình chống giả mạo mà hệ thống đang dùng (trung bình MiniFASNetV2 và MiniFASNetV1SE). Mỗi người quay **3 clip, mỗi clip khoảng 10 giây** bằng camera trước điện thoại A:
 
 | File | Cách làm |
 |---|---|
@@ -211,7 +211,7 @@ Mở PowerShell tại thư mục repo, chạy lệnh đếm số video của t�
 Get-ChildItem ml_report\du_lieu\video -Recurse -File | Group-Object { $_.Directory.Parent.Name + '/' + $_.Directory.Name } | Select-Object Name, Count
 ```
 
-Kết quả đúng: mỗi dòng `P1/buoi1`, `P1/buoi2`, `P1/buoi3`… có `Count` bằng **2**, và `P1/gia_mao` có 3 (nếu làm).
+Kết quả đúng: mỗi dòng `P1/buoi1`, `P1/buoi2`, `P1/buoi3`… có `Count` bằng **2**, và `P1/gia_mao` có 2–3 (nếu làm).
 
 ---
 
@@ -233,7 +233,7 @@ Kết quả đúng: mỗi dòng `P1/buoi1`, `P1/buoi2`, `P1/buoi3`… có `Count
    Nếu sau khi giải nén bị lồng hai lớp `lfw/lfw/…` thì bỏ bớt một lớp.
 
 ### 5.2 Notebook làm gì với LFW
-- Chọn ngẫu nhiên (seed cố định) khoảng **150 người, mỗi người tối đa 3 ảnh**, được khoảng 400 ảnh.
+- Chọn ngẫu nhiên (seed cố định) khoảng **150 người, mỗi người tối đa 3 ảnh**, được khoảng 200 ảnh (phần lớn người trong LFW chỉ có 1 ảnh).
 - Chia **theo người**: 70% số người vào train, 30% vào test. Một người lạ không xuất hiện ở cả hai bên, để đo đúng khả năng từ chối người **chưa từng gặp**.
 
 ### 5.3 Ghi lại để trích dẫn
@@ -252,7 +252,7 @@ cd D:\HeThongDangKyMonHoc\ml_report
 ```
 
 ```powershell
-python -m venv .venv
+py -3.12 -m venv .venv
 ```
 
 ```powershell
@@ -263,25 +263,31 @@ python -m venv .venv
 Notebook dùng lại mô hình của backend trong `backend/face_models/`. Cần có:
 - [ ] `face_detection_yunet_2023mar.onnx`
 - [ ] `w600k_r50.onnx`
-- [ ] `MiniFASNetV2.onnx` (cho phần giả mạo)
+- [ ] `MiniFASNetV2.onnx` và `MiniFASNetV1SE.onnx` (chống giả mạo, app lấy trung bình hai mô hình)
 
-Máy hiện đã có đủ 3 file. Thiếu thì tải lại theo `backend/face_models/README.md`.
+Máy hiện đã có đủ 4 file. Thiếu thì tải lại theo `backend/face_models/README.md`.
 
 ### 6.3 Mở notebook
-- **VS Code**: mở `ml_report/train_danh_gia_khuon_mat.ipynb` → góc phải trên bấm **Select Kernel** → chọn `.venv`.
+Có 2 notebook, chạy theo thứ tự:
+
+| Notebook | Làm gì | Thời gian |
+|---|---|---|
+| `01_trich_dac_trung.ipynb` | Cắt khung, tìm mặt, trích vector ArcFace → `dataset_mat.csv`; thống kê, histogram, t-SNE | 5–15 phút lần đầu |
+| `02_train_danh_gia.ipynb` | Chia train/test, train và so sánh các mô hình (cosine với 2 ngưỡng, k-NN, MLP, SVM), đánh giá SVM, chống giả mạo | Khoảng nửa phút |
+
+- **VS Code**: mở notebook trong `ml_report/` → góc phải trên bấm **Select Kernel** → chọn `.venv`.
 - **Hoặc trình duyệt**:
   ```powershell
   .venv\Scripts\jupyter notebook
   ```
 
 ### 6.4 Chạy
-1. Ô **Cấu hình** đầu notebook: đổi `DU_LIEU_GIA_LAP = True` thành `False`.
-2. Bấm **Run All**.
-3. Lần đầu mất khoảng **5–15 phút** (trích đặc trưng trên CPU). Các lần sau notebook dùng lại `dataset_mat.csv` đã lưu, chỉ mất vài giây. Muốn trích lại từ đầu thì xoá file đó.
+1. Mở `01_trich_dac_trung.ipynb`, bấm **Run All**. Chưa có LFW thì vẫn chạy, chỉ thiếu lớp `NGUOI_LA`. Các lần sau notebook dùng lại `dataset_mat.csv` đã lưu; quay thêm video thì xoá file đó để trích lại.
+2. Mở `02_train_danh_gia.ipynb`, bấm **Run All**. Muốn thử tham số mô hình khác thì chỉ cần chạy lại notebook này.
 
 ### 6.5 Kiểm tra kết quả chạy
-- [ ] Ô **"Thống kê ảnh"**: mỗi người, mỗi buổi có **từ 40 ảnh** trở lên. Thiếu thì xem lý do ở ô "Ảnh bị loại" và quay bổ sung.
-- [ ] Ô **"Ảnh bị loại"**: tỉ lệ loại dưới khoảng 30%. Cao hơn nghĩa là video mờ hoặc mặt quá nhỏ.
+- [ ] Notebook 1, ô **"Thống kê ảnh"**: mỗi người, mỗi buổi có **từ 40 ảnh** trở lên. Thiếu thì xem lý do ở ô "Ảnh bị loại" và quay bổ sung.
+- [ ] Ô **"Ảnh bị loại"**: tỉ lệ loại dưới khoảng 30%. Cao hơn nghĩa là video mờ, quá tối, mặt quá nhỏ hoặc bị che. Ô này ghi rõ lý do theo từng người, từng buổi.
 - [ ] Không có ô nào báo lỗi đỏ.
 - [ ] Thư mục `ml_report/ket_qua/` có đủ file ở mục 7.
 
@@ -291,7 +297,7 @@ Trong lúc chạy, chụp lại (dùng cho phần **ảnh chụp kết quả ch�
 - [ ] Ô cắt video đang chạy, thanh tiến độ.
 - [ ] Vài dòng đầu `dataset_mat.csv`.
 - [ ] Ô GridSearch in ra tham số tốt nhất.
-- [ ] Bảng so sánh 4 mô hình.
+- [ ] Bảng so sánh các mô hình.
 - [ ] Ô dự đoán thử một ảnh test: ảnh + nhãn dự đoán + xác suất.
 
 ### 6.7 Lỗi thường gặp
@@ -299,9 +305,10 @@ Trong lúc chạy, chụp lại (dùng cho phần **ảnh chụp kết quả ch�
 | Thông báo | Nguyên nhân | Cách sửa |
 |---|---|---|
 | `No module named ...` | Chưa chọn kernel `.venv` hoặc chưa cài | Làm lại 6.1, chọn đúng kernel |
-| `FileNotFoundError ... .onnx` | Thiếu mô hình | Làm 6.2 |
-| "Không tìm thấy video" | Sai tên thư mục | Kiểm tra lại mục 4.1, chạy lệnh ở 4.2 |
-| Một người có 0 ảnh ở một buổi | Video hỏng hoặc mặt quá nhỏ | Quay lại buổi đó |
+| "Thiếu mô hình ONNX …" | Thiếu file trong `backend/face_models/` | Làm 6.2 |
+| "Không tìm thấy video …" | Sai tên thư mục | Kiểm tra lại mục 4.1, chạy lệnh ở 4.2 |
+| "Chưa có ket_qua/dataset_mat.csv …" (notebook 2) | Chưa chạy notebook 1 | Chạy `01_trich_dac_trung.ipynb` trước |
+| Một người có 0 ảnh ở một buổi | Video hỏng, quá tối, mặt quá nhỏ hoặc bị che (khẩu trang) | Xem ô "Ảnh bị loại", quay lại clip đó |
 
 ---
 
@@ -313,6 +320,7 @@ Tất cả nằm trong `ml_report/ket_qua/`:
 |---|---|
 | `dataset_mat.csv` | **Dataset chính.** Mỗi dòng là một ảnh khuôn mặt (giải thích các cột ở mục 8.3) |
 | `anh_bi_loai.csv` | Khung hình bị loại và lý do |
+| `gia_mao.csv` | Các khung từ video giả mạo: đặc điểm ảnh và điểm "mặt thật" (notebook 2 dùng để tính APCER) |
 | `thong_ke.csv` | MIN, MAX, AVERAGE, COUNT, độ lệch chuẩn của từng cột số |
 | `so_anh_moi_nguoi.png` | Biểu đồ cột: số ảnh của từng người theo buổi |
 | `phan_bo_do_sang.png`, `phan_bo_do_net.png`, `phan_bo_goc_mat.png` | Histogram từng đặc điểm ảnh |
@@ -321,13 +329,15 @@ Tất cả nằm trong `ml_report/ket_qua/`:
 | `anh_can_chinh.png` | Ảnh trước và sau căn chỉnh 112×112 |
 | `chia_du_lieu.csv` | Số ảnh mỗi lớp trong tập train và tập test |
 | `gridsearch_svm.csv` | Kết quả thử các tham số SVM |
-| `bang_so_sanh.csv` | Accuracy, Precision, Recall, F1, FAR, FRR, thời gian của 4 mô hình |
+| `bang_so_sanh.csv` | Accuracy, Precision, Recall, F1, FAR, FRR, thời gian của các mô hình (cosine 0,5, cosine τ từ train, k-NN, MLP, SVM) |
+| `nguoi_la_cung_dieu_kien.csv` | FAR khi người lạ là một bạn quay cùng điều kiện (bỏ lần lượt từng người P1…P5 khỏi tập train). Sát với điểm danh hộ thật hơn FAR trên LFW |
 | `bao_cao_phan_loai_svm.csv` | Precision, Recall, F1 của từng người |
 | `ma_tran_nham_lan_svm.png` | Ma trận nhầm lẫn 6×6 của SVM |
 | `roc.png` | Đường ROC và AUC |
 | `far_frr.png` | FAR và FRR theo ngưỡng τ, đánh dấu EER và ngưỡng đã chọn |
 | `anh_doan_sai.png` | Các ảnh test bị đoán sai kèm nhãn thật và nhãn dự đoán |
-| `chong_gia_mao.png`, `chong_gia_mao.csv` | Phân bố điểm "mặt thật", APCER, BPCER, ACER (nếu có video giả mạo) |
+| `chong_gia_mao.png`, `chong_gia_mao.csv` | Phân bố điểm "mặt thật", APCER, BPCER, ACER theo từng khung (nếu có video giả mạo) |
+| `chong_gia_mao_theo_luot.png`, `chong_gia_mao_theo_luot.csv` | APCER, BPCER, ACER theo **lượt điểm danh** như app (6 khung, min của 3 khung nét nhất) ở nhiều ngưỡng. Dùng số này khi nói về hệ thống thật |
 | `so_lieu_bao_cao.txt` | Tóm tắt mọi con số cần điền vào báo cáo |
 | `svm.pkl` | Mô hình đã train |
 
@@ -367,7 +377,7 @@ Mẫu yêu cầu: bao nhiêu trường, kiểu dữ liệu, ý nghĩa từng tr�
 | `do_net` | Số thực ≥ 0 | Phương sai Laplacian (càng lớn càng nét) | Loại ảnh nhoè; phân tích lỗi |
 | `goc_mat` | Số thực (âm: quay một bên, dương: bên kia) | Ước lượng góc quay ngang của đầu | Kiểm tra dữ liệu có đủ góc nghiêng |
 | `rong_mat` | Số thực (pixel) | Chiều rộng khung mặt | Kiểm tra khoảng cách tới camera |
-| `diem_that` | Số thực 0–1 | Điểm "mặt thật" của MiniFASNetV2 | Phần chống giả mạo |
+| `diem_that` | Số thực 0–1 | Điểm "mặt thật": trung bình MiniFASNetV2 và MiniFASNetV1SE, như app | Phần chống giả mạo |
 | `e0` … `e511` | 512 số thực, `float32` | Vector đặc trưng ArcFace, chuẩn hoá L2 | **Đầu vào X của mô hình**. Viết chung một mục, không mô tả từng cột |
 
 Phần **trực quan hoá**: mỗi trường số kèm một biểu đồ và bảng MIN/MAX/AVERAGE/COUNT (`thong_ke.csv`). Với vector đặc trưng, dùng `histogram_cosine.png` và `tsne.png`. Nhận xét từng hình 2–3 câu: ví dụ cụm người nào tách rõ, cặp khác người có cosine phần lớn dưới bao nhiêu.
@@ -407,27 +417,27 @@ Gồm 3 phần:
 
 | Bước | Dữ liệu | Kiểu, kích thước |
 |---|---|---|
-| Đọc khung hình | Ảnh BGR | `uint8`, H × W × 3 (cạnh dài ≤ 1280) |
+| Đọc khung hình | Ảnh BGR | `uint8`, H × W × 3 (cạnh dài ≤ 1280; YuNet chạy trên bản thu nhỏ cạnh dài 640 vì mặt quá to làm YuNet mất tự tin) |
 | YuNet | Danh sách mặt | `float32`, N × 15 (x, y, w, h, 10 toạ độ điểm mốc, điểm tin cậy); giữ mặt lớn nhất, điểm ≥ 0,8 |
 | Căn chỉnh | Ảnh mặt | `uint8`, 112 × 112 × 3 |
 | Tiền xử lý | Tensor | `float32`, 1 × 3 × 112 × 112, RGB, (x − 127,5) / 127,5 |
 | ArcFace | Vector đặc trưng | `float32`, 1 × 512, chuẩn hoá L2 |
 | Tập dữ liệu | X, y, groups | X `float32` (n, 512); y chuỗi (n,); groups chuỗi (n,) |
 | SVM | Xác suất các lớp | `float64`, (n, 6) |
-| Quyết định | Nhãn | Lớp xác suất cao nhất; nếu < τ thì `NGUOI_LA` |
+| Quyết định | Nhãn | Danh tính P1…P5 có xác suất cao nhất; nếu xác suất đó < τ thì `NGUOI_LA`. τ chọn tại điểm FAR = FRR chỉ trên tập train, với người lạ là một bạn quay cùng điều kiện (bỏ lần lượt từng người khỏi tập train), không dùng LFW vì ảnh LFW quá dễ từ chối (cosine dùng 0,5 như app) |
 
-  Thêm công thức hàm mất mát ArcFace (lề góc *m* = 0,5, *s* = 64), bài toán tối ưu SVM lề mềm, kernel RBF, chiến lược một-đối-một, Platt scaling, GridSearchCV chia theo buổi với độ đo F1-macro. Mô tả ngắn 3 mô hình so sánh: cosine với ngưỡng 0,5 (như app), k-NN, MLP.
+  Thêm công thức hàm mất mát ArcFace (lề góc *m* = 0,5, *s* = 64), bài toán tối ưu SVM lề mềm, kernel RBF, chiến lược một-đối-một, Platt scaling, GridSearchCV chia theo buổi với độ đo F1-macro. Mô tả ngắn các mô hình so sánh: cosine với ngưỡng 0,5 (như app), cosine với ngưỡng chọn từ tập train, k-NN, MLP.
 - **Điểm mạnh**: hiệu quả với ít dữ liệu và số chiều cao, đặc trưng ArcFace học từ khoảng 600.000 danh tính, chạy CPU, train vài giây, có từ chối người lạ, lề lớn chống học thuộc.
 
 ### 8.8 Thực nghiệm và đánh giá
 - **Kết quả thực nghiệm**: dán ảnh chụp ở mục 6.6 và các hình ở mục 7, **mỗi hình có số hình và chú giải** (ví dụ "Hình 4.3 – Ma trận nhầm lẫn của SVM trên tập kiểm thử").
 - **Đánh giá mô hình**, trả lời đủ 3 câu mẫu hỏi:
-  - **Còn yếu ở điểm nào?** Xem `anh_doan_sai.png`: thường sai khi đeo khẩu trang, ngược sáng, quay quá nghiêng. Giả mạo bằng màn hình độ phân giải cao.
+  - **Còn yếu ở điểm nào?** Xem `anh_doan_sai.png`. Với dữ liệu hiện tại, SVM sai 17/526 ảnh test, **tất cả đều là từ chối nhầm chính chủ** (không nhận nhầm sang người khác), đều nằm ở clip 2 buổi 3 (đeo khẩu trang/mũ/ánh sáng vàng) của P1 và P3, và ảnh sai quay đầu nhiều hơn rõ rệt (trung vị |góc| 0,29 so với 0,07 ở ảnh đúng). Clip đeo khẩu trang của P5 không tìm được mặt nào. Chống giả mạo yếu nhất với **phát lại video** (lọt khoảng 15% số lượt), ảnh trên màn hình gần như không lọt. **Quan trọng:** so sánh FAR trên LFW với `nguoi_la_cung_dieu_kien.csv`. Người lạ trong LFW khác hẳn kiểu ảnh điện thoại nên rất dễ từ chối. Nếu chọn τ bằng người lạ LFW, τ của SVM chỉ còn 0,16 và SVM nhận nhầm 26% người lạ quay cùng điều kiện. Notebook đã chọn τ bằng người lạ cùng điều kiện ngay trong tập train: SVM còn nhận nhầm khoảng 8%, MLP khoảng 4%, nhưng riêng P5 vẫn bị nhận nhầm 17–38%, còn k-NN không cải thiện (xác suất của k-NN gần như chỉ 0 hoặc 1). Cosine với ngưỡng 0,5 của app nhận nhầm 0% nhưng từ chối nhầm chính chủ 15%; cosine với ngưỡng 0,35 chọn từ tập train cân bằng hơn: từ chối nhầm 4,3%, nhận nhầm người lạ cùng điều kiện 2%, accuracy 0,962. Vì vậy cách của app (cosine 1–1 với mẫu đăng ký) là hợp lý, chỉ có ngưỡng 0,5 đang chặt quá; bộ phân loại đã train nhận đúng sinh viên tương đương nhưng chặn người ngoài kém hơn.
   - **Dữ liệu đã đủ chưa?** Chưa: chỉ 5 người, 3 buổi, ít thiết bị; FAR đo trên số cặp nhỏ nên độ tin cậy thống kê hạn chế.
-  - **Cách cải thiện?** Thu thêm người và buổi; thêm ảnh khẩu trang; tăng cường dữ liệu (xoay, đổi sáng); thử thêm mô hình chống giả mạo thứ hai (MiniFASNetV1SE); dùng cosine 1–1 trong app thật để không phải train lại khi thêm sinh viên.
+  - **Cách cải thiện?** Thu thêm người và buổi; thêm ảnh khẩu trang; tăng cường dữ liệu (xoay, đổi sáng); chống phát lại video bằng chuỗi 2–3 động tác ngẫu nhiên thay vì một động tác (xem bảng chống giả mạo theo lượt); dùng cosine 1–1 trong app thật để không phải train lại khi thêm sinh viên; xem xét hạ `accept_threshold` của app từ 0,5 xuống khoảng 0,35 (ngưỡng chọn từ dữ liệu) sau khi thử thêm trên nhiều người hơn.
 
 ### 8.9 Kết luận và hướng phát triển
-- **Kết luận**: đã thu bộ dữ liệu 5 người (khoảng ___ ảnh), xây dựng quy trình trích đặc trưng, train và so sánh 4 mô hình, SVM đạt F1 = ___, FAR = ___ trên tập test độc lập; tích hợp nhận diện mặt vào hệ thống điểm danh có GPS.
+- **Kết luận**: đã thu bộ dữ liệu 5 người (khoảng ___ ảnh), xây dựng quy trình trích đặc trưng, train và so sánh các mô hình, mô hình chọn đạt F1 = ___, FAR với người lạ cùng điều kiện = ___ trên tập test độc lập; tích hợp nhận diện mặt vào hệ thống điểm danh có GPS.
 - **Hướng phát triển**: mở rộng dữ liệu, fine-tune ArcFace trên mặt người Việt, chống giả mạo 3D (mặt nạ), điểm danh nhiều người cùng lúc qua camera lớp học.
 
 ### 8.10 Các phần đầu báo cáo
@@ -492,4 +502,6 @@ Mẫu **không cho dẫn link hoặc website**, chỉ sách và tạp chí. Trư
 - Không commit `ml_report/du_lieu/` (đã chặn bằng `.gitignore`). Không gửi video lên nhóm chat công khai.
 - Bảng tên thật ↔ mã và giấy đồng ý để ngoài repo.
 - Báo cáo chỉ dùng mã P1–P5, chỉ dán ảnh của người đồng ý làm minh hoạ.
-- Sau khi chấm: xoá `ml_report/du_lieu/` (video, ảnh cắt, LFW) và `ket_qua/anh_doan_sai.png`, `ket_qua/anh_can_chinh.png`. Giữ notebook và các bảng số liệu.
+- Hai notebook khi đã chạy có **ảnh khuôn mặt** trong output (ảnh căn chỉnh, ảnh đoán sai, dự đoán thử): bấm **Clear All Outputs** rồi lưu trước khi commit. `ml_report/ket_qua/` đã bị chặn bằng `.gitignore`.
+- `anh_can_chinh.png` có mặt cả 5 người, `anh_doan_sai.png` có mặt người bị đoán sai: xem kỹ trước khi dán vào báo cáo.
+- Sau khi chấm: xoá `ml_report/du_lieu/` (video, ảnh cắt, LFW) và toàn bộ `ml_report/ket_qua/`. `dataset_mat.csv` chứa vector khuôn mặt, `svm.pkl` chứa vector hỗ trợ (cũng là vector khuôn mặt), nên đều là dữ liệu sinh trắc học phải xoá theo cam kết trong giấy đồng ý. Muốn giữ số liệu thì chỉ giữ `bang_so_sanh.csv`, `so_lieu_bao_cao.txt` và các biểu đồ không có mặt người.

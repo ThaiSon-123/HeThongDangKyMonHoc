@@ -49,3 +49,4 @@ backend/apps/attendance/tests/fixtures/faces/
 
 # Video thu dữ liệu ML (nặng, chứa mặt người thật)
 ml_report/du_lieu/
+ml_report/ket_qua/
